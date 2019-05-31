@@ -1,0 +1,25 @@
+{
+  "name": "WebXR API Emulation",
+  "short_name": "WebXR Emu",
+  "version": "0.0.1",
+  "description": "WebXR API Emulation",
+  "permissions": [
+    "tabs",
+    "<all_urls>",
+    "storage"
+  ],
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": [ "polyfill.js", "content-script.js" ],
+    "run_at": "document_start",
+    "all_frames": true
+  }],
+  "browser_action": {
+    "default_icon": {},
+    "default_title": "WebXR"
+  },
+  "manifest_version": 2,
+  "web_accessible_resources": [
+    "polyfill.js"
+  ]
+}
