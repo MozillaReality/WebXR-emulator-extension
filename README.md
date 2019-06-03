@@ -1,4 +1,5 @@
 # WebXR-emulator-extension
 WebXR emulator extension
 
-![Screenshot](./screenshots/screenshot.png)
+![Emulation](./screenshots/controller-emulator.gif)
+![Virtual controller](./screenshots/virtual-controller.gif)
