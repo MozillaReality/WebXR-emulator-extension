@@ -1,14 +1,16 @@
 # WebXR-emulator-extension
 
-WebXR API emulation WebExtension
-
 You can test WebXR application on your desktop without any XR devices.
 
 ## Features
 
+- WebXR API polyfill
+- Controller emulator (WIP)
+- Virtual controller (WIP)
+
 ## Videos
 
-WebXR and controller emulation
+WebXR API and controller emulation
 
 ![Emulation](./screenshots/controller-emulator.gif)
 
@@ -18,13 +20,15 @@ Virtual controller
 
 ## Usage
 
+Download this project and install extension to your browser. This extension is WIP. I recommend tempoary/Developer mode installation.
+
 ### FireFox
+
+[Temporary installation in Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox)
 
 ### Chrome
 
-## Development
-
-### How to build
+[Getting Started Tutorial](https://developer.chrome.com/extensions/getstarted)
 
 ## Similar projects
 
