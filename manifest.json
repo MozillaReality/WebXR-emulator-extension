@@ -10,7 +10,7 @@
   ],
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "js": [ "polyfill.js", "content-script.js" ],
+    "js": [ "src/controller.js", "src/webxr-polyfill.js", "content-script.js" ],
     "run_at": "document_start",
     "all_frames": true
   }],

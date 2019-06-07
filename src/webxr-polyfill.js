@@ -1,8 +1,9 @@
-function injectedScript() {
-
+function WebXRPolyfillInjection() {
   'use strict';
 
   //
+
+  const controller = new Controller();
 
   class EventDispatcher {
     constructor() {
@@ -55,7 +56,9 @@ function injectedScript() {
       super();
       this.frame = new XRFrame();
       this.renderState = {};
-      this.inputSources = [];
+
+      controller.setSession(this);
+      this.inputSources = [controller.getGamepad()];
     }
 
     updateRenderState(state) {
@@ -75,11 +78,37 @@ function injectedScript() {
     end() {
       this.dispatchEvent('end', {});
     }
-  }
+
+    _fireSelectStart(controller) {
+      this.dispatchEvent('selectstart', {type: 'selectstart', inputSource: controller.getGamepad()});
+    }
+
+    _fireSelectEnd(controller) {
+      this.dispatchEvent('selectend', {type: 'selectend', inputSource: controller.getGamepad()});
+    }
+ }
 
   class XRFrame {
+    constructor() {
+      this._pose = new XRPose();
+    }
+
     getViewerPose(space) {
       return new XRViewerPose();
+    }
+
+    getPose(targetRaySpace, referenceSpace) {
+      return this._pose;
+    }
+  }
+
+  class XRPose {
+    constructor() {
+      this.transform = new XRRigidTransform();
+      this.transform.matrix[0] = 1;
+      this.transform.matrix[5] = 1;
+      this.transform.matrix[10] = 1;
+      this.transform.matrix[15] = 1;
     }
   }
 
