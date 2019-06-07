@@ -5,7 +5,8 @@ You can test WebXR application on your desktop without any XR devices.
 ## Features
 
 - WebXR API polyfill
-- Controller emulator (WIP)
+- Headset emlator (WIP)
+- Controller emulator
 - Virtual controller (WIP)
 
 ## Videos
@@ -18,7 +19,8 @@ Virtual controller
 
 ![Virtual controller](./screenshots/virtual-controller.gif)
 
-## Usage
+
+## Install
 
 Download this project and install extension to your browser. This extension is WIP. I recommend tempoary/Developer mode installation.
 
@@ -29,6 +31,19 @@ Download this project and install extension to your browser. This extension is W
 ### Chrome
 
 [Getting Started Tutorial](https://developer.chrome.com/extensions/getstarted)
+
+## Usage
+
+### Headset emulator
+
+WIP
+
+### Controller emulator
+
+| Key | function |
+| ---- | ---- |
+| Space | Trigger button |
+| Cursors | Controller rotation |
 
 ## Similar projects
 
