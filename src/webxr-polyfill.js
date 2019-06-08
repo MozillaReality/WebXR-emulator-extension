@@ -4,6 +4,7 @@ function WebXRPolyfillInjection() {
   //
 
   const controller = new Controller();
+  const headset = new Headset();
 
   class EventDispatcher {
     constructor() {
@@ -59,6 +60,8 @@ function WebXRPolyfillInjection() {
 
       controller.setSession(this);
       this.inputSources = [controller.getGamepad()];
+
+      headset.setSession(this);
     }
 
     updateRenderState(state) {
@@ -91,10 +94,11 @@ function WebXRPolyfillInjection() {
   class XRFrame {
     constructor() {
       this._pose = new XRPose();
+      this._viewerPose = new XRViewerPose();
     }
 
     getViewerPose(space) {
-      return new XRViewerPose();
+      return this._viewerPose;
     }
 
     getPose(targetRaySpace, referenceSpace) {
@@ -121,22 +125,8 @@ function WebXRPolyfillInjection() {
   class XRView {
     constructor(eye) {
       this.eye = eye;
-
-      const projectionMatrix = [
-        1.1006344616457973, 0, 0, 0,
-        0, 1.4281480067421146, 0, 0,
-        0, 0, -1.02020202020202, -1,
-        0, 0, -0.20202020202020202, 0
-      ];
-      projectionMatrix[12] = eye === 0 ? -0.2 : 0.2;
-
-      this.projectionMatrix = new Float32Array(projectionMatrix);
+      this.projectionMatrix = new Float32Array(16);
       this.transform = new XRRigidTransform();
-      this.transform.inverse.matrix[0] = 1;
-      this.transform.inverse.matrix[5] = 1;
-      this.transform.inverse.matrix[10] = 1;
-      this.transform.inverse.matrix[13] = -1;
-      this.transform.inverse.matrix[15] = 1;
     }
   }
 
