@@ -1,5 +1,6 @@
 const source = '(function() {'
 +   'const Controller = (' + ControllerInjection + ')();'
++   'const Headset = (' + HeadsetInjection + ')();'
 +   '(' + WebXRPolyfillInjection + ')();'
 + '})();';
 const script = document.createElement('script');
