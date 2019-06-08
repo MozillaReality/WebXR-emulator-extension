@@ -1,4 +1,5 @@
 const source = '(function() {'
++   'const _Math = (' + MathInjection + ')();'
 +   'const Controller = (' + ControllerInjection + ')();'
 +   'const Headset = (' + HeadsetInjection + ')();'
 +   '(' + WebXRPolyfillInjection + ')();'

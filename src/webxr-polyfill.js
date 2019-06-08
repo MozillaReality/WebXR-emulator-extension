@@ -42,6 +42,8 @@ function WebXRPolyfillInjection() {
     }
   }
 
+  // https://www.w3.org/TR/webxr/#xr-interface
+
   class XR {
     supportsSession(mode) {
       return Promise.resolve();
@@ -52,11 +54,16 @@ function WebXRPolyfillInjection() {
     }
   }
 
+  // https://www.w3.org/TR/webxr/#xrsession-interface
+
   class XRSession extends EventDispatcher {
     constructor() {
       super();
-      this.frame = new XRFrame();
+      this.environmentBlendMode = null;
       this.renderState = {};
+      this.viewerSpace = null;
+
+      this._frame = new XRFrame();
 
       controller.setSession(this);
       this.inputSources = [controller.getGamepad()];
@@ -72,14 +79,23 @@ function WebXRPolyfillInjection() {
       return Promise.resolve(new XRReferenceSpace());
     }
 
-    requestAnimationFrame(func) {
+    requestAnimationFrame(callback) {
       requestAnimationFrame(() => {
-        func(performance.now(), this.frame);
+        callback(performance.now(), this._frame);
       });
+    }
+
+    getInputSources() {
+      return this.inputSources;
+    }
+
+    cancelAnimationFrame() {
+
     }
 
     end() {
       this.dispatchEvent('end', {});
+      return Promise.resolve();
     }
 
     _fireSelectStart(controller) {
