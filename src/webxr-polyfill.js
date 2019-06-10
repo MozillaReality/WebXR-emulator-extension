@@ -63,16 +63,18 @@ function WebXRPolyfillInjection() {
       this.renderState = {};
       this.viewerSpace = null;
 
-      this._frame = new XRFrame();
+      this._frame = new XRFrame(this);
 
       controller.setSession(this);
-      this.inputSources = [controller.getGamepad()];
+      this.inputSources = [
+        new XRInputSource(this, controller.getGamepad())
+      ];
 
       headset.setSession(this);
     }
 
-    updateRenderState(state) {
-      this.renderState = state;
+    updateRenderState(option) {
+      this.renderState = new XRRenderState(option);
     }
 
     requestReferenceSpace(type) {
@@ -99,16 +101,32 @@ function WebXRPolyfillInjection() {
     }
 
     _fireSelectStart(controller) {
-      this.dispatchEvent('selectstart', {type: 'selectstart', inputSource: controller.getGamepad()});
+      this.dispatchEvent('selectstart', {type: 'selectstart', inputSource: this.inputSources[0]});
     }
 
     _fireSelectEnd(controller) {
-      this.dispatchEvent('selectend', {type: 'selectend', inputSource: controller.getGamepad()});
+      this.dispatchEvent('selectend', {type: 'selectend', inputSource: this.inputSources[0]});
     }
- }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrrenderstate-interface
+
+  class XRRenderState {
+    constructor(option) {
+      option = option || {};
+      this.depthNear = option.depthNear;
+      this.depthFar = option.depthFar;
+      this.inlineVerticalFieldOfView = option.inlineVerticalFieldOfView;
+      this.baseLayer = option.baseLayer;
+      this.outputContext = option.outputContext;
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrframe-interface
 
   class XRFrame {
-    constructor() {
+    constructor(session) {
+      this.session = session;
       this._pose = new XRPose();
       this._viewerPose = new XRViewerPose();
     }
@@ -117,26 +135,40 @@ function WebXRPolyfillInjection() {
       return this._viewerPose;
     }
 
-    getPose(targetRaySpace, referenceSpace) {
+    getPose(sourceSpace, destinationSpace) {
       return this._pose;
     }
   }
 
+  // https://www.w3.org/TR/webxr/#xrspace-interface
+
+  class XRSpace {
+
+  }
+
+  // https://www.w3.org/TR/webxr/#xrpose-interface
+
   class XRPose {
     constructor() {
       this.transform = new XRRigidTransform();
-      this.transform.matrix[0] = 1;
-      this.transform.matrix[5] = 1;
-      this.transform.matrix[10] = 1;
-      this.transform.matrix[15] = 1;
+      this.emulatedPosition = false;
     }
   }
 
+  // https://www.w3.org/TR/webxr/#xrviewerpose-interface
+
   class XRViewerPose {
     constructor() {
-      this.views = [new XRView(0), new XRView(1)];
+      this.views = [new XRView(XREye.left), new XRView(XREye.right)];
     }
   }
+
+  // https://www.w3.org/TR/webxr/#xrview-interface
+
+  const XREye = {
+    left: 0,
+    right: 1
+  };
 
   class XRView {
     constructor(eye) {
@@ -146,33 +178,86 @@ function WebXRPolyfillInjection() {
     }
   }
 
+  // https://www.w3.org/TR/webxr/#xrrigidtransform-interface
+
   class XRRigidTransform {
     constructor() {
-      this.position;
-      this.orientation;
+      this.position = {x: 0, y: 0, z: 0, w: 1};
+      this.orientation = {x: 0, y: 0, z: 0, w: 1};
+
       this.matrix = new Float32Array(16);
+      this.matrix[0] = 1;
+      this.matrix[5] = 1;
+      this.matrix[10] = 1;
+      this.matrix[15] = 1;
+
       this.inverse = {
         matrix: new Float32Array(16)
       };
+
+      this.inverse.matrix[0] = 1;
+      this.inverse.matrix[5] = 1;
+      this.inverse.matrix[10] = 1;
+      this.inverse.matrix[15] = 1;
     }
   }
 
-  class XRReferenceSpace {
+  // https://www.w3.org/TR/webxr/#xrviewport-interface
 
+  class XRViewport {
+    constructor() {
+      this.x = 0;
+      this.y = 0;
+      this.width = 0;
+      this.height = 0;
+    }
   }
 
+  // https://www.w3.org/TR/webxr/#xrreferencespace-interface
+
+  class XRReferenceSpace {
+    getOffsetReferenceSpace(originOffset) {
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrwebgllayer-interface
+
   class XRWebGLLayer {
-    constructor(session, gl) {
+    constructor(session, context, options) {
       this.framebuffer = null;
+      this.framebufferWidth = 0;
+      this.framebufferHeight = 0;
+      this.context = context;
+
+      this._viewports = {};
+      this._viewports[XREye.left] = new XRViewport();
+      this._viewports[XREye.right] = new XRViewport();
     }
 
     getViewport(view) {
-      return {
-        x: view.eye === 0 ? 0 : window.innerWidth / 2 * window.devicePixelRatio,
-        y: 0,
-        width: window.innerWidth / 2 * window.devicePixelRatio,
-        height: window.innerHeight * window.devicePixelRatio
-      };
+      const viewport = this._viewports[view.eye];
+      viewport.x = view.eye === XREye.left ? 0 : window.innerWidth / 2 * window.devicePixelRatio;
+      viewport.y = 0;
+      viewport.width = window.innerWidth / 2 * window.devicePixelRatio;
+      viewport.height = window.innerHeight * window.devicePixelRatio;
+      return viewport;
+    }
+
+    requestViewportScaling(viewportScaleFactor) {
+
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrinputsource-interface
+
+  class XRInputSource {
+    constructor(session, gamepad) {
+      this._session = session;
+      this.handedness = null;
+      this.targetRayMode = null;
+      this.targetRaySpace = null;
+      this.gripSpace = null;
+      this.gamepad = gamepad;
     }
   }
 
