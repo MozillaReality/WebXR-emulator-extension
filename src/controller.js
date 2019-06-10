@@ -56,7 +56,7 @@ function ControllerInjection() {
 
       function animationLoop() {
         requestAnimationFrame(animationLoop);
-        scope._updateGamepad();
+        scope._update();
       }
 
       animationLoop();
@@ -70,7 +70,7 @@ function ControllerInjection() {
       this.session = session;
     }
 
-    _updateGamepad() {
+    _update() {
       const keys = this._keys;
       const keyPressed = this._keyPressed;
       const gamepad = this._gamepad;
