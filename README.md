@@ -1,3 +1,5 @@
+Status: In development. [Any feedback is very welcome.](https://github.com/MozillaReality/WebXR-emulator-extension/issues)
+
 # WebXR-emulator-extension
 
 You can test WebXR application on your desktop without any XR devices.
