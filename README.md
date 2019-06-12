@@ -2,14 +2,32 @@ Status: In development. [Any feedback is very welcome.](https://github.com/Mozil
 
 # WebXR-emulator-extension
 
-You can test WebXR application on your desktop without any XR devices.
+This WebExtension enables you to run immersive (VR) WebXR application on your desktop browser without any XR devices.
+It helps WebXR contents creation.
+
+## Background
+
+Currently immersive WebXR contents creation is hard because of few browsers and devices supporting WebXR.
+Even if there are many enough, still awkward to test for developers.
+They need to write code on desktop, wear headset/controllers for debug, back to desktop for update the code, and repeating.
+It'll be harder if they want to support two or more many devices especially if the devices are different types,
+for example 3dof or 6dof, controllers have different buttons, and so on.
+
+This extension resolves the problems by providing a way to run immersive WebXR application on desktop browser with various type of XR devices emulator.
+
 
 ## Features
 
 - WebXR API polyfill
-- Headset emlator
-- Controller emulator
+- Headset device emulator
+- Controller device emulator
 - Virtual controller (WIP)
+
+Currently this extension is very early stage. 
+
+- Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far.
+- No headset/controller emulator switch yet.
+
 
 ## Videos
 
@@ -24,7 +42,7 @@ Virtual controller
 
 ## Install
 
-Download this project and install extension to your browser. This extension is WIP. I recommend tempoary/Developer mode installation.
+Download this project and install extension to your browser. This extension is in development. I recommend temporary/Developer mode installation.
 
 ### FireFox
 
@@ -34,11 +52,14 @@ Download this project and install extension to your browser. This extension is W
 
 [Getting Started Tutorial](https://developer.chrome.com/extensions/getstarted)
 
+
 ## Usage
 
-I may update UI later.
+Install this extension to your web browser. And then access WebXR application.
 
 ### Headset emulator
+
+I may update UI later.
 
 | Key | function |
 | ---- | ---- |
@@ -53,15 +74,19 @@ I may update UI later.
 
 ### Controller emulator
 
+I may update UI later.
+
 | Key | function |
 | ---- | ---- |
 | Space | Trigger button |
 | Cursors | Controller rotation |
 
+
 ## Similar projects
 
 - [WebVR-Extension](https://github.com/spite/WebVR-Extension)
 - [webxr-polyfill](https://github.com/immersive-web/webxr-polyfill)
+
 
 ## License
 
