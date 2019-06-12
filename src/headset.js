@@ -1,6 +1,8 @@
 function HeadsetInjection() {
   'use strict';
 
+  const tmpVector3 = new _Math.Vector3();
+
   class Headset {
     constructor() {
       this.session = null;
@@ -90,17 +92,27 @@ function HeadsetInjection() {
       const matrix = this._matrix;
       const matrixInverse = this._matrixInverse;
 
+      matrix.getDirection(tmpVector3);
+
       if (keyPressed[keys.moveLeft]) {
-        position.x -= 0.02;
+        position.x -= tmpVector3.z * 0.02;
+        position.y -= tmpVector3.y * 0.02;
+        position.z += tmpVector3.x * 0.02;
       }
       if (keyPressed[keys.moveRight]) {
-        position.x += 0.02;
+        position.x += tmpVector3.z * 0.02;
+        position.y += tmpVector3.y * 0.02;
+        position.z -= tmpVector3.x * 0.02;
       }
       if (keyPressed[keys.moveForward]) {
-        position.z -= 0.02;
+        position.x -= tmpVector3.x * 0.02;
+        position.y -= tmpVector3.y * 0.02;
+        position.z -= tmpVector3.z * 0.02;
       }
       if (keyPressed[keys.moveBackward]) {
-        position.z += 0.02;
+        position.x += tmpVector3.x * 0.02;
+        position.y += tmpVector3.y * 0.02;
+        position.z += tmpVector3.z * 0.02;
       }
 
       if (keyPressed[keys.turnLeft]) {
