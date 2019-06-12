@@ -15,6 +15,25 @@ function MathInjection() {
 
       return this;
     }
+
+    normalize() {
+      return this.divideScalar(this.length() || 1);
+    }
+
+    length() {
+      return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    }
+
+    multiplyScalar(scalar) {
+      this.x *= scalar;
+      this.y *= scalar;
+      this.z *= scalar;
+      return this;
+    }
+
+    divideScalar(scalar) {
+      return this.multiplyScalar(1 / scalar);
+    }
   }
 
   class Euler {
@@ -192,6 +211,13 @@ function MathInjection() {
       te[15] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * detInv;
 
       return this;
+    }
+
+    getDirection(vector) {
+      vector.x = this.elements[8];
+      vector.y = this.elements[9];
+      vector.z = this.elements[10];
+      return vector;
     }
   }
 
