@@ -25,8 +25,8 @@ This extension resolves the problems by providing a way to run immersive WebXR a
 
 Currently this extension is very early stage. 
 
-- Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far.
-- No headset/controller emulator switch yet.
+- Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far
+- No headset/controller emulator switch yet
 
 
 ## Videos
