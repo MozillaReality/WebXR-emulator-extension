@@ -120,7 +120,5 @@ function ControllerInjection() {
     }
   }
 
-  console.log(navigator);
-
   return Controller;
 }

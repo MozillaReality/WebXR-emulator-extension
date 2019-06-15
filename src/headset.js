@@ -154,7 +154,5 @@ function HeadsetInjection() {
     }
   }
 
-  console.log(navigator);
-
   return Headset;
 }
