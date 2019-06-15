@@ -10,17 +10,31 @@
   ],
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "js": [ "src/math.js", "src/controller.js", "src/headset.js", "src/webxr-polyfill.js", "content-script.js" ],
+    "js": [
+      "src/math.js",
+      "src/configuration.js",
+      "src/event-dispatcher.js",
+      "src/controller.js",
+      "src/headset.js",
+      "src/webxr-polyfill.js",
+      "content-script.js"
+    ],
     "run_at": "document_start",
     "all_frames": true
   }],
   "browser_action": {
     "default_icon": {},
-    "default_title": "WebXR API Emulation"
+    "default_title": "WebXR API Emulation",
+    "default_popup": "config.html"
   },
+  "permissions": [
+    "storage"
+  ],
   "manifest_version": 2,
   "web_accessible_resources": [
     "src/math.js",
+    "src/configuration.js",
+    "src/event-dispatcher.js",
     "src/controller.js",
     "src/headset.js",
     "src/webxr-polyfill.js"
