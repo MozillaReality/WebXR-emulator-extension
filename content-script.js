@@ -9,10 +9,11 @@ const source =  'let xrconfiguration;'
 +   'const headset = new Headset();'
 +   '(' + WebXRPolyfillInjection + ')();'
 +   'xrconfiguration = new Configuration();'
-+   'xrconfiguration.addEventListener(\'devicechange\', event => {'
++   'xrconfiguration.addEventListener(\'typechange\', event => {'
 +     'const deviceType = event.configuration.deviceType;'
 +     'headset.setDeviceType(deviceType);'
 +     'controller.setDeviceType(deviceType);'
++     'headset.setStereoType(event.configuration.stereoType);'
 +   '});'
 +   'console.log(this);'
 + '})();';
@@ -22,15 +23,13 @@ script.textContent = source;
 script.parentNode.removeChild(script);
 
 const configurationId = 'webxr-extension';
-const initialValue = '0';
 
 browser.storage.local.get(configurationId).then(result => {
-  const [deviceType] = (result[configurationId] || initialValue).split(':');
   const script2 = document.createElement('script');
   const source2 = ''
   + '(function() {'
   +   'const Configuration = xrconfiguration.constructor;'
-  +   'xrconfiguration.setDeviceType(' + deviceType + ');'
+  +   'xrconfiguration.deserialize(\'' + (result[configurationId] || '') + '\');'
   +   'console.log(xrconfiguration);'
   + '})();';
   script2.textContent = source2;

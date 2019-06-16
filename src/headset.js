@@ -4,7 +4,10 @@ function HeadsetInjection() {
   const tmpVector3 = new _Math.Vector3();
   const tmpQuaternion = new _Math.Quaternion();
   const tmpMatrix3 = new _Math.Matrix3();
+
+  const defaultConfigurations = Configuration.defaultValues();
   const deviceTypes = Configuration.deviceTypes();
+  const stereoTypes = Configuration.stereoTypes();
 
   const capabilities = {};
   capabilities[deviceTypes.None] = {position: false, rotation: false};
@@ -20,7 +23,8 @@ function HeadsetInjection() {
   class Headset {
     constructor() {
       this.session = null;
-      this._deviceType = deviceTypes.None;
+      this._deviceType = defaultConfigurations.deviceType;
+      this._stereoType = defaultConfigurations.stereoType;
 
       this._keys = {
         disable: 16,          // shift
@@ -106,6 +110,10 @@ function HeadsetInjection() {
       this._deviceType = type;
     }
 
+    setStereoType(type) {
+      this._stereoType = type;
+    }
+
     _translateOnAxis(axis, distance) {
       tmpVector3.copy(axis).applyMatrix3(tmpMatrix3.setFromMatrix4(this._matrix));
       this._position.x += tmpVector3.x * distance;
@@ -171,7 +179,9 @@ function HeadsetInjection() {
       if (this.session) {
         // for left eye
 
-        this._translateOnAxis(axises.x, -0.2);
+        if (this._stereoType === stereoTypes.Enable) {
+          this._translateOnAxis(axises.x, -0.2);
+        }
 
         matrix.compose(position, quaternion, scale);
         matrixInverse.getInverse(matrix);
@@ -181,7 +191,9 @@ function HeadsetInjection() {
 
         // for right eye
 
-        this._translateOnAxis(axises.x, 0.4);
+        if (this._stereoType === stereoTypes.Enable) {
+          this._translateOnAxis(axises.x, 0.4);
+        }
 
         matrix.compose(position, quaternion, scale);
         matrixInverse.getInverse(matrix);
@@ -191,11 +203,35 @@ function HeadsetInjection() {
 
         // reset position
 
-        this._translateOnAxis(axises.x, -0.2);
+        if (this._stereoType === stereoTypes.Enable) {
+          this._translateOnAxis(axises.x, -0.2);
+        }
       }
 
       matrix.compose(position, quaternion, scale);
       matrixInverse.getInverse(matrix);
+
+      if (this.session &&
+          this.session.renderState.baseLayer &&
+          this.session.renderState.baseLayer._viewports) {
+        const viewports = this.session.renderState.baseLayer._viewports;
+
+        for (let i = 0; i < 2; i++) {
+          // @TODO: Use XREye.left/right?
+          const viewport = viewports[i];
+
+          if (this._stereoType === stereoTypes.Enable) {
+            viewport.x = i === 0 ? 0 : window.innerWidth / 2 * window.devicePixelRatio;
+            viewport.width = window.innerWidth / 2 * window.devicePixelRatio;
+          } else {
+            viewport.x = i === 0 ? 0 : window.innerWidth * window.devicePixelRatio;
+            viewport.width = i === 0 ? window.innerWidth * window.devicePixelRatio : 0;
+          }
+
+          viewport.y = 0;
+          viewport.height = window.innerHeight * window.devicePixelRatio;
+        }
+      }
     }
   }
 
