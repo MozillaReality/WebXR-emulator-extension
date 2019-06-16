@@ -2,12 +2,20 @@ function HeadsetInjection() {
   'use strict';
 
   const tmpVector3 = new _Math.Vector3();
+  const deviceTypes = Configuration.deviceTypes();
+
+  const capabilities = {};
+  capabilities[deviceTypes.None] = {position: false, rotation: false};
+  capabilities[deviceTypes.OculusGo] = {position: false, rotation: true};
+  capabilities[deviceTypes.OculusQuest] = {position: true, rotation: true};
 
   class Headset {
     constructor() {
       this.session = null;
+      this._deviceType = deviceTypes.None;
 
       this._keys = {
+        disable: 16,      // shift
         moveLeft: 65,     // a
         moveRight: 68,    // d
         moveBackward: 83, // s
@@ -82,6 +90,10 @@ function HeadsetInjection() {
       }
     }
 
+    setDeviceType(type) {
+      this._deviceType = type;
+    }
+
     _updateHeadset() {
       const keys = this._keys;
       const keyPressed = this._keyPressed;
@@ -91,44 +103,48 @@ function HeadsetInjection() {
       const scale = this._scale;
       const matrix = this._matrix;
       const matrixInverse = this._matrixInverse;
+      const capability = capabilities[this._deviceType];
 
       matrix.getDirection(tmpVector3);
 
-      if (keyPressed[keys.moveLeft]) {
-        position.x -= tmpVector3.z * 0.02;
-        position.y -= tmpVector3.y * 0.02;
-        position.z += tmpVector3.x * 0.02;
-      }
-      if (keyPressed[keys.moveRight]) {
-        position.x += tmpVector3.z * 0.02;
-        position.y += tmpVector3.y * 0.02;
-        position.z -= tmpVector3.x * 0.02;
-      }
-      if (keyPressed[keys.moveForward]) {
-        position.x -= tmpVector3.x * 0.02;
-        position.y -= tmpVector3.y * 0.02;
-        position.z -= tmpVector3.z * 0.02;
-      }
-      if (keyPressed[keys.moveBackward]) {
-        position.x += tmpVector3.x * 0.02;
-        position.y += tmpVector3.y * 0.02;
-        position.z += tmpVector3.z * 0.02;
-      }
-
-      if (keyPressed[keys.turnLeft]) {
-        rotation.y += 0.02;
-      }
-      if (keyPressed[keys.turnRight]) {
-        rotation.y -= 0.02;
-      }
-      if (keyPressed[keys.turnUp]) {
-        rotation.x += 0.02;
-      }
-      if (keyPressed[keys.turnDown]) {
-        rotation.x -= 0.02;
+      if (capability.position && !keyPressed[keys.disable]) {
+        if (keyPressed[keys.moveLeft]) {
+          position.x -= tmpVector3.z * 0.02;
+          position.y -= tmpVector3.y * 0.02;
+          position.z += tmpVector3.x * 0.02;
+        }
+        if (keyPressed[keys.moveRight]) {
+          position.x += tmpVector3.z * 0.02;
+          position.y += tmpVector3.y * 0.02;
+          position.z -= tmpVector3.x * 0.02;
+        }
+        if (keyPressed[keys.moveForward]) {
+          position.x -= tmpVector3.x * 0.02;
+          position.y -= tmpVector3.y * 0.02;
+          position.z -= tmpVector3.z * 0.02;
+        }
+        if (keyPressed[keys.moveBackward]) {
+          position.x += tmpVector3.x * 0.02;
+          position.y += tmpVector3.y * 0.02;
+          position.z += tmpVector3.z * 0.02;
+        }
       }
 
-      quaternion.fromEuler(rotation);
+      if (capability.rotation && !keyPressed[keys.disable]) {
+        if (keyPressed[keys.turnLeft]) {
+          rotation.y += 0.02;
+        }
+        if (keyPressed[keys.turnRight]) {
+          rotation.y -= 0.02;
+        }
+        if (keyPressed[keys.turnUp]) {
+          rotation.x += 0.02;
+        }
+        if (keyPressed[keys.turnDown]) {
+          rotation.x -= 0.02;
+        }
+        quaternion.fromEuler(rotation);
+      }
 
       position.x -= 0.2;
 

@@ -5,8 +5,15 @@ const source =  'let xrconfiguration;'
 +   'const _Math = (' + MathInjection + ')();'
 +   'const Controller = (' + ControllerInjection + ')();'
 +   'const Headset = (' + HeadsetInjection + ')();'
++   'const controller = new Controller();'
++   'const headset = new Headset();'
 +   '(' + WebXRPolyfillInjection + ')();'
 +   'xrconfiguration = new Configuration();'
++   'xrconfiguration.addEventListener(\'devicechange\', event => {'
++     'const deviceType = event.configuration.deviceType;'
++     'headset.setDeviceType(deviceType);'
++     'controller.setDeviceType(deviceType);'
++   '});'
 +   'console.log(this);'
 + '})();';
 const script = document.createElement('script');
@@ -18,12 +25,12 @@ const configurationId = 'webxr-extension';
 const initialValue = '0';
 
 browser.storage.local.get(configurationId).then(result => {
-  const [headsetType] = (result[configurationId] || initialValue).split(':');
+  const [deviceType] = (result[configurationId] || initialValue).split(':');
   const script2 = document.createElement('script');
   const source2 = ''
   + '(function() {'
   +   'const Configuration = xrconfiguration.constructor;'
-  +   'xrconfiguration.setHeadsetType(' + headsetType + ');'
+  +   'xrconfiguration.setDeviceType(' + deviceType + ');'
   +   'console.log(xrconfiguration);'
   + '})();';
   script2.textContent = source2;

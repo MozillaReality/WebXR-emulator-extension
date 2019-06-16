@@ -1,11 +1,6 @@
 function WebXRPolyfillInjection() {
   'use strict';
 
-  //
-
-  const controller = new Controller();
-  const headset = new Headset();
-
   // https://www.w3.org/TR/webxr/#xr-interface
 
   class XR {

@@ -10,9 +10,11 @@
       if (this.listeners[key] === undefined) {
         this.listeners[key] = [];
       }
+
       if (this.listeners[key].indexOf(func) >= 0) {
         return;
       }
+
       this.listeners[key].push(func);
     }
 
