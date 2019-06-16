@@ -26,7 +26,6 @@ This extension resolves the problems by providing a way to run immersive WebXR a
 Currently this extension is very early stage. 
 
 - Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far
-- No headset/controller emulator switch yet
 
 
 ## Videos
@@ -51,32 +50,6 @@ Download this project and install extension to your browser. This extension is i
 ### Chrome
 
 [Getting Started Tutorial](https://developer.chrome.com/extensions/getstarted)
-
-
-## Configuration
-
-If you click the extension icon, configuration popup opens.
-
-![Configuration](./screenshots/configuration.png)
-
-### Device
-
-You can switch device emulator. Currently just switches degrees of freedom.
-
-| Device | Description |
-| ---- | ---- |
-| None | no dof |
-| OculusGo | 3dof headset and 3dof controller |
-| OculusQuest | 6dof headset and 6dof controller |
-
-### Stereo Effect
-
-You can enable/disable Stereo Effect which renders two views.
-
-| StereoEffect | Description |
-| ---- | ---- |
-| Enable | Enables Stereo effect |
-| Disable | Disables Stereo effect |
 
 
 ## Usage
@@ -110,6 +83,31 @@ Only Controller
 | Key | function |
 | ---- | ---- |
 | Space | Trigger button |
+
+### Configuration
+
+If you click the extension icon, configuration popup opens.
+
+![Configuration](./screenshots/configuration.png)
+
+#### Device
+
+You can switch device emulator. Currently just switches degrees of freedom.
+
+| Device | Description |
+| ---- | ---- |
+| None | no dof |
+| OculusGo | 3dof headset and 3dof controller |
+| OculusQuest | 6dof headset and 6dof controller |
+
+#### Stereo Effect
+
+You can enable/disable Stereo Effect which renders two views.
+
+| StereoEffect | Description |
+| ---- | ---- |
+| Enable | Enables Stereo effect |
+| Disable | Disables Stereo effect |
 
 
 ## Similar projects
