@@ -1,16 +1,18 @@
 ﻿function ConfigurationInjection() {
   'use strict';
 
-  class Configuration {
+  class Configuration extends EventDispatcher {
     constructor() {
-      this.headsetType = null;
+      super();
+      this.deviceType = Configuration.deviceTypes().None;
     }
 
-    setHeadsetType(type) {
-      this.headsetType = type;
+    setDeviceType(type) {
+      this.deviceType = type;
+      this.dispatchEvent('devicechange', {type: 'devicechange', configuration: this});
     }
 
-    static headsetTypes() {
+    static deviceTypes() {
       return {
         None: 0,
         OculusGo: 1,

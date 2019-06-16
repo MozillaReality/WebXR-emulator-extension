@@ -3,16 +3,34 @@ function ControllerInjection() {
 
   //
 
+  const deviceTypes = Configuration.deviceTypes();
+
+  const capabilities = {};
+  capabilities[deviceTypes.None] = {position: false, rotation: false};
+  capabilities[deviceTypes.OculusGo] = {position: false, rotation: true};
+  capabilities[deviceTypes.OculusQuest] = {position: true, rotation: true};
+
+  const ids = {};
+  ids[deviceTypes.None] = 'None';
+  ids[deviceTypes.OculusGo] = 'Oculus Go Controller';
+  ids[deviceTypes.OculusQuest] = 'Oculus Quest Controller';
+
   class Controller {
     constructor() {
       this.session = null;
+      this._deviceType = deviceTypes.None;
 
       this._keys = {
-        trigger: 32,   // space
-        turnLeft: 37,  // left
-        turnUp: 38,    // up
-        turnRight: 39, // right
-        turnDown: 40   // down
+        enable: 16,       // shift
+        trigger: 32,      // space
+        moveLeft: 65,     // a
+        moveRight: 68,    // d
+        moveDown: 83,     // s
+        moveUp: 87,       // w
+        turnUp: 73,       // i
+        turnLeft: 74,     // j
+        turnDown: 75,     // k
+        turnRight: 76     // l
       };
 
       this._keyPressed = {};
@@ -22,7 +40,7 @@ function ControllerInjection() {
       }
 
       this._gamepad = {
-        id: 'Oculus Go Controller',
+        id: ids[this._deviceType],
         pose: {
           hasPosition: true,
           position: [0, 0, 0],
@@ -70,6 +88,11 @@ function ControllerInjection() {
       this.session = session;
     }
 
+    setDeviceType(type) {
+      this._deviceType = type;
+      this._gamepad.id = ids[type];
+    }
+
     _update() {
       const keys = this._keys;
       const keyPressed = this._keyPressed;
@@ -79,6 +102,7 @@ function ControllerInjection() {
       const quaternion = this._quaternion;
       const scale = this._scale;
       const matrix = this._matrix;
+      const capability = capabilities[this._deviceType];
 
       if (keyPressed[keys.trigger] && !gamepad.buttons[1].pressed) {
         gamepad.buttons[1].pressed = true;
@@ -94,17 +118,34 @@ function ControllerInjection() {
         }
       }
 
-      if(keyPressed[keys.turnLeft]) {
-        rotation.y += 0.02;
+      if (capability.position && keyPressed[keys.enable]) {
+        if (keyPressed[keys.moveLeft]) {
+          position.x -= 0.02;
+        }
+        if (keyPressed[keys.moveRight]) {
+          position.x += 0.02;
+        }
+        if (keyPressed[keys.moveUp]) {
+          position.y += 0.02;
+        }
+        if (keyPressed[keys.moveDown]) {
+          position.y -= 0.02;
+        }
       }
-      if(keyPressed[keys.turnRight]) {
-        rotation.y -= 0.02;
-      }
-      if(keyPressed[keys.turnUp]) {
-        rotation.x += 0.02;
-      }
-      if(keyPressed[keys.turnDown]) {
-        rotation.x -= 0.02;
+
+      if (capability.rotation && keyPressed[keys.enable]) {
+        if (keyPressed[keys.turnLeft]) {
+          rotation.y += 0.02;
+        }
+        if (keyPressed[keys.turnRight]) {
+          rotation.y -= 0.02;
+        }
+        if (keyPressed[keys.turnUp]) {
+          rotation.x += 0.02;
+        }
+        if (keyPressed[keys.turnDown]) {
+          rotation.x -= 0.02;
+        }
       }
 
       quaternion.fromEuler(rotation);
