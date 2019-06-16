@@ -61,7 +61,7 @@ If you click the extension icon, configuration popup opens.
 
 ### Device
 
-You can switch devicue emulator. Currently just switches degrees of freedom.
+You can switch device emulator. Currently just switches degrees of freedom.
 
 | Device | Description |
 | ---- | ---- |
