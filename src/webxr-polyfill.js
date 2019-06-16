@@ -194,12 +194,7 @@ function WebXRPolyfillInjection() {
     }
 
     getViewport(view) {
-      const viewport = this._viewports[view.eye];
-      viewport.x = view.eye === XREye.left ? 0 : window.innerWidth / 2 * window.devicePixelRatio;
-      viewport.y = 0;
-      viewport.width = window.innerWidth / 2 * window.devicePixelRatio;
-      viewport.height = window.innerHeight * window.devicePixelRatio;
-      return viewport;
+      return this._viewports[view.eye];
     }
 
     requestViewportScaling(viewportScaleFactor) {
