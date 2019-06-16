@@ -57,29 +57,33 @@ Download this project and install extension to your browser. This extension is i
 
 Install this extension to your web browser. And then access WebXR application.
 
-### Headset emulator
+### Headset and Controller controls
 
-I may update UI later.
+You can control Headset and Controller with keys. I may update UI later.
+
+Headset and Controller common
 
 | Key | function |
 | ---- | ---- |
+| shift | While releasing: Headset, While pressing: Controller |
 | a | Move left |
 | d | Move right |
 | w | Move up |
 | s | Move down |
+| z | Move forward |
+| x | Move backward |
 | j | turn left |
 | l | turn right |
 | i | turn up |
 | k | turn down |
+| , | turn clockwise |
+| m | turn counter-clockwise |
 
-### Controller emulator
-
-I may update UI later.
+Only Controller
 
 | Key | function |
 | ---- | ---- |
 | Space | Trigger button |
-| Cursors | Controller rotation |
 
 
 ## Similar projects
