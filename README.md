@@ -53,6 +53,32 @@ Download this project and install extension to your browser. This extension is i
 [Getting Started Tutorial](https://developer.chrome.com/extensions/getstarted)
 
 
+## Configuration
+
+If you click the extension icon, configuration popup opens.
+
+![Configuration](./screenshots/configuration.png)
+
+### Device
+
+You can switch devicue emulator. Currently just switches degrees of freedom.
+
+| Device | Description |
+| ---- | ---- |
+| None | no dof |
+| OculusGo | 3dof headset and 3dof controller |
+| OculusQuest | 6dof headset and 6dof controller |
+
+### Stereo Effect
+
+You can enable/disable Stereo Effect which renders two views.
+
+| StereoEffect | Description |
+| ---- | ---- |
+| Enable | Enables Stereo effect |
+| Disable | Disables Stereo effect |
+
+
 ## Usage
 
 Install this extension to your web browser. And then access WebXR application.
