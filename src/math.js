@@ -16,6 +16,13 @@ function MathInjection() {
       return this;
     }
 
+    copy(v) {
+      this.x = v.x;
+      this.y = v.y;
+      this.z = v.z;
+      return this;
+    }
+
     normalize() {
       return this.divideScalar(this.length() || 1);
     }
@@ -33,6 +40,34 @@ function MathInjection() {
 
     divideScalar(scalar) {
       return this.multiplyScalar(1 / scalar);
+    }
+
+    applyMatrix3(m) {
+      const x = this.x;
+      const y = this.y;
+      const z = this.z;
+      const e = m.elements;
+
+      this.x = e[0] * x + e[3] * y + e[6] * z;
+      this.y = e[1] * x + e[4] * y + e[7] * z;
+      this.z = e[2] * x + e[5] * y + e[8] * z;
+
+      return this;
+    }
+
+    applyMatrix4(m) {
+      const x = this.x;
+      const y = this.y;
+      const z = this.z;
+      const e = m.elements;
+
+      const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+
+      this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
+      this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
+      this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
+
+      return this;
     }
   }
 
@@ -82,6 +117,85 @@ function MathInjection() {
       array[2] = this.z;
       array[3] = this.w;
 
+      return this;
+    }
+
+    length() {
+      return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w);
+    }
+
+    normalize() {
+      const l = this.length();
+
+      if (l === 0) {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+        this.w = 1;
+      } else {
+        l = 1 / l;
+        this.x = this.x * l;
+        this.y = this.y * l;
+        this.z = this.z * l;
+        this.w = this.w * l;
+      }
+
+      return this;
+    }
+
+    setFromAxisAngle(axis, angle) {
+      const halfAngle = angle / 2;
+      const s = Math.sin(halfAngle);
+
+      this.x = axis.x * s;
+      this.y = axis.y * s;
+      this.z = axis.z * s;
+      this.w = Math.cos(halfAngle);
+
+      return this;
+    }
+
+    multiply(q) {
+      const qax = this.x;
+      const qay = this.y;
+      const qaz = this.z;
+      const qaw = this.w;
+
+      const qbx = q.x;
+      const qby = q.y;
+      const qbz = q.z;
+      const qbw = q.w;
+
+      this.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+      this.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+      this.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+      this.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+
+      return this;
+    }
+  }
+
+  class Matrix3 {
+    constructor() {
+      this.elements = new Float32Array([
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+      ]);
+    }
+
+    setFromMatrix4(m) {
+      const te = this.elements;
+      const me = m.elements;
+      te[0] = me[0];
+      te[1] = me[1];
+      te[2] = me[2];
+      te[3] = me[4];
+      te[4] = me[5];
+      te[5] = me[6];
+      te[6] = me[8];
+      te[7] = me[9];
+      te[8] = me[10];
       return this;
     }
   }
@@ -225,6 +339,7 @@ function MathInjection() {
     Vector3: Vector3,
     Euler: Euler,
     Quaternion: Quaternion,
+    Matrix3: Matrix3,
     Matrix4: Matrix4
   };
 }
