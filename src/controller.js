@@ -2,7 +2,9 @@ function ControllerInjection() {
   'use strict';
 
   //
-
+  const tmpVector3 = new _Math.Vector3();
+  const tmpQuaternion = new _Math.Quaternion();
+  const tmpMatrix3 = new _Math.Matrix3();
   const deviceTypes = Configuration.deviceTypes();
 
   const capabilities = {};
@@ -15,22 +17,32 @@ function ControllerInjection() {
   ids[deviceTypes.OculusGo] = 'Oculus Go Controller';
   ids[deviceTypes.OculusQuest] = 'Oculus Quest Controller';
 
+  const axises = {
+    x: new _Math.Vector3(1, 0, 0),
+    y: new _Math.Vector3(0, 1, 0),
+    z: new _Math.Vector3(0, 0, 1)
+  };
+
   class Controller {
     constructor() {
       this.session = null;
       this._deviceType = deviceTypes.None;
 
       this._keys = {
-        enable: 16,       // shift
-        trigger: 32,      // space
-        moveLeft: 65,     // a
-        moveRight: 68,    // d
-        moveDown: 83,     // s
-        moveUp: 87,       // w
-        turnUp: 73,       // i
-        turnLeft: 74,     // j
-        turnDown: 75,     // k
-        turnRight: 76     // l
+        enable: 16,           // shift
+        trigger: 32,          // space
+        moveLeft: 65,         // a
+        moveRight: 68,        // d
+        moveUp: 87,           // w
+        moveDown: 83,         // s
+        moveBackward: 90,     // z
+        moveForward: 88,      // x
+        turnUp: 73,           // i
+        turnLeft: 74,         // j
+        turnDown: 75,         // k
+        turnRight: 76,        // l
+        turnClock: 77,        // m
+        turnCounterClock: 188 // comma
       };
 
       this._keyPressed = {};
@@ -93,6 +105,13 @@ function ControllerInjection() {
       this._gamepad.id = ids[type];
     }
 
+    _translateOnAxis(axis, distance) {
+      tmpVector3.copy(axis).applyMatrix3(tmpMatrix3.setFromMatrix4(this._matrix));
+      this._position.x += tmpVector3.x * distance;
+      this._position.y += tmpVector3.y * distance;
+      this._position.z += tmpVector3.z * distance;
+    }
+
     _update() {
       const keys = this._keys;
       const keyPressed = this._keyPressed;
@@ -118,37 +137,49 @@ function ControllerInjection() {
         }
       }
 
-      if (capability.position && keyPressed[keys.enable]) {
-        if (keyPressed[keys.moveLeft]) {
-          position.x -= 0.02;
+      if (keyPressed[keys.enable]) {
+        if (capability.position) {
+          if (keyPressed[keys.moveLeft]) {
+            this._translateOnAxis(axises.x, -0.02);
+          }
+          if (keyPressed[keys.moveRight]) {
+            this._translateOnAxis(axises.x, 0.02);
+          }
+          if (keyPressed[keys.moveUp]) {
+            this._translateOnAxis(axises.y, 0.02);
+          }
+          if (keyPressed[keys.moveDown]) {
+            this._translateOnAxis(axises.y, -0.02);
+          }
+          if (keyPressed[keys.moveForward]) {
+            this._translateOnAxis(axises.z, 0.02);
+          }
+          if (keyPressed[keys.moveBackward]) {
+            this._translateOnAxis(axises.z, -0.02);
+          }
         }
-        if (keyPressed[keys.moveRight]) {
-          position.x += 0.02;
-        }
-        if (keyPressed[keys.moveUp]) {
-          position.y += 0.02;
-        }
-        if (keyPressed[keys.moveDown]) {
-          position.y -= 0.02;
+
+        if (capability.rotation) {
+          if (keyPressed[keys.turnLeft]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.y, 0.02));
+          }
+          if (keyPressed[keys.turnRight]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.y, -0.02));
+          }
+          if (keyPressed[keys.turnUp]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.x, 0.02));
+          }
+          if (keyPressed[keys.turnDown]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.x, -0.02));
+          }
+          if (keyPressed[keys.turnClock]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, -0.02));
+          }
+          if (keyPressed[keys.turnCounterClock]) {
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, 0.02));
+          }
         }
       }
-
-      if (capability.rotation && keyPressed[keys.enable]) {
-        if (keyPressed[keys.turnLeft]) {
-          rotation.y += 0.02;
-        }
-        if (keyPressed[keys.turnRight]) {
-          rotation.y -= 0.02;
-        }
-        if (keyPressed[keys.turnUp]) {
-          rotation.x += 0.02;
-        }
-        if (keyPressed[keys.turnDown]) {
-          rotation.x -= 0.02;
-        }
-      }
-
-      quaternion.fromEuler(rotation);
 
       matrix.compose(position, quaternion, scale);
 
