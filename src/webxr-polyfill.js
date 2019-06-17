@@ -19,21 +19,24 @@ function WebXRPolyfillInjection() {
     constructor() {
       super();
       this.environmentBlendMode = null;
-      this.renderState = {};
+      this.renderState = null;
       this.viewerSpace = null;
 
       this._frame = new XRFrame(this);
 
       controller.setSession(this);
+      headset.setSession(this);
+
+      this.updateRenderState({});
+
       this.inputSources = [
         new XRInputSource(this, controller.getGamepad())
       ];
-
-      headset.setSession(this);
     }
 
     updateRenderState(option) {
       this.renderState = new XRRenderState(option);
+      headset.updateProjectionMatrices();
     }
 
     requestReferenceSpace(type) {
@@ -73,9 +76,9 @@ function WebXRPolyfillInjection() {
   class XRRenderState {
     constructor(option) {
       option = option || {};
-      this.depthNear = option.depthNear;
-      this.depthFar = option.depthFar;
-      this.inlineVerticalFieldOfView = option.inlineVerticalFieldOfView;
+      this.depthNear = option.depthNear || 0.1;
+      this.depthFar = option.depthFar || 1000.0;
+      this.inlineVerticalFieldOfView = option.inlineVerticalFieldOfView || Math.PI * 0.5;
       this.baseLayer = option.baseLayer;
       this.outputContext = option.outputContext;
     }
