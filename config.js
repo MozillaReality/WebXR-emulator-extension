@@ -4,7 +4,7 @@ const initialValues = '1:0'.split(':'); // @TODO: Import from Configuration
 const deviceSelect = document.getElementById('deviceSelect');
 const stereoSelect = document.getElementById('stereoSelect');
 
-browser.storage.local.get(configurationId).then(result => {
+chrome.storage.local.get(configurationId, result => {
   const values = (result[configurationId] || '').split(':');
   let deviceIndex = parseInt(values[0]);
   let stereoIndex = parseInt(values[1]);
@@ -30,7 +30,7 @@ function storeValues() {
     deviceSelect.selectedIndex,
     stereoSelect.selectedIndex
   ].join(':');
-  browser.storage.local.set(storedValue).then(() => {
+  chrome.storage.local.set(storedValue, () => {
     // window.alert(window); // to check if works
   });
 }

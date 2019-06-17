@@ -24,7 +24,7 @@ script.parentNode.removeChild(script);
 
 const configurationId = 'webxr-extension';
 
-browser.storage.local.get(configurationId).then(result => {
+chrome.storage.local.get(configurationId, result => {
   const script2 = document.createElement('script');
   const source2 = ''
   + '(function() {'
