@@ -64,7 +64,7 @@ function ControllerInjection() {
         ]
       };
 
-      this._position = new _Math.Vector3(0.5, 0.9, -0.1);
+      this._position = new _Math.Vector3(0.2, 0.9, -0.1);
       this._rotation = new _Math.Euler();
       this._quaternion = new _Math.Quaternion();
       this._scale = new _Math.Vector3(1, 1, 1);

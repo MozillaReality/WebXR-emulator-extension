@@ -5,6 +5,8 @@ function HeadsetInjection() {
   const tmpQuaternion = new _Math.Quaternion();
   const tmpMatrix3 = new _Math.Matrix3();
 
+  const projectionMatrix = new _Math.Matrix4();
+
   const defaultConfigurations = Configuration.defaultValues();
   const deviceTypes = Configuration.deviceTypes();
   const stereoTypes = Configuration.stereoTypes();
@@ -79,30 +81,23 @@ function HeadsetInjection() {
 
     setSession(session) {
       this.session = session;
+    }
+
+    updateProjectionMatrices() {
+      if (!this.session || !this.session.renderState) {
+        return;
+      }
+
+      const renderState = this.session.renderState;
+      const depthNear = renderState.depthNear;
+      const depthFar = renderState.depthFar;
+      const inlineVerticalFieldOfView = renderState.inlineVerticalFieldOfView;
+      const aspect = window.innerWidth / window.innerHeight * (this._stereoType === stereoTypes.Enable ? 0.5 : 1.0);
 
       for (let i = 0; i < 2; i++) {
         const view = this.session._frame._viewerPose.views[i];
-
-        const projectionMatrix = view.projectionMatrix;
-        projectionMatrix[0] = 1.1006344616457973;
-        projectionMatrix[1] = 0;
-        projectionMatrix[2] = 0;
-        projectionMatrix[3] = 0;
-
-        projectionMatrix[4] = 0;
-        projectionMatrix[5] = 1.4281480067421146;
-        projectionMatrix[6] = 0;
-        projectionMatrix[7] = 0;
-
-        projectionMatrix[8] = 0;
-        projectionMatrix[9] = 0;
-        projectionMatrix[10] = -1.02020202020202;
-        projectionMatrix[11] = -1;
-
-        projectionMatrix[12] = i === 0 ? -0.2 : 0.2;
-        projectionMatrix[13] = 0;
-        projectionMatrix[14] = -0.20202020202020202;
-        projectionMatrix[15] = 0;
+        const fov = inlineVerticalFieldOfView * 180 / Math.PI
+        this._updateProjectionMatrix(fov, aspect, depthNear, depthFar, view.projectionMatrix);
       }
     }
 
@@ -112,6 +107,17 @@ function HeadsetInjection() {
 
     setStereoType(type) {
       this._stereoType = type;
+    }
+
+    _updateProjectionMatrix(fov, aspect, near, far, array) {
+      const zoom = 1;
+      const top = near * Math.tan(Math.PI / 180 * 0.5 * fov) / zoom;
+      const height = 2 * top;
+      const width = aspect * height;
+      const left = -0.5 * width;
+
+      projectionMatrix.makePerspective(left, left + width, top, top - height, near, far);
+      projectionMatrix.toArray(array);
     }
 
     _translateOnAxis(axis, distance) {
@@ -180,7 +186,7 @@ function HeadsetInjection() {
         // for left eye
 
         if (this._stereoType === stereoTypes.Enable) {
-          this._translateOnAxis(axises.x, -0.2);
+          this._translateOnAxis(axises.x, -0.02);
         }
 
         matrix.compose(position, quaternion, scale);
@@ -192,7 +198,7 @@ function HeadsetInjection() {
         // for right eye
 
         if (this._stereoType === stereoTypes.Enable) {
-          this._translateOnAxis(axises.x, 0.4);
+          this._translateOnAxis(axises.x, 0.04);
         }
 
         matrix.compose(position, quaternion, scale);
@@ -204,7 +210,7 @@ function HeadsetInjection() {
         // reset position
 
         if (this._stereoType === stereoTypes.Enable) {
-          this._translateOnAxis(axises.x, -0.2);
+          this._translateOnAxis(axises.x, -0.02);
         }
       }
 
