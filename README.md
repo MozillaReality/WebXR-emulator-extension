@@ -2,8 +2,8 @@ Status: In development. [Any feedback is very welcome.](https://github.com/Mozil
 
 # WebXR-emulator-extension
 
-This WebExtension enables you to run immersive (VR) WebXR application on your desktop browser without any XR devices.
-It helps WebXR contents creation.
+This WebExtension enables you to run immersive (VR) [WebXR](https://www.w3.org/TR/webxr/) application on your desktop browser without any XR devices.
+It helps your WebXR contents creation.
 
 ## Background
 
@@ -92,7 +92,7 @@ If you click the extension icon, configuration popup opens.
 
 #### Device
 
-You can switch device emulator. Currently just switches degrees of freedom.
+You can switch device emulator. Currently the difference is just degrees of freedom. Not precisely emulated yet.
 
 | Device | Description |
 | ---- | ---- |
