@@ -13,7 +13,6 @@
     "js": [
       "src/math.js",
       "src/configuration.js",
-      "src/event-dispatcher.js",
       "src/controller.js",
       "src/headset.js",
       "src/webxr-polyfill.js",
@@ -34,7 +33,6 @@
   "web_accessible_resources": [
     "src/math.js",
     "src/configuration.js",
-    "src/event-dispatcher.js",
     "src/controller.js",
     "src/headset.js",
     "src/webxr-polyfill.js"

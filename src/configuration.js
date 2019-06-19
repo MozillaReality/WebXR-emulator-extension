@@ -1,7 +1,7 @@
 ﻿function ConfigurationInjection() {
   'use strict';
 
-  class Configuration extends EventDispatcher {
+  class Configuration extends EventTarget {
     constructor() {
       super();
       this.deviceType = Configuration.defaultValues().deviceType;
@@ -10,12 +10,12 @@
 
     setDeviceType(type) {
       this.deviceType = type;
-      this.dispatchEvent('typechange', {type: 'typechange', configuration: this});
+      this.dispatchEvent(new ConfigurationEvent('typechange', this));
     }
 
     setStereoType(type) {
       this.deviceType = type;
-      this.dispatchEvent('typechange', {type: 'typechange', configuration: this});
+      this.dispatchEvent(new ConfigurationEvent('typechange', this));
     }
 
     serialize() {
@@ -40,7 +40,7 @@
         this.stereoType = defaultValues.stereoType;
       }
 
-      this.dispatchEvent('typechange', {type: 'typechange', configuration: this});
+      this.dispatchEvent(new ConfigurationEvent('typechange', this));
     }
 
     static deviceTypes() {
@@ -63,6 +63,13 @@
         deviceType: Configuration.deviceTypes().OculusGo,
         stereoType: Configuration.stereoTypes().Enable
       };
+    }
+  }
+
+  class ConfigurationEvent extends Event {
+    constructor(type, configuration) {
+      super(type);
+      this.configuration = configuration;
     }
   }
 

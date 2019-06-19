@@ -1,6 +1,5 @@
 const source =  'let xrconfiguration;'
 + '(function() {'
-+   'const EventDispatcher = (' + EventDispatcherInjection + ')();'
 +   'const Configuration = (' + ConfigurationInjection + ')();'
 +   'const _Math = (' + MathInjection + ')();'
 +   'const Controller = (' + ControllerInjection + ')();'
