@@ -173,10 +173,10 @@ function ControllerInjection() {
             quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.x, -0.02));
           }
           if (keyPressed[keys.turnClock]) {
-            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, -0.02));
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, 0.02));
           }
           if (keyPressed[keys.turnCounterClock]) {
-            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, 0.02));
+            quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, -0.02));
           }
         }
       }
