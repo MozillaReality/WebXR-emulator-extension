@@ -15,7 +15,7 @@ function WebXRPolyfillInjection() {
 
   // https://www.w3.org/TR/webxr/#xrsession-interface
 
-  class XRSession extends EventDispatcher {
+  class XRSession extends EventTarget {
     constructor() {
       super();
       this.environmentBlendMode = null;
@@ -58,16 +58,16 @@ function WebXRPolyfillInjection() {
     }
 
     end() {
-      this.dispatchEvent('end', {});
+      this.dispatchEvent(new XRSessionEvent('end', this));
       return Promise.resolve();
     }
 
     _fireSelectStart(controller) {
-      this.dispatchEvent('selectstart', {type: 'selectstart', inputSource: this.inputSources[0]});
+      this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[0]));
     }
 
     _fireSelectEnd(controller) {
-      this.dispatchEvent('selectend', {type: 'selectend', inputSource: this.inputSources[0]});
+      this.dispatchEvent(new XRInputSourceEvent('selectend', this._frame, this.inputSources[0]));
     }
   }
 
@@ -215,6 +215,36 @@ function WebXRPolyfillInjection() {
       this.targetRaySpace = null;
       this.gripSpace = null;
       this.gamepad = gamepad;
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrsessionevent-interface
+
+  class XRSessionEvent extends Event {
+    constructor(type, session) {
+      super(type);
+      this.session = session;
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrinputsourceevent-interface
+
+  class XRInputSourceEvent extends Event {
+    constructor(type, frame, inputSource, buttonIndex) {
+      super(type);
+      this.frame = frame;
+      this.inputSource = inputSource;
+      this.buttonIndex = buttonIndex !== undefined ? buttonIndex : null;
+    }
+  }
+
+  // https://www.w3.org/TR/webxr/#xrreferencespaceevent-interface
+
+  class XRReferenceSpaceEvent extends Event {
+    constructor(type, referenceSpace, transform) {
+      super(type);
+      this.referenceSpace = referenceSpace;
+      this.transform = transform;
     }
   }
 
