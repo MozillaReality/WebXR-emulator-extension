@@ -3,13 +3,46 @@ function WebXRPolyfillInjection() {
 
   // https://www.w3.org/TR/webxr/#xr-interface
 
-  class XR {
+  class XR extends EventTarget {
+    constructor() {
+      super();
+      this._device = null;
+      this._devices = [];
+    }
+
     supportsSession(mode) {
-      return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const scope = this;
+
+        function checkMode() {
+          scope.removeEventListener('devicechange', checkMode);
+
+          return scope._device.modes.indexOf(mode) !== -1
+            ? resolve()
+            : reject(new DOMException('NotSupportedError'));
+        }
+
+        this.addEventListener('devicechange', checkMode);
+
+        if (this._device !== null) {
+          checkMode();
+        }
+      });
     }
 
     requestSession(mode) {
       return Promise.resolve(new XRSession());
+    }
+
+    _activateDevice(device) {
+      if (this._devices.indexOf(device)) {
+        this._devices.push(device);
+      }
+
+      if (this._device !== device) {
+        this._device = device;
+        this.dispatchEvent(new Event('devicechange'));
+      }
     }
   }
 
@@ -24,22 +57,19 @@ function WebXRPolyfillInjection() {
 
       this._frame = new XRFrame(this);
 
-      controller.setSession(this);
-      headset.setSession(this);
-
       this.updateRenderState({});
 
       this.inputSources = [
-        new XRInputSource(this, controller.getGamepad())
+        new XRInputSource(this, xrDeviceManager.getGamepad())
       ];
     }
 
     updateRenderState(option) {
       this.renderState = new XRRenderState(option);
-      headset.updateProjectionMatrices();
     }
 
     requestReferenceSpace(type) {
+      xrDeviceManager.setSession(this);
       return Promise.resolve(new XRReferenceSpace());
     }
 
@@ -250,6 +280,14 @@ function WebXRPolyfillInjection() {
 
   if (navigator.xr === undefined) {
     navigator.xr = new XR();
+  }
+
+  if (window.XR === undefined) {
+    window.XR = XR;
+  }
+
+  if (window.XRSession === undefined) {
+    window.XRSession = XRSession;
   }
 
   if (window.XRWebGLLayer === undefined) {
