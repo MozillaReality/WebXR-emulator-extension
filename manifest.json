@@ -12,10 +12,13 @@
     "matches": ["<all_urls>"],
     "js": [
       "src/math.js",
-      "src/configuration.js",
       "src/controller.js",
       "src/headset.js",
       "src/webxr-polyfill.js",
+      "src/device-manager.js",
+      "src/devices/base.js",
+      "src/devices/oculus-go.js",
+      "src/devices/oculus-quest.js",
       "content-script.js"
     ],
     "run_at": "document_start",
@@ -32,7 +35,6 @@
   "manifest_version": 2,
   "web_accessible_resources": [
     "src/math.js",
-    "src/configuration.js",
     "src/controller.js",
     "src/headset.js",
     "src/webxr-polyfill.js"

@@ -7,15 +7,6 @@ function HeadsetInjection() {
 
   const projectionMatrix = new _Math.Matrix4();
 
-  const defaultConfigurations = Configuration.defaultValues();
-  const deviceTypes = Configuration.deviceTypes();
-  const stereoTypes = Configuration.stereoTypes();
-
-  const capabilities = {};
-  capabilities[deviceTypes.None] = {position: false, rotation: false};
-  capabilities[deviceTypes.OculusGo] = {position: false, rotation: true};
-  capabilities[deviceTypes.OculusQuest] = {position: true, rotation: true};
-
   const axises = {
     x: new _Math.Vector3(1, 0, 0),
     y: new _Math.Vector3(0, 1, 0),
@@ -23,10 +14,12 @@ function HeadsetInjection() {
   };
 
   class Headset {
-    constructor() {
-      this.session = null;
-      this._deviceType = defaultConfigurations.deviceType;
-      this._stereoType = defaultConfigurations.stereoType;
+    constructor(device, hasPosition, hasRotation) {
+      this.device = device;
+      this.hasPosition = hasPosition;
+      this.hasRotation = hasRotation;
+      this.stereoEnabled = true;
+      this.active = true;
 
       this._keys = {
         disable: 16,          // shift
@@ -57,6 +50,14 @@ function HeadsetInjection() {
       this._matrix = new _Math.Matrix4();
       this._matrixInverse = new _Math.Matrix4();
 
+      this.device.addEventListener('sessionupdate', event => {
+        this._updateViewport();
+        this._updateProjectionMatrices();
+      });
+
+      this._updateViewport();
+      this._updateProjectionMatrices();
+
       window.addEventListener('keydown', event => {
         if (this._keyPressed[event.keyCode] !== undefined) {
           this._keyPressed[event.keyCode] = true;
@@ -72,41 +73,65 @@ function HeadsetInjection() {
       const scope = this;
 
       function animationLoop() {
-        requestAnimationFrame(animationLoop);
-        scope._updateHeadset();
+        if (scope.active) {
+          requestAnimationFrame(animationLoop);
+          scope._updateHeadset();
+        }
       }
 
       animationLoop();
     }
 
-    setSession(session) {
-      this.session = session;
-    }
+    _updateProjectionMatrices() {
+      const session = this.device.session;
 
-    updateProjectionMatrices() {
-      if (!this.session || !this.session.renderState) {
+      if (!session || !session.renderState) {
         return;
       }
 
-      const renderState = this.session.renderState;
+      const renderState = session.renderState;
       const depthNear = renderState.depthNear;
       const depthFar = renderState.depthFar;
       const inlineVerticalFieldOfView = renderState.inlineVerticalFieldOfView;
-      const aspect = window.innerWidth / window.innerHeight * (this._stereoType === stereoTypes.Enable ? 0.5 : 1.0);
+      const aspect = window.innerWidth / window.innerHeight * (this.stereoEnabled ? 0.5 : 1.0);
 
       for (let i = 0; i < 2; i++) {
-        const view = this.session._frame._viewerPose.views[i];
+        const view = session._frame._viewerPose.views[i];
         const fov = inlineVerticalFieldOfView * 180 / Math.PI
         this._updateProjectionMatrix(fov, aspect, depthNear, depthFar, view.projectionMatrix);
       }
     }
 
-    setDeviceType(type) {
-      this._deviceType = type;
+    enableStereo(enable) {
+      this.stereoEnabled = enable;
     }
 
-    setStereoType(type) {
-      this._stereoType = type;
+    _updateViewport() {
+      const session = this.device.session;
+
+      if (!session ||
+          !session.renderState ||
+          !session.renderState.baseLayer ||
+          !session.renderState.baseLayer._viewports) {
+        return;
+      }
+
+      const viewports = session.renderState.baseLayer._viewports;
+      for (let i = 0; i < 2; i++) {
+        // @TODO: Use XREye.left/right?
+        const viewport = viewports[i];
+
+        if (this.stereoEnabled) {
+          viewport.x = i === 0 ? 0 : window.innerWidth / 2 * window.devicePixelRatio;
+          viewport.width = window.innerWidth / 2 * window.devicePixelRatio;
+        } else {
+          viewport.x = i === 0 ? 0 : window.innerWidth * window.devicePixelRatio;
+          viewport.width = i === 0 ? window.innerWidth * window.devicePixelRatio : 0;
+        }
+
+        viewport.y = 0;
+        viewport.height = window.innerHeight * window.devicePixelRatio;
+      }
     }
 
     _updateProjectionMatrix(fov, aspect, near, far, array) {
@@ -128,6 +153,7 @@ function HeadsetInjection() {
     }
 
     _updateHeadset() {
+      const session = this.device.session;
       const keys = this._keys;
       const keyPressed = this._keyPressed;
       const position = this._position;
@@ -136,10 +162,11 @@ function HeadsetInjection() {
       const scale = this._scale;
       const matrix = this._matrix;
       const matrixInverse = this._matrixInverse;
-      const capability = capabilities[this._deviceType];
+      const hasPosition = this.hasPosition;
+      const hasRotation = this.hasRotation;
 
       if (!keyPressed[keys.disable]) {
-        if (capability.position) {
+        if (hasPosition) {
           if (keyPressed[keys.moveLeft]) {
             this._translateOnAxis(axises.x, -0.02);
           }
@@ -160,7 +187,7 @@ function HeadsetInjection() {
           }
         }
 
-        if (capability.rotation) {
+        if (hasRotation) {
           if (keyPressed[keys.turnLeft]) {
             quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.y, 0.02));
           }
@@ -182,62 +209,40 @@ function HeadsetInjection() {
         }
       }
 
-      if (this.session) {
+      if (session) {
         // for left eye
 
-        if (this._stereoType === stereoTypes.Enable) {
+        if (this.stereoEnabled) {
           this._translateOnAxis(axises.x, -0.02);
         }
 
         matrix.compose(position, quaternion, scale);
         matrixInverse.getInverse(matrix);
 
-        matrix.toArray(this.session._frame._viewerPose.views[0].transform.matrix);
-        matrixInverse.toArray(this.session._frame._viewerPose.views[0].transform.inverse.matrix);
+        matrix.toArray(session._frame._viewerPose.views[0].transform.matrix);
+        matrixInverse.toArray(session._frame._viewerPose.views[0].transform.inverse.matrix);
 
         // for right eye
 
-        if (this._stereoType === stereoTypes.Enable) {
+        if (this.stereoEnabled) {
           this._translateOnAxis(axises.x, 0.04);
         }
 
         matrix.compose(position, quaternion, scale);
         matrixInverse.getInverse(matrix);
 
-        matrix.toArray(this.session._frame._viewerPose.views[1].transform.matrix);
-        matrixInverse.toArray(this.session._frame._viewerPose.views[1].transform.inverse.matrix);
+        matrix.toArray(session._frame._viewerPose.views[1].transform.matrix);
+        matrixInverse.toArray(session._frame._viewerPose.views[1].transform.inverse.matrix);
 
         // reset position
 
-        if (this._stereoType === stereoTypes.Enable) {
+        if (this.stereoEnabled) {
           this._translateOnAxis(axises.x, -0.02);
         }
       }
 
       matrix.compose(position, quaternion, scale);
       matrixInverse.getInverse(matrix);
-
-      if (this.session &&
-          this.session.renderState.baseLayer &&
-          this.session.renderState.baseLayer._viewports) {
-        const viewports = this.session.renderState.baseLayer._viewports;
-
-        for (let i = 0; i < 2; i++) {
-          // @TODO: Use XREye.left/right?
-          const viewport = viewports[i];
-
-          if (this._stereoType === stereoTypes.Enable) {
-            viewport.x = i === 0 ? 0 : window.innerWidth / 2 * window.devicePixelRatio;
-            viewport.width = window.innerWidth / 2 * window.devicePixelRatio;
-          } else {
-            viewport.x = i === 0 ? 0 : window.innerWidth * window.devicePixelRatio;
-            viewport.width = i === 0 ? window.innerWidth * window.devicePixelRatio : 0;
-          }
-
-          viewport.y = 0;
-          viewport.height = window.innerHeight * window.devicePixelRatio;
-        }
-      }
     }
   }
 

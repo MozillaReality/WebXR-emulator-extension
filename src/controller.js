@@ -5,17 +5,6 @@ function ControllerInjection() {
   const tmpVector3 = new _Math.Vector3();
   const tmpQuaternion = new _Math.Quaternion();
   const tmpMatrix3 = new _Math.Matrix3();
-  const deviceTypes = Configuration.deviceTypes();
-
-  const capabilities = {};
-  capabilities[deviceTypes.None] = {position: false, rotation: false};
-  capabilities[deviceTypes.OculusGo] = {position: false, rotation: true};
-  capabilities[deviceTypes.OculusQuest] = {position: true, rotation: true};
-
-  const ids = {};
-  ids[deviceTypes.None] = 'None';
-  ids[deviceTypes.OculusGo] = 'Oculus Go Controller';
-  ids[deviceTypes.OculusQuest] = 'Oculus Quest Controller';
 
   const axises = {
     x: new _Math.Vector3(1, 0, 0),
@@ -24,9 +13,11 @@ function ControllerInjection() {
   };
 
   class Controller {
-    constructor() {
-      this.session = null;
-      this._deviceType = deviceTypes.None;
+    constructor(device, hasPosition, hasRotation) {
+      this.device = device;
+      this.hasPosition = hasPosition;
+      this.hasRotation = hasRotation;
+      this.active = true;
 
       this._keys = {
         enable: 16,           // shift
@@ -52,7 +43,6 @@ function ControllerInjection() {
       }
 
       this._gamepad = {
-        id: ids[this._deviceType],
         pose: {
           hasPosition: true,
           position: [0, 0, 0],
@@ -85,8 +75,10 @@ function ControllerInjection() {
       const scope = this;
 
       function animationLoop() {
-        requestAnimationFrame(animationLoop);
-        scope._update();
+        if (scope.active) {
+          requestAnimationFrame(animationLoop);
+          scope._update();
+        }
       }
 
       animationLoop();
@@ -94,15 +86,6 @@ function ControllerInjection() {
 
     getGamepad() {
       return this._gamepad;
-    }
-
-    setSession(session) {
-      this.session = session;
-    }
-
-    setDeviceType(type) {
-      this._deviceType = type;
-      this._gamepad.id = ids[type];
     }
 
     _translateOnAxis(axis, distance) {
@@ -113,6 +96,7 @@ function ControllerInjection() {
     }
 
     _update() {
+      const session = this.device.session;
       const keys = this._keys;
       const keyPressed = this._keyPressed;
       const gamepad = this._gamepad;
@@ -121,24 +105,25 @@ function ControllerInjection() {
       const quaternion = this._quaternion;
       const scale = this._scale;
       const matrix = this._matrix;
-      const capability = capabilities[this._deviceType];
+      const hasPosition = this.hasPosition;
+      const hasRotation = this.hasRotation;
 
       if (keyPressed[keys.trigger] && !gamepad.buttons[1].pressed) {
         gamepad.buttons[1].pressed = true;
 
-        if (this.session) {
-          this.session._fireSelectStart(this);
+        if (session) {
+          session._fireSelectStart(this);
         }
       } else if (!keyPressed[keys.trigger] && gamepad.buttons[1].pressed) {
         gamepad.buttons[1].pressed = false;
 
-        if (this.session) {
-          this.session._fireSelectEnd(this);
+        if (session) {
+          session._fireSelectEnd(this);
         }
       }
 
       if (keyPressed[keys.enable]) {
-        if (capability.position) {
+        if (hasPosition) {
           if (keyPressed[keys.moveLeft]) {
             this._translateOnAxis(axises.x, -0.02);
           }
@@ -159,7 +144,7 @@ function ControllerInjection() {
           }
         }
 
-        if (capability.rotation) {
+        if (hasRotation) {
           if (keyPressed[keys.turnLeft]) {
             quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.y, 0.02));
           }
@@ -186,8 +171,8 @@ function ControllerInjection() {
       position.toArray(gamepad.pose.position);
       quaternion.toArray(gamepad.pose.orientation);
 
-      if (this.session) {
-        matrix.toArray(this.session._frame._pose.transform.matrix);
+      if (session) {
+        matrix.toArray(session._frame._pose.transform.matrix);
       }
     }
   }

@@ -1,19 +1,14 @@
-const source =  'let xrconfiguration;'
+const source =  'let xrDeviceManager;'
 + '(function() {'
-+   'const Configuration = (' + ConfigurationInjection + ')();'
 +   'const _Math = (' + MathInjection + ')();'
-+   'const Controller = (' + ControllerInjection + ')();'
++   'const XRDeviceManager = (' + XRDeviceManagerInjection + ')();'
++   'const XRDeviceBase = (' + XRDeviceBaseInjection + ')();'
++   'const OculusGoDevice = (' + OculusGoDeviceInjection + ')();'
++   'const OculusQuestDevice = (' + OculusQuestDeviceInjection + ')();'
 +   'const Headset = (' + HeadsetInjection + ')();'
-+   'const controller = new Controller();'
-+   'const headset = new Headset();'
++   'const Controller = (' + ControllerInjection + ')();'
 +   '(' + WebXRPolyfillInjection + ')();'
-+   'xrconfiguration = new Configuration();'
-+   'xrconfiguration.addEventListener(\'typechange\', event => {'
-+     'const deviceType = event.configuration.deviceType;'
-+     'headset.setDeviceType(deviceType);'
-+     'controller.setDeviceType(deviceType);'
-+     'headset.setStereoType(event.configuration.stereoType);'
-+   '});'
++   'xrDeviceManager = new XRDeviceManager();'
 +   'console.log(this);'
 + '})();';
 const script = document.createElement('script');
@@ -27,9 +22,8 @@ chrome.storage.local.get(configurationId, result => {
   const script2 = document.createElement('script');
   const source2 = ''
   + '(function() {'
-  +   'const Configuration = xrconfiguration.constructor;'
-  +   'xrconfiguration.deserialize(\'' + (result[configurationId] || '') + '\');'
-  +   'console.log(xrconfiguration);'
+  +   'xrDeviceManager.deserialize(\'' + (result[configurationId] || '') + '\');'
+  +   'console.log(xrDeviceManager);'
   + '})();';
   script2.textContent = source2;
   (document.head || document.documentElement).appendChild(script2);
