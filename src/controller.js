@@ -186,22 +186,6 @@ function ControllerInjection() {
         if (keyPressed[keys.touchDown]) {
           gamepad.axes[1] += 1.0;
         }
-
-        gamepad.axes[2] = 0.0;
-        gamepad.axes[3] = 0.0;
-
-        if (keyPressed[keys.touch2Left]) {
-          gamepad.axes[2] -= 1.0;
-        }
-        if (keyPressed[keys.touch2Right]) {
-          gamepad.axes[2] += 1.0;
-        }
-        if (keyPressed[keys.touch2Up]) {
-          gamepad.axes[3] -= 1.0;
-        }
-        if (keyPressed[keys.touch2Down]) {
-          gamepad.axes[3] += 1.0;
-        }
       }
 
       matrix.compose(position, quaternion, scale);
