@@ -20,20 +20,24 @@ function ControllerInjection() {
       this.active = true;
 
       this._keys = {
-        enable: 16,           // shift
-        trigger: 32,          // space
-        moveLeft: 65,         // a
-        moveRight: 68,        // d
-        moveUp: 87,           // w
-        moveDown: 83,         // s
-        moveBackward: 90,     // z
-        moveForward: 88,      // x
-        turnUp: 73,           // i
-        turnLeft: 74,         // j
-        turnDown: 75,         // k
-        turnRight: 76,        // l
-        turnClock: 77,        // m
-        turnCounterClock: 188 // comma
+        enable: 16,            // shift
+        trigger: 32,           // space
+        moveLeft: 65,          // a
+        moveRight: 68,         // d
+        moveUp: 87,            // w
+        moveDown: 83,          // s
+        moveBackward: 90,      // z
+        moveForward: 88,       // x
+        turnUp: 73,            // i
+        turnLeft: 74,          // j
+        turnDown: 75,          // k
+        turnRight: 76,         // l
+        turnClock: 77,         // m
+        turnCounterClock: 188, // comma
+        touchLeft: 37,         // left
+        touchRight: 39,        // right
+        touchUp: 38,           // up
+        touchDown: 40          // down
       };
 
       this._keyPressed = {};
@@ -51,7 +55,9 @@ function ControllerInjection() {
         buttons: [
           {pressed: false},
           {pressed: false}
-        ]
+        ],
+        mapping: 'xr-standard',
+        axes: [0, 0]
       };
 
       this._position = new _Math.Vector3(0.2, 0.9, -0.1);
@@ -163,6 +169,38 @@ function ControllerInjection() {
           if (keyPressed[keys.turnCounterClock]) {
             quaternion.multiply(tmpQuaternion.setFromAxisAngle(axises.z, -0.02));
           }
+        }
+
+        gamepad.axes[0] = 0.0;
+        gamepad.axes[1] = 0.0;
+
+        if (keyPressed[keys.touchLeft]) {
+          gamepad.axes[0] -= 1.0;
+        }
+        if (keyPressed[keys.touchRight]) {
+          gamepad.axes[0] += 1.0;
+        }
+        if (keyPressed[keys.touchUp]) {
+          gamepad.axes[1] -= 1.0;
+        }
+        if (keyPressed[keys.touchDown]) {
+          gamepad.axes[1] += 1.0;
+        }
+
+        gamepad.axes[2] = 0.0;
+        gamepad.axes[3] = 0.0;
+
+        if (keyPressed[keys.touch2Left]) {
+          gamepad.axes[2] -= 1.0;
+        }
+        if (keyPressed[keys.touch2Right]) {
+          gamepad.axes[2] += 1.0;
+        }
+        if (keyPressed[keys.touch2Up]) {
+          gamepad.axes[3] -= 1.0;
+        }
+        if (keyPressed[keys.touch2Down]) {
+          gamepad.axes[3] += 1.0;
         }
       }
 
