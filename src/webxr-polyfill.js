@@ -52,12 +52,10 @@ function WebXRPolyfillInjection() {
     constructor() {
       super();
       this.environmentBlendMode = null;
-      this.renderState = null;
+      this.renderState = new XRRenderState();
       this.viewerSpace = null;
 
       this._frame = new XRFrame(this);
-
-      this.updateRenderState({});
 
       this.inputSources = [
         new XRInputSource(this, xrDeviceManager.getGamepad())
@@ -65,7 +63,7 @@ function WebXRPolyfillInjection() {
     }
 
     updateRenderState(option) {
-      this.renderState = new XRRenderState(option);
+      this.renderState._update(option);
     }
 
     requestReferenceSpace(type) {
@@ -106,11 +104,33 @@ function WebXRPolyfillInjection() {
   class XRRenderState {
     constructor(option) {
       option = option || {};
-      this.depthNear = option.depthNear || 0.1;
-      this.depthFar = option.depthFar || 1000.0;
-      this.inlineVerticalFieldOfView = option.inlineVerticalFieldOfView || Math.PI * 0.5;
-      this.baseLayer = option.baseLayer;
-      this.outputContext = option.outputContext;
+      this.depthNear = 0.1;
+      this.depthFar = 1000.0;
+      this.inlineVerticalFieldOfView = Math.PI * 0.5;
+      this.baseLayer = null;
+      this.outputContext = null;
+    }
+
+    _update(option) {
+      if (option.depthNear !== undefined) {
+        this.depthNear = option.depthNear;
+      }
+
+      if (option.depthFar !== undefined) {
+        this.depthFar = option.depthFar;
+      }
+
+      if (option.inlineVerticalFieldOfView !== undefined) {
+        this.inlineVerticalFieldOfView = option.inlineVerticalFieldOfView;
+      }
+
+      if (option.baseLayer !== undefined) {
+        this.baseLayer = option.baseLayer;
+      }
+
+      if (option.outputContext !== undefined) {
+        this.outputContext = option.outputContext;
+      }
     }
   }
 
