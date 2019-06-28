@@ -54,6 +54,7 @@ function WebXRPolyfillInjection() {
       this.environmentBlendMode = null;
       this.renderState = new XRRenderState();
       this.viewerSpace = null;
+      this._ended = false;
 
       this._frame = new XRFrame(this);
 
@@ -63,7 +64,12 @@ function WebXRPolyfillInjection() {
     }
 
     updateRenderState(option) {
+      if (this._ended) {
+        throw new DOMException('InvalidStateError');
+      }
+
       this.renderState._update(option);
+      xrDeviceManager.setSession(this);
     }
 
     requestReferenceSpace(type) {
@@ -86,6 +92,7 @@ function WebXRPolyfillInjection() {
     }
 
     end() {
+      this._ended = true;
       this.dispatchEvent(new XRSessionEvent('end', this));
       return Promise.resolve();
     }
@@ -144,6 +151,10 @@ function WebXRPolyfillInjection() {
     }
 
     getViewerPose(space) {
+      if (this.session._ended) {
+        return null;
+      }
+
       return this._viewerPose;
     }
 
