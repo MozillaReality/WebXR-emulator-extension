@@ -204,9 +204,22 @@ function WebXRPolyfillInjection() {
   // https://www.w3.org/TR/webxr/#xrrigidtransform-interface
 
   class XRRigidTransform {
-    constructor() {
+    constructor(position, orientation) {
       this.position = {x: 0, y: 0, z: 0, w: 1};
       this.orientation = {x: 0, y: 0, z: 0, w: 1};
+
+      if (position !== undefined) {
+        this.position.x = position.x;
+        this.position.y = position.y;
+        this.position.z = position.z;
+      }
+
+      if (orientation !== undefined) {
+        this.orientation.x = orientation.x;
+        this.orientation.y = orientation.y;
+        this.orientation.z = orientation.z;
+        this.orientation.w = orientation.w;
+      }
 
       this.matrix = new Float32Array(16);
       this.matrix[0] = 1;
