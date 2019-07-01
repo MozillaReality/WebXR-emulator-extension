@@ -1,3 +1,8 @@
+// Synchronously adding WebXR polyfill because
+// some applications for example Three.js WebVR examples
+// check if WebXR is available by synchronously checking
+// navigator.xr, window.XR or whatever.
+
 const source =  'let xrDeviceManager;'
 + '(function() {'
 +   'const _Math = (' + MathInjection + ')();'
@@ -15,6 +20,9 @@ const script = document.createElement('script');
 script.textContent = source;
 (document.head || document.documentElement).appendChild(script);
 script.parentNode.removeChild(script);
+
+// No synchronous storage API so reluctantly
+// reflecting configuration asynchronously
 
 const configurationId = 'webxr-extension';
 
