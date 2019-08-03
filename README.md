@@ -39,6 +39,10 @@ Virtual controller
 ![Virtual controller](./screenshots/virtual-controller.gif)
 
 
+## Browsers
+
+We test this project on the latest desktop Firefox/Chrome. [Bug reports from other platforms are very welcome.](https://github.com/MozillaReality/WebXR-emulator-extension/issues)
+
 ## Install
 
 Download this project and install extension to your browser. This extension is in development. I recommend temporary/Developer mode installation.
