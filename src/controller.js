@@ -13,11 +13,14 @@ function ControllerInjection() {
   };
 
   class Controller {
-    constructor(device, hasPosition, hasRotation) {
+    constructor(device, hasPosition, hasRotation, leftRight) {
       this.device = device;
       this.hasPosition = hasPosition;
       this.hasRotation = hasRotation;
       this.active = true;
+
+      // @TODO: define Controller.LEFT/RIGHT
+      this.leftRight = leftRight;
 
       this._keys = {
         enable: 16,            // shift
@@ -61,6 +64,9 @@ function ControllerInjection() {
       };
 
       this._position = new _Math.Vector3(0.2, 0.9, -0.1);
+      if (this.leftRight === 1) {
+        this._position.x = -this._position.x;
+      }
       this._rotation = new _Math.Euler();
       this._quaternion = new _Math.Quaternion();
       this._scale = new _Math.Vector3(1, 1, 1);
@@ -118,13 +124,13 @@ function ControllerInjection() {
         gamepad.buttons[1].pressed = true;
 
         if (session) {
-          session._fireSelectStart(this);
+          session._fireSelectStart(this, this.leftRight);
         }
       } else if (!keyPressed[keys.trigger] && gamepad.buttons[1].pressed) {
         gamepad.buttons[1].pressed = false;
 
         if (session) {
-          session._fireSelectEnd(this);
+          session._fireSelectEnd(this, this.leftRight);
         }
       }
 
@@ -194,7 +200,7 @@ function ControllerInjection() {
       quaternion.toArray(gamepad.pose.orientation);
 
       if (session) {
-        matrix.toArray(session._frame._pose.transform.matrix);
+        matrix.toArray(session._frame._poses[this.leftRight].transform.matrix);
       }
     }
   }

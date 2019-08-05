@@ -25,8 +25,13 @@ function XRDeviceManagerInjection() {
       this.device.setSession(session);
     }
 
-    getGamepad() {
-      return this.device.controller.getGamepad();
+    getGamepads() {
+      const array = [];
+      const controllers = this.device.controllers;
+      for (let i = 0, il = controllers.length; i < il; i++) {
+        array[i] = controllers[i].getGamepad();
+      }
+      return array;
     }
 
     serialize() {
