@@ -56,11 +56,13 @@ function WebXRPolyfillInjection() {
       this.viewerSpace = null;
       this._ended = false;
 
-      this._frame = new XRFrame(this);
+      this.inputSources = [];
+      const gamepads = xrDeviceManager.getGamepads();
+      for (let i = 0, il = gamepads.length; i < il; i++) {
+        this.inputSources[i] = new XRInputSource(this, gamepads[i]);
+      }
 
-      this.inputSources = [
-        new XRInputSource(this, xrDeviceManager.getGamepad())
-      ];
+      this._frame = new XRFrame(this);
     }
 
     updateRenderState(option) {
@@ -97,12 +99,12 @@ function WebXRPolyfillInjection() {
       return Promise.resolve();
     }
 
-    _fireSelectStart(controller) {
-      this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[0]));
+    _fireSelectStart(controller, leftRight) {
+      this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[leftRight]));
     }
 
-    _fireSelectEnd(controller) {
-      this.dispatchEvent(new XRInputSourceEvent('selectend', this._frame, this.inputSources[0]));
+    _fireSelectEnd(controller, leftRight) {
+      this.dispatchEvent(new XRInputSourceEvent('selectend', this._frame, this.inputSources[leftRight]));
     }
   }
 
@@ -146,7 +148,11 @@ function WebXRPolyfillInjection() {
   class XRFrame {
     constructor(session) {
       this.session = session;
-      this._pose = new XRPose();
+      this._poses = [];
+      const inputSources = session.inputSources;
+      for (let i = 0, il = inputSources.length; i < il; i++) {
+        this._poses[i] = new XRPose();
+      }
       this._viewerPose = new XRViewerPose();
     }
 
@@ -159,7 +165,13 @@ function WebXRPolyfillInjection() {
     }
 
     getPose(sourceSpace, destinationSpace) {
-      return this._pose;
+      const inputSources = this.session.inputSources;
+      for (let i = 0, il = inputSources.length; i < il; i++) {
+        if (inputSources[i].targetRaySpace === sourceSpace) {
+          return this._poses[i];
+        }
+      }
+      return null;
     }
   }
 
@@ -286,7 +298,7 @@ function WebXRPolyfillInjection() {
       this._session = session;
       this.handedness = null;
       this.targetRayMode = null;
-      this.targetRaySpace = null;
+      this.targetRaySpace = new XRSpace();
       this.gripSpace = null;
       this.gamepad = gamepad;
     }

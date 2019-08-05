@@ -6,7 +6,7 @@
       this.id = 'None';
       this.modes = ['inline'];
       this.headset = null;
-      this.controller = null;
+      this.controllers = [];
       this.session = null;
     }
 
