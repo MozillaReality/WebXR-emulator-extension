@@ -58,7 +58,7 @@ Download this project and install extension to your browser. This extension is i
 
 ## Usage
 
-Install this extension to your web browser. And then access WebXR application.
+Install this extension to your web browser. And then access WebXR application (for example, [Three.js examples](https://threejs.org/examples/?q=webvr)).
 
 ### Headset and Controller controls
 
