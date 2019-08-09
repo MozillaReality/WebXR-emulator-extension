@@ -1,28 +1,43 @@
 const port = chrome.runtime.connect(null, {name: 'panel'});
+const tabId = chrome.devtools.inspectedWindow.tabId;
 
 // receive message from contentScript via background
 
 port.onMessage.addListener(message => {
-  console.log(message);
   if (message.action === 'webxr-startup') {
     if (assetNodes.headset) {
-      onPoseChange('headset', assetNodes.headset);
+      notifyPoseChange('headset', assetNodes.headset);
     }
     if (assetNodes.rightHand) {
-      onPoseChange('rightHand', assetNodes.rightHand);
+      notifyPoseChange('rightHand', assetNodes.rightHand);
     }
     if (assetNodes.leftHand) {
-      onPoseChange('leftHand', assetNodes.leftHand);
+      notifyPoseChange('leftHand', assetNodes.leftHand);
     }
   }
 });
 
-const onPoseChange = (objectName, node) => {
-  port.postMessage({
+// send messag to contentScript via background
+
+const postMessage = (message) => {
+  message.tabId = tabId;
+  port.postMessage(message);
+};
+
+const notifyPoseChange = (objectName, node) => {
+  postMessage({
     action: 'webxr-pose',
     object: objectName,
     position: node.position.toArray([]),
     quaternion: node.quaternion.toArray([])
+  });
+};
+
+const notifyButtonPressed = (objectName, pressed) => {
+  postMessage({
+    action: 'webxr-button',
+    object: objectName,
+    pressed: pressed
   });
 };
 
@@ -118,7 +133,7 @@ const loadHeadsetAsset = () => {
     assetNodes.headset = parent;
 
     const onChange = () => {
-      onPoseChange('headset', parent);
+      notifyPoseChange('headset', parent);
     };
 
     const controls = createTransformControls(parent, onChange,
@@ -151,7 +166,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       assetNodes.rightHand = parentRight;
 
       const onChange = () => {
-       onPoseChange('rightHand', parentRight); 
+       notifyPoseChange('rightHand', parentRight); 
       };
 
       const controls = createTransformControls(parentRight, onChange,
@@ -167,7 +182,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       assetNodes.leftHand = parentLeft;
 
       const onChange = () => {
-        onPoseChange('leftHand', parentLeft);
+        notifyPoseChange('leftHand', parentLeft);
       };
 
       const controls = createTransformControls(parentLeft, onChange,
@@ -195,14 +210,13 @@ const updateAssetNodes = (deviceIndex) => {
       node.parent.remove(node);
     }
 
-    assetNodes[key] = null;
+    controls.detach(parent);
 
-    if (controls) {
-      controls.detach(parent);
-      transformControls[key] = null;
-    }
+    assetNodes[key] = null;
+    transformControls[key] = null;
   }
 
+  // @TODO: Get information from device profile file or somewhere?
   if (deviceIndex === 1) { // Oculus Go
     loadHeadsetAsset();
     loadControllersAsset(true, false);
@@ -263,20 +277,12 @@ document.getElementById('translateButton').addEventListener('click', event => {
 
 document.getElementById('rightPressButton').addEventListener('click', event => {
   states.rightButtonPressed = !states.rightButtonPressed;
-  port.postMessage({
-    action: 'webxr-button',
-    object: 'rightHand',
-    pressed: states.rightButtonPressed
-  });
+  notifyButtonPressed('rightHand', states.rightButtonPressed);
 }, false);
 
 document.getElementById('leftPressButton').addEventListener('click', event => {
   states.leftButtonPressed = !states.leftButtonPressed;
-  port.postMessage({
-    action: 'webxr-button',
-    object: 'leftHand',
-    pressed: states.leftButtonPressed
-  });
+  notifyButtonPressed('leftHand', states.leftButtonPressed);
 }, false);
 
 const deviceSelect = document.getElementById('deviceSelect');
