@@ -106,5 +106,53 @@ function XRDeviceManagerInjection() {
     }
   }
 
+  window.addEventListener('webxr-pose', event => {
+    const position = event.detail.position;
+    const quaternion = event.detail.quaternion;
+
+    switch (event.detail.object) {
+      case 'headset':
+        if (!xrDeviceManager.device.headset) {
+          return;
+        }
+        xrDeviceManager.device.headset.updatePose(position, quaternion);
+        break;
+
+      case 'rightHand':
+        if (xrDeviceManager.device.controllers.length < 1) {
+          return;
+        }
+        xrDeviceManager.device.controllers[0].updatePose(position, quaternion);
+        break;
+
+      case 'leftHand':
+        if (xrDeviceManager.device.controllers.length < 2) {
+          return;
+        }
+        xrDeviceManager.device.controllers[1].updatePose(position, quaternion);
+        break;
+    }
+  }, false);
+
+  window.addEventListener('webxr-button', event => {
+    const pressed = event.detail.pressed;
+
+    switch (event.detail.object) {
+      case 'rightHand':
+        if (xrDeviceManager.device.controllers.length < 1) {
+          return;
+        }
+        xrDeviceManager.device.controllers[0].updateButtonPressed(pressed);
+        break;
+
+      case 'leftHand':
+        if (xrDeviceManager.device.controllers.length < 2) {
+          return;
+        }
+        xrDeviceManager.device.controllers[1].updateButtonPressed(pressed);
+        break;
+    }
+  }, false);
+
   return XRDeviceManager;
 }

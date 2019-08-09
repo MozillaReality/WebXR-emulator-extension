@@ -1,3 +1,28 @@
+const port = chrome.runtime.connect({name: 'contentScript'});
+
+const dispatchCustomEvent = (type, detail) => {
+  window.dispatchEvent(new CustomEvent(type, {
+    detail: cloneInto ? cloneInto(detail, window) : detail
+  }));
+};
+
+// receive message from panel via background
+
+port.onMessage.addListener(message => {
+  if (message.action === 'webxr-pose') {
+    dispatchCustomEvent('webxr-pose', {
+      object: message.object,
+      position: message.position,
+      quaternion: message.quaternion
+    });
+  } else if (message.action === 'webxr-button') {
+    dispatchCustomEvent('webxr-button', {
+      object: message.object,
+      pressed: message.pressed
+    });
+  }
+});
+
 // Synchronously adding WebXR polyfill because
 // some applications for example Three.js WebVR examples
 // check if WebXR is available by synchronously checking
@@ -36,4 +61,8 @@ chrome.storage.local.get(configurationId, result => {
   script2.textContent = source2;
   (document.head || document.documentElement).appendChild(script2);
   script2.parentNode.removeChild(script2);
+
+  port.postMessage({
+    action: 'webxr-startup'
+  });
 });

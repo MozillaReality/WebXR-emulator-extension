@@ -2,7 +2,12 @@
   "name": "WebXR API Emulation",
   "short_name": "WebXR Emu",
   "version": "0.0.1",
+  "minimum_chrome_version": "10.0",
+  "devtools_page": "devtools.html",
   "description": "WebXR API Emulation",
+  "background": {
+    "scripts": ["background.js"]
+  },
   "permissions": [
     "tabs",
     "<all_urls>",
@@ -26,12 +31,8 @@
   }],
   "browser_action": {
     "default_icon": {},
-    "default_title": "WebXR API Emulation",
-    "default_popup": "config.html"
+    "default_title": "WebXR API Emulation"
   },
-  "permissions": [
-    "storage"
-  ],
   "manifest_version": 2,
   "web_accessible_resources": [
     "src/math.js",

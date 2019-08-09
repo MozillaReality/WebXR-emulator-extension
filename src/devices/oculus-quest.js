@@ -7,7 +7,8 @@
       this.modes.push('immersive-vr');
       this.headset = new Headset(this, true, true);
       this.controllers = [
-        new Controller(this, true, true, 0)
+        new Controller(this, true, true, 0),
+        new Controller(this, true, true, 1)
       ];
     }
   }

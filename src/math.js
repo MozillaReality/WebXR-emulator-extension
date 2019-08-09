@@ -12,7 +12,13 @@ function MathInjection() {
       array[0] = this.x;
       array[1] = this.y;
       array[2] = this.z;
+      return array;
+    }
 
+    fromArray(array) {
+      this.x = array[0];
+      this.y = array[1];
+      this.z = array[2];
       return this;
     }
 
@@ -117,6 +123,14 @@ function MathInjection() {
       array[2] = this.z;
       array[3] = this.w;
 
+      return array;
+    }
+
+    fromArray(array) {
+      this.x = array[0];
+      this.y = array[1];
+      this.z = array[2];
+      this.w = array[3];
       return this;
     }
 
@@ -215,7 +229,7 @@ function MathInjection() {
         array[i] = this.elements[i];
       }
 
-      return this;
+      return array;
     }
 
     compose(position, quaternion, scale) {
