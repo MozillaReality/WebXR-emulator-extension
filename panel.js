@@ -49,6 +49,17 @@ const states = {
   leftButtonPressed: false
 };
 
+const deviceCapabilities = {
+  headset: {
+    hasPosition: false,
+    hasRotation: false
+  },
+  controller: {
+    hasPosition: false,
+    hasRotation: false
+  }
+};
+
 // initialize Three.js objects
 
 // renderer
@@ -115,6 +126,18 @@ const createTransformControls = (target, onChange, enabled) => {
   return controls;
 };
 
+const disableTransformControlsIfNeeded = (controls, capability) => {
+  if (!controls.enabled) {
+    return;
+  }
+
+  if (states.translateMode && !capability.hasPosition) {
+    controls.enabled = false;
+  } else if (!states.translateMode && !capability.hasRotation) {
+    controls.enabled = false;
+  }
+};
+
 // assets
 
 const assetNodes = {
@@ -138,6 +161,7 @@ const loadHeadsetAsset = () => {
 
     const controls = createTransformControls(parent, onChange,
       document.getElementById('headsetCheckbox').checked);
+    disableTransformControlsIfNeeded(controls, deviceCapabilities.headset);
 
     scene.add(controls);
     transformControls.headset = controls;
@@ -171,6 +195,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
 
       const controls = createTransformControls(parentRight, onChange,
         document.getElementById('rightHandCheckbox').checked);
+      disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
 
       scene.add(controls);
       transformControls.rightHand = controls;
@@ -187,6 +212,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
 
       const controls = createTransformControls(parentLeft, onChange,
         document.getElementById('leftHandCheckbox').checked);
+      disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
 
       scene.add(controls);
       transformControls.leftHand = controls;
@@ -216,13 +242,26 @@ const updateAssetNodes = (deviceIndex) => {
     transformControls[key] = null;
   }
 
+  deviceCapabilities.headset.hasPosition = false;
+  deviceCapabilities.headset.hasRotation = false;
+  deviceCapabilities.controller.hasPosition = false;
+  deviceCapabilities.controller.hasRotation = false;
+
   // @TODO: Get information from device profile file or somewhere?
   if (deviceIndex === 1) { // Oculus Go
     loadHeadsetAsset();
     loadControllersAsset(true, false);
+    deviceCapabilities.headset.hasPosition = false;
+    deviceCapabilities.headset.hasRotation = true;
+    deviceCapabilities.controller.hasPosition = false;
+    deviceCapabilities.controller.hasRotation = true;
   } else if (deviceIndex === 2) { // Oculus Quest
     loadHeadsetAsset();
     loadControllersAsset(true, true);
+    deviceCapabilities.headset.hasPosition = true;
+    deviceCapabilities.headset.hasRotation = true;
+    deviceCapabilities.controller.hasPosition = true;
+    deviceCapabilities.controller.hasRotation = true;
   }
 };
 
@@ -238,25 +277,45 @@ window.addEventListener('resize', event => {
 }, false);
 
 const updateControlsEnability = (domElement, controls) => {
-  if (!controls) {
-    return;
-  }
-
   const checked = domElement.checked;
   controls.visible = checked;
   controls.enabled = checked;
 }
 
 document.getElementById('headsetCheckbox').addEventListener('change', event => {
-  updateControlsEnability(event.target, transformControls.headset);
+  const controls = transformControls.headset;
+
+  if (!controls) {
+    return;
+  }
+
+  updateControlsEnability(event.target, controls);
+  disableTransformControlsIfNeeded(controls, deviceCapabilities.headset);
+  render();
 }, false);
 
 document.getElementById('rightHandCheckbox').addEventListener('change', event => {
-  updateControlsEnability(event.target, transformControls.rightHand);
+  const controls = transformControls.rightHand;
+
+  if (!controls) {
+    return;
+  }
+
+  updateControlsEnability(event.target, controls);
+  disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
+  render();
 }, false);
 
 document.getElementById('leftHandCheckbox').addEventListener('change', event => {
-  updateControlsEnability(event.target, transformControls.leftHand);
+  const controls = transformControls.leftHand;
+
+  if (!controls) {
+    return;
+  }
+
+  updateControlsEnability(event.target, controls);
+  disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
+  render();
 }, false);
 
 document.getElementById('translateButton').addEventListener('click', event => {
@@ -270,6 +329,9 @@ document.getElementById('translateButton').addEventListener('click', event => {
     }
  
     controls.setMode(states.translateMode ? 'translate' : 'rotate');
+    updateControlsEnability(document.getElementById(key + 'Checkbox'), controls);
+    disableTransformControlsIfNeeded(controls,
+      key === 'headset' ? deviceCapabilities.headset : deviceCapabilities.controller);
   }
 
   render();
