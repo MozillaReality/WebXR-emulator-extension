@@ -24,16 +24,11 @@ This extension resolves the problems by providing a way to run immersive WebXR a
 - WebXR API polyfill
 - Headset device emulator
 - Controller device emulator
-- Virtual controller (WIP)
+- [Virtual controller (WIP)](./screenshots/virtual-controller.gif)
 
 Currently this extension is very early stage. 
 
 - Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far
-
-Virtual controller idea(WIP)
-
-![Virtual controller](./screenshots/virtual-controller.gif)
-
 
 ## Browsers
 
