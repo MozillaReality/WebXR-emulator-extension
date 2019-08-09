@@ -1,0 +1,59 @@
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        margin: 0;
+        background-color: #fff;
+        color: #000;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      #info {
+        position: absolute;
+        top: 0px;
+        padding: 10px;
+        box-sizing: border-box;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      Device:
+      <select id="deviceSelect">
+        <option value="0">None</option>
+        <option value="1">Oculus Go</option>
+        <option value="2">Oculus Quest</option>
+      </select>
+      <br />
+      Stereo Effect:
+      <select id="stereoSelect">
+        <option value="0">Enable</option>
+        <option value="1">Disable</option>
+      </select>
+      <br /><br />
+      Reload the page to reflect<br />
+      the above configuration.<br /><br />
+      <input id="headsetCheckbox" type="checkbox">headset</input><br />
+      <input id="rightHandCheckbox" type="checkbox">right controller</input><br />
+      <input id="leftHandCheckbox" type="checkbox">left controller</input><br />
+      <button id="translateButton">translate/rotate</button><br />
+      <button id="rightPressButton">right press/release</button><br />
+      <button id="leftPressButton">left press/release</button><br />
+    </div>
+    <script src="three.js"></script>
+    <script src="GLTFLoader.js"></script>
+    <script src="OBJLoader.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="TransformControls.js"></script>
+    <script src="panel.js"></script>
+  </body>
+</html>
