@@ -2,7 +2,7 @@ const port = chrome.runtime.connect({name: 'contentScript'});
 
 const dispatchCustomEvent = (type, detail) => {
   window.dispatchEvent(new CustomEvent(type, {
-    detail: cloneInto ? cloneInto(detail, window) : detail
+    detail: typeof cloneInto !== 'undefined' ? cloneInto(detail, window) : detail
   }));
 };
 
