@@ -5,6 +5,9 @@ Status: In development. [Any feedback is very welcome.](https://github.com/Mozil
 This WebExtension enables you to run immersive (VR) [WebXR](https://www.w3.org/TR/webxr/) application on your desktop browser without any XR devices.
 It helps your WebXR contents creation.
 
+![Screenshot](./screenshots/screenshot.gif)
+
+
 ## Background
 
 Currently immersive WebXR contents creation is hard because of few browsers and devices supporting WebXR.
@@ -27,14 +30,7 @@ Currently this extension is very early stage.
 
 - Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far
 
-
-## Videos
-
-WebXR API and controller emulation
-
-![Emulation](./screenshots/controller-emulator.gif)
-
-Virtual controller
+Virtual controller idea(WIP)
 
 ![Virtual controller](./screenshots/virtual-controller.gif)
 
@@ -58,39 +54,9 @@ Download this project and install extension to your browser. This extension is i
 
 ## Usage
 
-Install this extension to your web browser. And then access WebXR application (for example, [Three.js examples](https://threejs.org/examples/?q=webvr)).
-
-### Headset and Controller controls
-
-You can control Headset and Controller with keys. I may update UI later.
-
-Headset and Controller common
-
-| Key | function |
-| ---- | ---- |
-| shift | While releasing: Headset, While pressing: Controller |
-| a | Move left |
-| d | Move right |
-| w | Move up |
-| s | Move down |
-| z | Move forward |
-| x | Move backward |
-| j | turn left |
-| l | turn right |
-| i | turn up |
-| k | turn down |
-| , | turn clockwise |
-| m | turn counter-clockwise |
-
-Only Controller
-
-| Key | function |
-| ---- | ---- |
-| Space | Trigger button |
+Install this extension to your web browser, access WebXR application (for example, [Three.js examples](https://threejs.org/examples/?q=webvr)), and then open WebXR panel in developer tool. You can control position and roation of devices in the panel.
 
 ### Configuration
-
-If you click the extension icon, configuration popup opens.
 
 ![Configuration](./screenshots/configuration.png)
 
