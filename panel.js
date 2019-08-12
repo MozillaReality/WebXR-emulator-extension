@@ -365,7 +365,7 @@ const storeValues = () => {
 // load configuration and then load assets
 
 const configurationId = 'webxr-extension';
-const initialValues = '1:0'.split(':'); // @TODO: Import from Configuration
+const initialValues = [1, 0]; // @TODO: Import from Configuration
 
 chrome.storage.local.get(configurationId, result => {
   const values = (result[configurationId] || '').split(':');
