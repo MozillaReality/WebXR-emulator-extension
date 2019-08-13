@@ -5,19 +5,43 @@ const tabId = chrome.devtools.inspectedWindow.tabId;
 
 port.onMessage.addListener(message => {
   if (message.action === 'webxr-startup') {
-    if (assetNodes.headset) {
-      notifyPoseChange('headset', assetNodes.headset);
-    }
-    if (assetNodes.rightHand) {
-      notifyPoseChange('rightHand', assetNodes.rightHand);
-    }
-    if (assetNodes.leftHand) {
-      notifyPoseChange('leftHand', assetNodes.leftHand);
-    }
+    notifyPoses();
   }
 });
 
-// send messag to contentScript via background
+// send message to contentScript via background
+
+const resetPoses = () => {
+  if (assetNodes.headset) {
+    const headset = assetNodes.headset;
+    headset.position.copy(defaultTransforms.headset.position);
+    headset.rotation.copy(defaultTransforms.headset.rotation);
+  }
+  if (assetNodes.rightHand) {
+    const contoller = assetNodes.rightHand;
+    contoller.position.copy(defaultTransforms.rightHand.position);
+    contoller.rotation.copy(defaultTransforms.rightHand.rotation);
+  }
+  if (assetNodes.leftHand) {
+    const contoller = assetNodes.leftHand;
+    contoller.position.copy(defaultTransforms.leftHand.position);
+    contoller.rotation.copy(defaultTransforms.leftHand.rotation);
+  }
+  notifyPoses();
+  render();
+};
+
+const notifyPoses = () => {
+  if (assetNodes.headset) {
+    notifyPoseChange('headset', assetNodes.headset);
+  }
+  if (assetNodes.rightHand) {
+    notifyPoseChange('rightHand', assetNodes.rightHand);
+  }
+  if (assetNodes.leftHand) {
+    notifyPoseChange('leftHand', assetNodes.leftHand);
+  }
+};
 
 const postMessage = (message) => {
   message.tabId = tabId;
@@ -57,6 +81,24 @@ const deviceCapabilities = {
   controller: {
     hasPosition: false,
     hasRotation: false
+  }
+};
+
+
+// @TODO: Currently the values are　rough.
+//        Set more appropriate values
+const defaultTransforms = {
+  headset: {
+    position: new THREE.Vector3(0, 2, 0),
+    rotation: new THREE.Euler(0, 0, 0)
+  },
+  rightHand: {
+    position: new THREE.Vector3(0.5, 1.5, -0.5),
+    rotation: new THREE.Euler(0, 0, 0)
+  },
+  leftHand: {
+    position: new THREE.Vector3(-0.5, 1.5, -0.5),
+    rotation: new THREE.Euler(0, 0, 0)
   }
 };
 
@@ -149,7 +191,8 @@ const assetNodes = {
 const loadHeadsetAsset = () => {
   new THREE.OBJLoader().load('assets/headset.obj', headset => {
     const parent = new THREE.Object3D();
-    parent.position.y = 2;
+    parent.position.copy(defaultTransforms.headset.position);
+    parent.rotation.copy(defaultTransforms.headset.rotation);
     headset.rotation.y = -Math.PI;
 
     scene.add(parent.add(headset));
@@ -172,28 +215,26 @@ const loadHeadsetAsset = () => {
 
 const loadControllersAsset = (loadRight, loadLeft) => {
   new THREE.GLTFLoader().load('assets/oculus-go-controller.gltf', gltf => {
-    const rightController = gltf.scene;
-    rightController.scale.multiplyScalar(6);
-    const leftController = rightController.clone();
-
-    const parentRight = new THREE.Object3D();
-    const parentLeft = new THREE.Object3D();
-
-    parentRight.add(rightController);
-    parentRight.position.set(0.5, 1.5, -0.5);
-
-    parentLeft.add(leftController);
-    parentLeft.position.set(-0.5, 1.5, -0.5);
+    const baseController = gltf.scene;
+    baseController.scale.multiplyScalar(6);
 
     if (loadRight) {
-      scene.add(parentRight);
-      assetNodes.rightHand = parentRight;
+      const parent = new THREE.Object3D();
+      const controller = baseController.clone();
+
+      parent.position.copy(defaultTransforms.rightHand.position);
+      parent.rotation.copy(defaultTransforms.rightHand.rotation);
+      parent.add(controller);
+
+      scene.add(parent);
+
+      assetNodes.rightHand = parent;
 
       const onChange = () => {
-       notifyPoseChange('rightHand', parentRight); 
+        notifyPoseChange('rightHand', parent); 
       };
 
-      const controls = createTransformControls(parentRight, onChange,
+      const controls = createTransformControls(parent, onChange,
         document.getElementById('rightHandCheckbox').checked);
       disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
 
@@ -203,14 +244,22 @@ const loadControllersAsset = (loadRight, loadLeft) => {
     }
 
     if (loadLeft) {
-      scene.add(parentLeft);
-      assetNodes.leftHand = parentLeft;
+      const parent = new THREE.Object3D();
+      const controller = baseController.clone();
+
+      parent.position.copy(defaultTransforms.leftHand.position);
+      parent.rotation.copy(defaultTransforms.leftHand.rotation);
+      parent.add(controller);
+
+      scene.add(parent);
+
+      assetNodes.leftHand = parent;
 
       const onChange = () => {
-        notifyPoseChange('leftHand', parentLeft);
+        notifyPoseChange('leftHand', parent);
       };
 
-      const controls = createTransformControls(parentLeft, onChange,
+      const controls = createTransformControls(parent, onChange,
         document.getElementById('leftHandCheckbox').checked);
       disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
 
@@ -376,6 +425,12 @@ document.getElementById('leftPressButton').addEventListener('click', event => {
   states.leftButtonPressed = !states.leftButtonPressed;
   notifyButtonPressed('leftHand', states.leftButtonPressed);
 }, false);
+
+document.getElementById('resetPoseButton').addEventListener('click', event => {
+  resetPoses();
+}, false);
+
+//
 
 const deviceSelect = document.getElementById('deviceSelect');
 const stereoSelect = document.getElementById('stereoSelect');
