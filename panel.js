@@ -282,40 +282,70 @@ const updateControlsEnability = (domElement, controls) => {
   controls.enabled = checked;
 }
 
-document.getElementById('headsetCheckbox').addEventListener('change', event => {
+const onHeadsetCheckboxChange = () => {
   const controls = transformControls.headset;
 
   if (!controls) {
     return;
   }
 
-  updateControlsEnability(event.target, controls);
+  const checkbox = document.getElementById('headsetCheckbox');
+  updateControlsEnability(checkbox, controls);
   disableTransformControlsIfNeeded(controls, deviceCapabilities.headset);
   render();
-}, false);
+};
 
-document.getElementById('rightHandCheckbox').addEventListener('change', event => {
+document.getElementById('headsetCheckbox')
+  .addEventListener('change', onHeadsetCheckboxChange, false);
+
+document.getElementById('headsetSpan').addEventListener('click', event => {
+  const checkbox = document.getElementById('headsetCheckbox');
+  checkbox.checked = !checkbox.checked;
+  onHeadsetCheckboxChange();
+});
+
+const onRightHandCheckboxChange = () => {
   const controls = transformControls.rightHand;
 
   if (!controls) {
     return;
   }
 
-  updateControlsEnability(event.target, controls);
+  const checkbox = document.getElementById('rightHandCheckbox');
+  updateControlsEnability(checkbox, controls);
   disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
   render();
+};
+
+document.getElementById('rightHandCheckbox')
+  .addEventListener('change', onRightHandCheckboxChange, false);
+
+document.getElementById('rightHandSpan').addEventListener('click', event => {
+  const checkbox = document.getElementById('rightHandCheckbox');
+  checkbox.checked = !checkbox.checked;
+  onRightHandCheckboxChange();
 }, false);
 
-document.getElementById('leftHandCheckbox').addEventListener('change', event => {
+const onLeftHandCheckboxChange = () => {
   const controls = transformControls.leftHand;
 
   if (!controls) {
     return;
   }
 
-  updateControlsEnability(event.target, controls);
+  const checkbox = document.getElementById('leftHandCheckbox');
+  updateControlsEnability(checkbox, controls);
   disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
   render();
+};
+
+document.getElementById('leftHandCheckbox')
+  .addEventListener('change', onLeftHandCheckboxChange, false);
+
+document.getElementById('leftHandSpan').addEventListener('click', event => {
+  const checkbox = document.getElementById('leftHandCheckbox');
+  checkbox.checked = !checkbox.checked;
+  onLeftHandCheckboxChange();
 }, false);
 
 document.getElementById('translateButton').addEventListener('click', event => {
