@@ -4,6 +4,8 @@ const tabId = chrome.devtools.inspectedWindow.tabId;
 // receive message from contentScript via background
 
 port.onMessage.addListener(message => {
+  // notify the poses to sync
+  // if main page is reloaded while panel is opened
   if (message.action === 'webxr-startup') {
     notifyPoses();
   }
@@ -20,8 +22,8 @@ const notifyPoseChange = (objectName, node) => {
   postMessage({
     action: 'webxr-pose',
     object: objectName,
-    position: node.position.toArray([]),
-    quaternion: node.quaternion.toArray([])
+    position: node.position.toArray([]), // @TODO: reuse array
+    quaternion: node.quaternion.toArray([]) // @TODO: reuse array
   });
 };
 
@@ -34,41 +36,17 @@ const notifyButtonPressed = (objectName, pressed) => {
 };
 
 const notifyPoses = () => {
-  if (assetNodes.headset) {
-    notifyPoseChange('headset', assetNodes.headset);
+  for (const key in assetNodes) {
+    if (assetNodes[key]) {
+      notifyPoseChange(key, assetNodes[key]);
+    }
   }
-  if (assetNodes.rightHand) {
-    notifyPoseChange('rightHand', assetNodes.rightHand);
-  }
-  if (assetNodes.leftHand) {
-    notifyPoseChange('leftHand', assetNodes.leftHand);
-  }
-};
-
-const resetPoses = () => {
-  if (assetNodes.headset) {
-    const headset = assetNodes.headset;
-    headset.position.copy(defaultTransforms.headset.position);
-    headset.rotation.copy(defaultTransforms.headset.rotation);
-  }
-  if (assetNodes.rightHand) {
-    const contoller = assetNodes.rightHand;
-    contoller.position.copy(defaultTransforms.rightHand.position);
-    contoller.rotation.copy(defaultTransforms.rightHand.rotation);
-  }
-  if (assetNodes.leftHand) {
-    const contoller = assetNodes.leftHand;
-    contoller.position.copy(defaultTransforms.leftHand.position);
-    contoller.rotation.copy(defaultTransforms.leftHand.rotation);
-  }
-  notifyPoses();
-  render();
 };
 
 //
 
 const states = {
-  translateMode: true,
+  translateMode: false, // true: translate mode, false: rotate mode
   rightButtonPressed: false,
   leftButtonPressed: false
 };
@@ -84,8 +62,20 @@ const deviceCapabilities = {
   }
 };
 
-// @TODO: Currently the values are　rough.
-//        Set more appropriate values
+const transformControls = {
+  headset: null,
+  rightHand: null,
+  leftHand: null
+};
+
+const assetNodes = {
+  headset: null,
+  rightHand: null,
+  leftHand: null
+};
+
+// @TODO: Currently the values are　groundless.
+//        Set more appropriate values.
 const defaultTransforms = {
   headset: {
     position: new THREE.Vector3(0, 2, 0),
@@ -130,27 +120,20 @@ scene.add(light);
 const gridHelper = new THREE.PolarGridHelper(10, 5);
 scene.add(gridHelper);
 
-// controls
+// orbit controls for camera
 
 const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
 orbitControls.addEventListener('change', render);
 orbitControls.target.set(0, 2, 0);
-orbitControls.update();
+orbitControls.update(); // seems like this line is necessary if I set non-zero as target
 
-const transformControls = {
-  headset: null,
-  rightHand: null,
-  leftHand: null
-};
+// transform controls for device assets
 
-const createTransformControls = (target, onChange, enabled) => {
+const createTransformControls = (target, onChange) => {
   const controls = new THREE.TransformControls(camera, renderer.domElement);
   controls.setMode(states.translateMode ? 'translate' : 'rotate');
   controls.setSpace('local');
   controls.attach(target);
-
-  controls.visible = enabled;
-  controls.enabled = enabled;
 
   controls.addEventListener('mouseDown', () => {
     orbitControls.enabled = false;
@@ -168,25 +151,20 @@ const createTransformControls = (target, onChange, enabled) => {
   return controls;
 };
 
-const disableTransformControlsIfNeeded = (controls, capability) => {
-  if (!controls.enabled) {
-    return;
-  }
+const setupTransformControlsEnability = (controls, enabled, capabilities) => {
+  controls.visible = enabled;
+  controls.enabled = enabled;
 
-  if (states.translateMode && !capability.hasPosition) {
-    controls.enabled = false;
-  } else if (!states.translateMode && !capability.hasRotation) {
-    controls.enabled = false;
+  // disable if device doesn't have capability of current transform mode
+  if (controls.enabled) {
+    if ((states.translateMode && !capabilities.hasPosition) ||
+        (!states.translateMode && !capabilities.hasRotation)) {
+      controls.enabled = false;
+    }
   }
 };
 
-// assets
-
-const assetNodes = {
-  headset: null,
-  rightHand: null,
-  leftHand: null  
-};
+// device assets
 
 const loadHeadsetAsset = () => {
   new THREE.OBJLoader().load('assets/headset.obj', headset => {
@@ -202,9 +180,10 @@ const loadHeadsetAsset = () => {
       notifyPoseChange('headset', parent);
     };
 
-    const controls = createTransformControls(parent, onChange,
-      document.getElementById('headsetCheckbox').checked);
-    disableTransformControlsIfNeeded(controls, deviceCapabilities.headset);
+    const controls = createTransformControls(parent, onChange);
+    setupTransformControlsEnability(controls,
+      document.getElementById('headsetCheckbox').checked,
+      deviceCapabilities.headset);
 
     scene.add(controls);
     transformControls.headset = controls;
@@ -218,54 +197,39 @@ const loadControllersAsset = (loadRight, loadLeft) => {
     const baseController = gltf.scene;
     baseController.scale.multiplyScalar(6);
 
-    if (loadRight) {
+    // key: 'rightHand' or 'leftHand'
+    const setupController = (key) => {
       const parent = new THREE.Object3D();
       const controller = baseController.clone();
 
-      parent.position.copy(defaultTransforms.rightHand.position);
-      parent.rotation.copy(defaultTransforms.rightHand.rotation);
+      parent.position.copy(defaultTransforms[key].position);
+      parent.rotation.copy(defaultTransforms[key].rotation);
       parent.add(controller);
 
       scene.add(parent);
 
-      assetNodes.rightHand = parent;
+      assetNodes[key] = parent;
 
       const onChange = () => {
-        notifyPoseChange('rightHand', parent); 
+        notifyPoseChange(key, parent);
       };
 
-      const controls = createTransformControls(parent, onChange,
-        document.getElementById('rightHandCheckbox').checked);
-      disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
+      const controls = createTransformControls(parent, onChange);
+      setupTransformControlsEnability(controls,
+        document.getElementById(key + 'Checkbox').checked,
+        deviceCapabilities.controller);
 
       scene.add(controls);
-      transformControls.rightHand = controls;
+      transformControls[key] = controls;
       onChange();
+    };
+
+    if (loadRight) {
+      setupController('rightHand');
     }
 
     if (loadLeft) {
-      const parent = new THREE.Object3D();
-      const controller = baseController.clone();
-
-      parent.position.copy(defaultTransforms.leftHand.position);
-      parent.rotation.copy(defaultTransforms.leftHand.rotation);
-      parent.add(controller);
-
-      scene.add(parent);
-
-      assetNodes.leftHand = parent;
-
-      const onChange = () => {
-        notifyPoseChange('leftHand', parent);
-      };
-
-      const controls = createTransformControls(parent, onChange,
-        document.getElementById('leftHandCheckbox').checked);
-      disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
-
-      scene.add(controls);
-      transformControls.leftHand = controls;
-      onChange();
+      setupController('leftHand');
     }
 
     render();
@@ -273,7 +237,9 @@ const loadControllersAsset = (loadRight, loadLeft) => {
 };
 
 const updateAssetNodes = (deviceIndex) => {
-  for (let key in assetNodes) {
+  // firstly remove all existing resources and disable all panel controls
+
+  for (const key in assetNodes) {
     const node = assetNodes[key];
     const controls = transformControls[key];
 
@@ -285,12 +251,11 @@ const updateAssetNodes = (deviceIndex) => {
       node.parent.remove(node);
     }
 
-    controls.detach(parent);
+    controls.detach();
 
     assetNodes[key] = null;
     transformControls[key] = null;
   }
-
 
   states.rightButtonPressed = false;
   states.leftButtonPressed = false;
@@ -306,32 +271,52 @@ const updateAssetNodes = (deviceIndex) => {
   document.getElementById('leftPressButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
 
+  // secondly load new assets and enable necessary panel controls
+
+  let hasHeadset = false;
+  let hasRightController = false;
+  let hasLeftController = false;
+
   // @TODO: Get information from device profile file or somewhere?
   if (deviceIndex === 1) { // Oculus Go
-    loadHeadsetAsset();
-    loadControllersAsset(true, false);
+    hasHeadset = true;
+    hasRightController = true;
     deviceCapabilities.headset.hasRotation = true;
     deviceCapabilities.controller.hasRotation = true;
-    document.getElementById('headsetCheckboxSpan').style.display = '';
-    document.getElementById('rightHandCheckboxSpan').style.display = '';
-    document.getElementById('translateButton').style.display = '';
-    document.getElementById('rightPressButton').style.display = '';
-    document.getElementById('resetPoseButton').style.display = '';
   } else if (deviceIndex === 2) { // Oculus Quest
-    loadHeadsetAsset();
-    loadControllersAsset(true, true);
+    hasHeadset = true;
+    hasRightController = true;
+    hasLeftController = true;
     deviceCapabilities.headset.hasPosition = true;
     deviceCapabilities.headset.hasRotation = true;
     deviceCapabilities.controller.hasPosition = true;
     deviceCapabilities.controller.hasRotation = true;
+  }
+
+  if (hasHeadset) {
+    loadHeadsetAsset();
     document.getElementById('headsetCheckboxSpan').style.display = '';
+  }
+
+  if (hasRightController || hasLeftController) {
+    loadControllersAsset(hasRightController, hasLeftController);
+  }
+
+  if (hasRightController) {
     document.getElementById('rightHandCheckboxSpan').style.display = '';
-    document.getElementById('leftHandCheckboxSpan').style.display = '';
-    document.getElementById('translateButton').style.display = '';
     document.getElementById('rightPressButton').style.display = '';
+  }
+
+  if (hasLeftController) {
+    document.getElementById('leftHandCheckboxSpan').style.display = '';
     document.getElementById('leftPressButton').style.display = '';
+  }
+
+  if (hasHeadset || hasRightController || hasLeftController) {
+    document.getElementById('translateButton').style.display = '';
     document.getElementById('resetPoseButton').style.display = '';
   }
+
   render();
 };
 
@@ -346,22 +331,14 @@ window.addEventListener('resize', event => {
   render();
 }, false);
 
-const updateControlsEnability = (domElement, controls) => {
-  const checked = domElement.checked;
-  controls.visible = checked;
-  controls.enabled = checked;
-}
-
 const onHeadsetCheckboxChange = () => {
-  const controls = transformControls.headset;
-
-  if (!controls) {
+  if (!transformControls.headset) {
     return;
   }
 
-  const checkbox = document.getElementById('headsetCheckbox');
-  updateControlsEnability(checkbox, controls);
-  disableTransformControlsIfNeeded(controls, deviceCapabilities.headset);
+  setupTransformControlsEnability(transformControls.headset,
+    document.getElementById('headsetCheckbox').checked,
+    deviceCapabilities.headset);
   render();
 };
 
@@ -374,17 +351,20 @@ document.getElementById('headsetLabel').addEventListener('click', event => {
   onHeadsetCheckboxChange();
 });
 
-const onRightHandCheckboxChange = () => {
-  const controls = transformControls.rightHand;
-
-  if (!controls) {
+// key: 'rightHand' or 'leftHand'
+const onControllerCheckboxChange = (key) => {
+  if (!transformControls[key]) {
     return;
   }
 
-  const checkbox = document.getElementById('rightHandCheckbox');
-  updateControlsEnability(checkbox, controls);
-  disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
+  setupTransformControlsEnability(transformControls[key],
+    document.getElementById(key + 'Checkbox').checked,
+    deviceCapabilities.controller);
   render();
+};
+
+const onRightHandCheckboxChange = () => {
+  onControllerCheckboxChange('rightHand');
 };
 
 document.getElementById('rightHandCheckbox')
@@ -397,16 +377,7 @@ document.getElementById('rightHandLabel').addEventListener('click', event => {
 }, false);
 
 const onLeftHandCheckboxChange = () => {
-  const controls = transformControls.leftHand;
-
-  if (!controls) {
-    return;
-  }
-
-  const checkbox = document.getElementById('leftHandCheckbox');
-  updateControlsEnability(checkbox, controls);
-  disableTransformControlsIfNeeded(controls, deviceCapabilities.controller);
-  render();
+  onControllerCheckboxChange('leftHand');
 };
 
 document.getElementById('leftHandCheckbox')
@@ -421,17 +392,17 @@ document.getElementById('leftHandLabel').addEventListener('click', event => {
 document.getElementById('translateButton').addEventListener('click', event => {
   states.translateMode = !states.translateMode;
 
-  for (let key in transformControls) {
+  for (const key in transformControls) {
     const controls = transformControls[key];
 
     if (!controls) {
       continue;
     }
- 
+
     controls.setMode(states.translateMode ? 'translate' : 'rotate');
-    updateControlsEnability(document.getElementById(key + 'Checkbox'), controls);
-    disableTransformControlsIfNeeded(controls,
-      key === 'headset' ? deviceCapabilities.headset : deviceCapabilities.controller);
+    setupTransformControlsEnability(controls,
+      document.getElementById(key + 'Checkbox').checked,
+      deviceCapabilities[key === 'headset' ? key : 'controller']);
   }
 
   render();
@@ -448,10 +419,21 @@ document.getElementById('leftPressButton').addEventListener('click', event => {
 }, false);
 
 document.getElementById('resetPoseButton').addEventListener('click', event => {
-  resetPoses();
+  for (const key in assetNodes) {
+    const device = assetNodes[key];
+
+    if (!device) {
+      continue;
+    }
+
+    device.position.copy(defaultTransforms[key].position);
+    device.rotation.copy(defaultTransforms[key].rotation);
+  }
+  notifyPoses();
+  render();
 }, false);
 
-//
+// configurations
 
 const deviceSelect = document.getElementById('deviceSelect');
 const stereoSelect = document.getElementById('stereoSelect');

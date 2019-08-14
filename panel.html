@@ -12,7 +12,7 @@
         display: block;
       }
 
-      #info {
+      #controls {
         position: absolute;
         top: 0px;
         padding: 10px;
@@ -26,8 +26,9 @@
     </style>
   </head>
   <body>
-    <div id="info">
+    <div id="controls">
       Device:
+      <!-- The order must follow the order of device type defined in configuration.js -->
       <select id="deviceSelect">
         <option value="0">None</option>
         <option value="1">Oculus Go</option>
@@ -35,6 +36,7 @@
       </select>
       <br />
       Stereo Effect:
+      <!-- The order must follow the order of stereo effect type defined in configuration.js -->
       <select id="stereoSelect">
         <option value="0">Enable</option>
         <option value="1">Disable</option>
