@@ -30,6 +30,10 @@ Currently this extension is very early stage.
 
 - Targeting only [Three.js WebVR examples](https://threejs.org/examples/?q=webvr) so far
 
+## WebXR device API
+
+This extension is based on [WebXR device API draft issued on May 21 2019](https://www.w3.org/TR/webxr/)
+
 ## Browsers
 
 We test this project on the latest desktop Firefox/Chrome. [Bug reports from other platforms are very welcome.](https://github.com/MozillaReality/WebXR-emulator-extension/issues)
