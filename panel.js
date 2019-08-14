@@ -11,38 +11,6 @@ port.onMessage.addListener(message => {
 
 // send message to contentScript via background
 
-const resetPoses = () => {
-  if (assetNodes.headset) {
-    const headset = assetNodes.headset;
-    headset.position.copy(defaultTransforms.headset.position);
-    headset.rotation.copy(defaultTransforms.headset.rotation);
-  }
-  if (assetNodes.rightHand) {
-    const contoller = assetNodes.rightHand;
-    contoller.position.copy(defaultTransforms.rightHand.position);
-    contoller.rotation.copy(defaultTransforms.rightHand.rotation);
-  }
-  if (assetNodes.leftHand) {
-    const contoller = assetNodes.leftHand;
-    contoller.position.copy(defaultTransforms.leftHand.position);
-    contoller.rotation.copy(defaultTransforms.leftHand.rotation);
-  }
-  notifyPoses();
-  render();
-};
-
-const notifyPoses = () => {
-  if (assetNodes.headset) {
-    notifyPoseChange('headset', assetNodes.headset);
-  }
-  if (assetNodes.rightHand) {
-    notifyPoseChange('rightHand', assetNodes.rightHand);
-  }
-  if (assetNodes.leftHand) {
-    notifyPoseChange('leftHand', assetNodes.leftHand);
-  }
-};
-
 const postMessage = (message) => {
   message.tabId = tabId;
   port.postMessage(message);
@@ -65,6 +33,38 @@ const notifyButtonPressed = (objectName, pressed) => {
   });
 };
 
+const notifyPoses = () => {
+  if (assetNodes.headset) {
+    notifyPoseChange('headset', assetNodes.headset);
+  }
+  if (assetNodes.rightHand) {
+    notifyPoseChange('rightHand', assetNodes.rightHand);
+  }
+  if (assetNodes.leftHand) {
+    notifyPoseChange('leftHand', assetNodes.leftHand);
+  }
+};
+
+const resetPoses = () => {
+  if (assetNodes.headset) {
+    const headset = assetNodes.headset;
+    headset.position.copy(defaultTransforms.headset.position);
+    headset.rotation.copy(defaultTransforms.headset.rotation);
+  }
+  if (assetNodes.rightHand) {
+    const contoller = assetNodes.rightHand;
+    contoller.position.copy(defaultTransforms.rightHand.position);
+    contoller.rotation.copy(defaultTransforms.rightHand.rotation);
+  }
+  if (assetNodes.leftHand) {
+    const contoller = assetNodes.leftHand;
+    contoller.position.copy(defaultTransforms.leftHand.position);
+    contoller.rotation.copy(defaultTransforms.leftHand.rotation);
+  }
+  notifyPoses();
+  render();
+};
+
 //
 
 const states = {
@@ -84,7 +84,6 @@ const deviceCapabilities = {
   }
 };
 
-
 // @TODO: Currently the values are　rough.
 //        Set more appropriate values
 const defaultTransforms = {
@@ -93,11 +92,11 @@ const defaultTransforms = {
     rotation: new THREE.Euler(0, 0, 0)
   },
   rightHand: {
-    position: new THREE.Vector3(0.5, 1.5, -0.5),
+    position: new THREE.Vector3(0.5, 1.5, -1.0),
     rotation: new THREE.Euler(0, 0, 0)
   },
   leftHand: {
-    position: new THREE.Vector3(-0.5, 1.5, -0.5),
+    position: new THREE.Vector3(-0.5, 1.5, -1.0),
     rotation: new THREE.Euler(0, 0, 0)
   }
 };
@@ -117,7 +116,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 5, 10);
+camera.position.set(-3, 3, 4);
 camera.lookAt(new THREE.Vector3(0, 2, 0));
 
 const render = () => {
@@ -125,7 +124,7 @@ const render = () => {
 };
 
 const light = new THREE.DirectionalLight(0xffffff);
-light.position.set(1, 1, 1);
+light.position.set(-1, 1, -1);
 scene.add(light);
 
 const gridHelper = new THREE.PolarGridHelper(10, 5);
@@ -135,7 +134,8 @@ scene.add(gridHelper);
 
 const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
 orbitControls.addEventListener('change', render);
-orbitControls.target.set(0, 0, 0);
+orbitControls.target.set(0, 2, 0);
+orbitControls.update();
 
 const transformControls = {
   headset: null,
@@ -291,19 +291,32 @@ const updateAssetNodes = (deviceIndex) => {
     transformControls[key] = null;
   }
 
+
+  states.rightButtonPressed = false;
+  states.leftButtonPressed = false;
   deviceCapabilities.headset.hasPosition = false;
   deviceCapabilities.headset.hasRotation = false;
   deviceCapabilities.controller.hasPosition = false;
   deviceCapabilities.controller.hasRotation = false;
+  document.getElementById('headsetCheckboxSpan').style.display = 'none';
+  document.getElementById('rightHandCheckboxSpan').style.display = 'none';
+  document.getElementById('leftHandCheckboxSpan').style.display = 'none';
+  document.getElementById('translateButton').style.display = 'none';
+  document.getElementById('rightPressButton').style.display = 'none';
+  document.getElementById('leftPressButton').style.display = 'none';
+  document.getElementById('resetPoseButton').style.display = 'none';
 
   // @TODO: Get information from device profile file or somewhere?
   if (deviceIndex === 1) { // Oculus Go
     loadHeadsetAsset();
     loadControllersAsset(true, false);
-    deviceCapabilities.headset.hasPosition = false;
     deviceCapabilities.headset.hasRotation = true;
-    deviceCapabilities.controller.hasPosition = false;
     deviceCapabilities.controller.hasRotation = true;
+    document.getElementById('headsetCheckboxSpan').style.display = '';
+    document.getElementById('rightHandCheckboxSpan').style.display = '';
+    document.getElementById('translateButton').style.display = '';
+    document.getElementById('rightPressButton').style.display = '';
+    document.getElementById('resetPoseButton').style.display = '';
   } else if (deviceIndex === 2) { // Oculus Quest
     loadHeadsetAsset();
     loadControllersAsset(true, true);
@@ -311,7 +324,15 @@ const updateAssetNodes = (deviceIndex) => {
     deviceCapabilities.headset.hasRotation = true;
     deviceCapabilities.controller.hasPosition = true;
     deviceCapabilities.controller.hasRotation = true;
+    document.getElementById('headsetCheckboxSpan').style.display = '';
+    document.getElementById('rightHandCheckboxSpan').style.display = '';
+    document.getElementById('leftHandCheckboxSpan').style.display = '';
+    document.getElementById('translateButton').style.display = '';
+    document.getElementById('rightPressButton').style.display = '';
+    document.getElementById('leftPressButton').style.display = '';
+    document.getElementById('resetPoseButton').style.display = '';
   }
+  render();
 };
 
 render();
@@ -347,7 +368,7 @@ const onHeadsetCheckboxChange = () => {
 document.getElementById('headsetCheckbox')
   .addEventListener('change', onHeadsetCheckboxChange, false);
 
-document.getElementById('headsetSpan').addEventListener('click', event => {
+document.getElementById('headsetLabel').addEventListener('click', event => {
   const checkbox = document.getElementById('headsetCheckbox');
   checkbox.checked = !checkbox.checked;
   onHeadsetCheckboxChange();
@@ -369,7 +390,7 @@ const onRightHandCheckboxChange = () => {
 document.getElementById('rightHandCheckbox')
   .addEventListener('change', onRightHandCheckboxChange, false);
 
-document.getElementById('rightHandSpan').addEventListener('click', event => {
+document.getElementById('rightHandLabel').addEventListener('click', event => {
   const checkbox = document.getElementById('rightHandCheckbox');
   checkbox.checked = !checkbox.checked;
   onRightHandCheckboxChange();
@@ -391,7 +412,7 @@ const onLeftHandCheckboxChange = () => {
 document.getElementById('leftHandCheckbox')
   .addEventListener('change', onLeftHandCheckboxChange, false);
 
-document.getElementById('leftHandSpan').addEventListener('click', event => {
+document.getElementById('leftHandLabel').addEventListener('click', event => {
   const checkbox = document.getElementById('leftHandCheckbox');
   checkbox.checked = !checkbox.checked;
   onLeftHandCheckboxChange();
