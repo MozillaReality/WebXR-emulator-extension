@@ -402,19 +402,27 @@ function WebXRPolyfillInjection() {
     }
   }
 
-  if (navigator.xr === undefined) {
-    navigator.xr = new XR();
-  }
+  navigator.xr = new XR();
 
-  if (window.XR === undefined) {
-    window.XR = XR;
-  }
+  // In Chrome(76) window.XR* are overriden by browser
+  // after the timing of "run_at": "document_start" of content_scripts.
+  // Then defining window.XR* here with defineProperties + writable: false
+  // to avoid the overriding.
+  // @TODO: investigate how to have XR device emulators interact with
+  //        WebXR API defined by browser.
 
-  if (window.XRSession === undefined) {
-    window.XRSession = XRSession;
-  }
-
-  if (window.XRWebGLLayer === undefined) {
-    window.XRWebGLLayer = XRWebGLLayer;
-  }
+  Object.defineProperties(window, {
+    XR: {
+      value: XR,
+      writable: false
+    },
+    XRSession: {
+      value: XRSession,
+      writable: false
+    },
+    XRWebGLLayer: {
+      value: XRWebGLLayer,
+      writable: false
+    }
+  });
 }
