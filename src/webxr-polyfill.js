@@ -1,5 +1,10 @@
+// In this file prefix '_' means that that property/method
+// is not defined under WebXR device API rather than it's private.
+
+// @TODO: Full WebXR API support.
+// @TODO: Bump into the latest spec. Currently based on 21 May 2019 draft version.
+
 function WebXRPolyfillInjection() {
-  'use strict';
 
   // https://www.w3.org/TR/webxr/#xr-interface
 
@@ -99,12 +104,31 @@ function WebXRPolyfillInjection() {
       return Promise.resolve();
     }
 
-    _fireSelectStart(controller, leftRight) {
-      this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[leftRight]));
+    // @TODO: better to replace the following _notify* methods
+    //        with event handlers?
+
+    _notifyViewerPoseUpdated(matrixArray, matrixInverseArray) {
+      this._frame._updateViewerPose(matrixArray, matrixInverseArray);
     }
 
-    _fireSelectEnd(controller, leftRight) {
-      this.dispatchEvent(new XRInputSourceEvent('selectend', this._frame, this.inputSources[leftRight]));
+    _notifyProjectionMatricesUpdated(projectionMatrixArray) {
+      this._frame._updateProjectionMatrices(projectionMatrixArray);
+    }
+
+    _notifyViewportsUpdated(viewportArray) {
+      this.renderState._updateViewports(viewportArray);
+    }
+
+    _notifyControllerPoseUpdated(index, matrixArray) {
+      this._frame._updatePose(index, matrixArray);
+    }
+
+    _notifyControllerButtonPressed(index) {
+      this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[index]));
+    }
+
+    _notifyControllerButtonReleased(index) {
+      this.dispatchEvent(new XRInputSourceEvent('selectend', this._frame, this.inputSources[index]));
     }
   }
 
@@ -141,6 +165,21 @@ function WebXRPolyfillInjection() {
         this.outputContext = option.outputContext;
       }
     }
+
+    _updateViewports(viewportArray) {
+      if (!this.baseLayer) {
+        return;
+      }
+
+      const viewports = this.baseLayer._viewports;
+      for (let i = 0; i < viewports.length; i++) {
+        const viewport = viewports[i];
+        viewport.x = viewportArray[i * 4 + 0];
+        viewport.y = viewportArray[i * 4 + 1];
+        viewport.width = viewportArray[i * 4 + 2];
+        viewport.height = viewportArray[i * 4 + 3];
+      }
+    }
   }
 
   // https://www.w3.org/TR/webxr/#xrframe-interface
@@ -172,6 +211,35 @@ function WebXRPolyfillInjection() {
         }
       }
       return null;
+    }
+
+    _updateViewerPose(matrixArray, matrixInverseArray) {
+      for (let i = 0; i < 2; i++) {
+        const view = this._viewerPose.views[i];
+        const matrix = view.transform.matrix;
+        const matrixInverse = view.transform.inverse.matrix;
+        for (let j = 0; j < 16; j++) {
+          matrix[j] = matrixArray[i * 16 + j];
+          matrixInverse[j] = matrixInverseArray[i * 16 + j];
+        }
+      }
+    }
+
+    _updateProjectionMatrices(projectionMatrixArray) {
+      const views = this._viewerPose.views;
+      for (let i = 0; i < views.length; i++) {
+        const projectionMatrix = views[i].projectionMatrix;
+        for (let j = 0; j < 16; j++) {
+          projectionMatrix[j] = projectionMatrixArray[i * 16 + j];
+        }
+      }
+    }
+
+    _updatePose(index, matrixArray) {
+      const matrix = this._poses[index].transform.matrix;
+      for (let i = 0; i < 16; i++) {
+        matrix[i] = matrixArray[i];
+      }
     }
   }
 
@@ -277,7 +345,7 @@ function WebXRPolyfillInjection() {
       this.framebufferHeight = 0;
       this.context = context;
 
-      this._viewports = {};
+      this._viewports = [];
       this._viewports[XREye.left] = new XRViewport();
       this._viewports[XREye.right] = new XRViewport();
     }

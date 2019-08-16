@@ -1,6 +1,6 @@
-function MathInjection() {
-  'use strict';
+// inspired by Three.js Math libs
 
+function MathInjection() {
   class Vector3 {
     constructor(x, y, z) {
       this.x = x || 0;
@@ -8,17 +8,17 @@ function MathInjection() {
       this.z = z || 0;
     }
 
-    toArray(array) {
-      array[0] = this.x;
-      array[1] = this.y;
-      array[2] = this.z;
+    toArray(array, offset = 0) {
+      array[offset + 0] = this.x;
+      array[offset + 1] = this.y;
+      array[offset + 2] = this.z;
       return array;
     }
 
-    fromArray(array) {
-      this.x = array[0];
-      this.y = array[1];
-      this.z = array[2];
+    fromArray(array, offset = 0) {
+      this.x = array[offset + 0];
+      this.y = array[offset + 1];
+      this.z = array[offset + 2];
       return this;
     }
 
@@ -77,6 +77,23 @@ function MathInjection() {
     }
   }
 
+  class Vector4 {
+    constructor(x, y, z, w) {
+      this.x = x || 0;
+      this.y = y || 0;
+      this.z = z || 0;
+      this.w = w || 0;
+    }
+
+    toArray(array, offset = 0) {
+      array[offset + 0] = this.x;
+      array[offset + 1] = this.y;
+      array[offset + 2] = this.z;
+      array[offset + 3] = this.w;
+      return array;
+    }
+  }
+
   class Euler {
     constructor(x, y, z) {
       this.x = x || 0;
@@ -117,20 +134,20 @@ function MathInjection() {
       return this;
     }
 
-    toArray(array) {
-      array[0] = this.x;
-      array[1] = this.y;
-      array[2] = this.z;
-      array[3] = this.w;
+    toArray(array, offset = 0) {
+      array[offset + 0] = this.x;
+      array[offset + 1] = this.y;
+      array[offset + 2] = this.z;
+      array[offset + 3] = this.w;
 
       return array;
     }
 
-    fromArray(array) {
-      this.x = array[0];
-      this.y = array[1];
-      this.z = array[2];
-      this.w = array[3];
+    fromArray(array, offset = 0) {
+      this.x = array[offset + 0];
+      this.y = array[offset + 1];
+      this.z = array[offset + 2];
+      this.w = array[offset + 3];
       return this;
     }
 
@@ -224,12 +241,17 @@ function MathInjection() {
       ]);
     }
 
-    toArray(array) {
+    toArray(array, offset = 0) {
       for (let i = 0; i < 16; i++) {
-        array[i] = this.elements[i];
+        array[offset + i] = this.elements[i];
       }
-
       return array;
+    }
+
+    copy(matrix) {
+      for (let i = 0; i < 16; i++) {
+        this.elements[i] = matrix.elements[i];
+      }
     }
 
     compose(position, quaternion, scale) {
@@ -381,6 +403,7 @@ function MathInjection() {
 
   return {
     Vector3: Vector3,
+    Vector4: Vector4,
     Euler: Euler,
     Quaternion: Quaternion,
     Matrix3: Matrix3,

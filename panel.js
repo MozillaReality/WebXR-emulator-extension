@@ -21,7 +21,7 @@ const postMessage = (message) => {
 const notifyPoseChange = (objectName, node) => {
   postMessage({
     action: 'webxr-pose',
-    object: objectName,
+    objectName: objectName,
     position: node.position.toArray([]), // @TODO: reuse array
     quaternion: node.quaternion.toArray([]) // @TODO: reuse array
   });
@@ -30,7 +30,7 @@ const notifyPoseChange = (objectName, node) => {
 const notifyButtonPressed = (objectName, pressed) => {
   postMessage({
     action: 'webxr-button',
-    object: objectName,
+    objectName: objectName,
     pressed: pressed
   });
 };

@@ -1,6 +1,4 @@
 function XRDeviceManagerInjection() {
-  'use strict';
-
   class XRDeviceManager {
     constructor() {
       this.deviceType = null;
@@ -26,12 +24,12 @@ function XRDeviceManagerInjection() {
     }
 
     getGamepads() {
-      const array = [];
+      const pads = [];
       const controllers = this.device.controllers;
       for (let i = 0, il = controllers.length; i < il; i++) {
-        array[i] = controllers[i].getGamepad();
+        pads[i] = controllers[i].gamepad;
       }
-      return array;
+      return pads;
     }
 
     serialize() {
@@ -83,6 +81,8 @@ function XRDeviceManagerInjection() {
       return false;
     }
 
+    // @TODO: the following configuration values should be from configuration.js
+
     static deviceTypes() {
       return {
         None: 0,
@@ -107,49 +107,40 @@ function XRDeviceManagerInjection() {
   }
 
   window.addEventListener('webxr-pose', event => {
-    const position = event.detail.position;
-    const quaternion = event.detail.quaternion;
+    if (!xrDeviceManager.device) {
+      return;
+    }
 
-    switch (event.detail.object) {
+    const positionArray = event.detail.position;
+    const quaternionArray = event.detail.quaternion;
+    const objectName = event.detail.objectName;
+
+    switch (objectName) {
       case 'headset':
-        if (!xrDeviceManager.device.headset) {
-          return;
-        }
-        xrDeviceManager.device.headset.updatePose(position, quaternion);
+        xrDeviceManager.device.updateHeadsetPose(positionArray, quaternionArray);
         break;
 
       case 'rightHand':
-        if (xrDeviceManager.device.controllers.length < 1) {
-          return;
-        }
-        xrDeviceManager.device.controllers[0].updatePose(position, quaternion);
-        break;
-
       case 'leftHand':
-        if (xrDeviceManager.device.controllers.length < 2) {
-          return;
-        }
-        xrDeviceManager.device.controllers[1].updatePose(position, quaternion);
+        xrDeviceManager.device.updateControllerPose(positionArray, quaternionArray,
+          objectName === 'rightHand' ? 0 : 1); // @TODO: remove magic number
         break;
     }
   }, false);
 
   window.addEventListener('webxr-button', event => {
+    if (!xrDeviceManager.device) {
+      return;
+    }
+
     const pressed = event.detail.pressed;
+    const objectName = event.detail.objectName;
 
-    switch (event.detail.object) {
+    switch (objectName) {
       case 'rightHand':
-        if (xrDeviceManager.device.controllers.length < 1) {
-          return;
-        }
-        xrDeviceManager.device.controllers[0].updateButtonPressed(pressed);
-        break;
-
       case 'leftHand':
-        if (xrDeviceManager.device.controllers.length < 2) {
-          return;
-        }
-        xrDeviceManager.device.controllers[1].updateButtonPressed(pressed);
+        xrDeviceManager.device.updateControllerButtonPressed(pressed,
+          objectName === 'rightHand' ? 0 : 1); // @TODO: remove magic number
         break;
     }
   }, false);
