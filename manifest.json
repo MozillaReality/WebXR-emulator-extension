@@ -30,7 +30,7 @@
     "all_frames": true
   }],
   "browser_action": {
-    "default_icon": {},
+    "default_icon": "icon.png",
     "default_title": "WebXR API Emulation"
   },
   "manifest_version": 2,
