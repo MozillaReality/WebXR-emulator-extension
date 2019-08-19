@@ -107,8 +107,8 @@ function WebXRPolyfillInjection() {
     // @TODO: better to replace the following _notify* methods
     //        with event handlers?
 
-    _notifyViewerPoseUpdated(matrixArray, matrixInverseArray) {
-      this._frame._updateViewerPose(matrixArray, matrixInverseArray);
+    _notifyViewerPoseUpdated(matrixArray, matrixInverseArray, positions, orientations) {
+      this._frame._updateViewerPose(matrixArray, matrixInverseArray, positions, orientations);
     }
 
     _notifyProjectionMatricesUpdated(projectionMatrixArray) {
@@ -119,12 +119,13 @@ function WebXRPolyfillInjection() {
       this.renderState._updateViewports(viewportArray);
     }
 
-    _notifyControllerPoseUpdated(index, matrixArray) {
-      this._frame._updatePose(index, matrixArray);
+    _notifyControllerPoseUpdated(index, matrixArray, positionArray, orientationArray) {
+      this._frame._updatePose(index, matrixArray, positionArray, orientationArray);
     }
 
     _notifyControllerButtonPressed(index) {
       this.dispatchEvent(new XRInputSourceEvent('selectstart', this._frame, this.inputSources[index]));
+      this.dispatchEvent(new XRInputSourceEvent('select', this._frame, this.inputSources[index]));
     }
 
     _notifyControllerButtonReleased(index) {
@@ -213,14 +214,23 @@ function WebXRPolyfillInjection() {
       return null;
     }
 
-    _updateViewerPose(matrixArray, matrixInverseArray) {
+    _updateViewerPose(matrixArray, matrixInverseArray, positionArray, orientationArray) {
       for (let i = 0; i < 2; i++) {
         const view = this._viewerPose.views[i];
         const matrix = view.transform.matrix;
         const matrixInverse = view.transform.inverse.matrix;
+        const position = view.transform.position;
+        const orientation = view.transform.orientation;
         for (let j = 0; j < 16; j++) {
           matrix[j] = matrixArray[i * 16 + j];
           matrixInverse[j] = matrixInverseArray[i * 16 + j];
+          position.x = positionArray[i * 3 + 0];
+          position.y = positionArray[i * 3 + 1];
+          position.z = positionArray[i * 3 + 2];
+          orientation.x = orientationArray[i * 4 + 0];
+          orientation.y = orientationArray[i * 4 + 1];
+          orientation.z = orientationArray[i * 4 + 2];
+          orientation.w = orientationArray[i * 4 + 3];
         }
       }
     }
@@ -235,11 +245,21 @@ function WebXRPolyfillInjection() {
       }
     }
 
-    _updatePose(index, matrixArray) {
-      const matrix = this._poses[index].transform.matrix;
+    _updatePose(index, matrixArray, positionArray, orientationArray) {
+      const pose = this._poses[index];
+      const matrix = pose.transform.matrix;
+      const position = pose.transform.position;
+      const orientation = pose.transform.orientation;
       for (let i = 0; i < 16; i++) {
         matrix[i] = matrixArray[i];
       }
+      position.x = positionArray[0];
+      position.y = positionArray[1];
+      position.z = positionArray[2];
+      orientation.x = orientationArray[0];
+      orientation.y = orientationArray[1];
+      orientation.z = orientationArray[2];
+      orientation.w = orientationArray[3];
     }
   }
 
@@ -333,6 +353,7 @@ function WebXRPolyfillInjection() {
 
   class XRReferenceSpace {
     getOffsetReferenceSpace(originOffset) {
+      return new XRReferenceSpace();
     }
   }
 
@@ -422,6 +443,10 @@ function WebXRPolyfillInjection() {
     },
     XRWebGLLayer: {
       value: XRWebGLLayer,
+      writable: false
+    },
+    XRRigidTransform: {
+      value: XRRigidTransform,
       writable: false
     }
   });

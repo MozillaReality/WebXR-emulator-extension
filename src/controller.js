@@ -40,7 +40,8 @@ function ControllerInjection() {
       this.position.toArray(this.gamepad.pose.position);
       this.quaternion.toArray(this.gamepad.pose.orientation);
 
-      this.dispatchEvent(new ControllerPoseUpdateEvent('poseupdate', this.matrix));
+      this.dispatchEvent(new ControllerPoseUpdateEvent('poseupdate',
+        this.matrix, this.position, this.quaternion));
     }
 
     updateButtonPressed(pressed) {
@@ -56,10 +57,16 @@ function ControllerInjection() {
   }
 
   class ControllerPoseUpdateEvent extends Event {
-    constructor(type, matrix) {
+    constructor(type, matrix, position, quaternion) {
       super(type);
+
       this.matrix = [];
+      this.position = [];
+      this.orientation = [];
+
       matrix.toArray(this.matrix);
+      position.toArray(this.position);
+      quaternion.toArray(this.orientation);
     }
   }
 

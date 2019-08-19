@@ -50,7 +50,8 @@
 
       headset.addEventListener('viewposeupdate', event => {
         if (this.session) {
-          this.session._notifyViewerPoseUpdated(event.viewMatrices, event.viewMatrixInverses);
+          this.session._notifyViewerPoseUpdated(event.viewMatrices, event.viewMatrixInverses,
+            event.positions, event.orientations);
         }
       }, false);
 
@@ -76,7 +77,8 @@
         if (this.session) {
           for (let i = 0, il = this.controllers.length; i < il; i++) {
             if (this.controllers[i] === event.target) {
-              this.session._notifyControllerPoseUpdated(i, event.matrix);
+              this.session._notifyControllerPoseUpdated(i, event.matrix,
+                event.position, event.orientation);
             }
           }
         }

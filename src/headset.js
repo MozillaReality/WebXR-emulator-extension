@@ -37,6 +37,14 @@ function HeadsetInjection() {
         new _Math.Vector4(),
         new _Math.Vector4()
       ];
+      this.positions = [
+        new _Math.Vector3(),
+        new _Math.Vector3()
+      ];
+      this.orientations = [
+        new _Math.Quaternion(),
+        new _Math.Quaternion()
+      ];
     }
 
     // @TODO: any better method name?
@@ -59,7 +67,7 @@ function HeadsetInjection() {
       this._updateViewMatrices();
 
       this.dispatchEvent(new HeadsetPoseUpdateEvent('viewposeupdate',
-        this.viewMatrices, this.viewMatrixInverses));
+        this.viewMatrices, this.viewMatrixInverses, this.positions, this.orientations));
     }
 
     updateProjectionMatrices(renderState) {
@@ -117,35 +125,47 @@ function HeadsetInjection() {
     _updateViewMatrices() {
       if (this.stereoEnabled) {
         // for left eye
+        // @TODO: remove magic number
         this._translateOnAxis(this.position, this.matrix, axises.x, -0.02);
         this.viewMatrices[0].compose(this.position, this.quaternion, this.scale);
         this.viewMatrixInverses[0].getInverse(this.viewMatrices[0]);
+        this.positions[0].copy(this.position);
 
         // for right eye
         this._translateOnAxis(this.position, this.matrix, axises.x, 0.04);
         this.viewMatrices[1].compose(this.position, this.quaternion, this.scale);
         this.viewMatrixInverses[1].getInverse(this.viewMatrices[1]);
+        this.positions[1].copy(this.position);
 
+        // reset position
         this._translateOnAxis(this.position, this.matrix, axises.x, -0.02);
       } else {
         for (let i = 0; i < 2; i++) {
           this.viewMatrices[i].copy(this.matrix);
           this.viewMatrixInverses[i].copy(this.matrixInverse);
+          this.positions[i].copy(this.position);
         }
+      }
+      for (let i = 0; i < 2; i++) {
+        this.orientations[i].copy(this.quaternion);
       }
     }
   }
 
   class HeadsetPoseUpdateEvent extends Event {
-    constructor(type, viewMatrices, viewMatrixInverses) {
+    constructor(type, viewMatrices, viewMatrixInverses, positions, orientations) {
       super(type);
 
       this.viewMatrices = [];
       this.viewMatrixInverses = [];
+      this.positions = [];
+      this.orientations = [];
 
       for (let i = 0; i < viewMatrices.length; i++) {
         viewMatrices[i].toArray(this.viewMatrices, i * 16);
         viewMatrixInverses[i].toArray(this.viewMatrixInverses, i * 16);
+        positions[i].toArray(this.positions, i * 3);
+        orientations[i].toArray(this.orientations, i * 4);
       }
     }
   }
