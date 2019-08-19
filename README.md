@@ -2,6 +2,8 @@
 
 WebXR emulator extension is a browser extension which helps your WebXR content creation. It enables to responsively run [WebXR](https://www.w3.org/TR/webxr/) application on your **desktop** browser without any XR devices.
 
+[Blog post](https://blog.mozvr.com/xxxxxx/)
+
 ![Screenshot](./screenshots/screenshot.gif)
 
 
@@ -38,7 +40,7 @@ Download this project and install the extension into your browser. This extensio
 
 Go to WebXR application page (for example, [Three.js examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter)). You will find that you are available to enter immersive(VR) mode.
 
-Open "WebXR" tab in browser's developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll devices. You can move headset and controller device models and trigger the controller buttons with your mouse there. You will see that their transforms are reflected to WebXR application in immersive mode.
+Open "WebXR" tab in browser's developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll devices. You can move headset and controller models and trigger the controller buttons with your mouse there. You will see that their transforms are reflected to WebXR application in immersive mode.
 
 ## Configuration
 
