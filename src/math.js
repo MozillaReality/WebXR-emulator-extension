@@ -110,6 +110,14 @@ function MathInjection() {
       this.w = w || 1;
     }
 
+    copy(q) {
+      this.x = q.x;
+      this.y = q.y;
+      this.z = q.z;
+      this.w = q.w;
+      return this;
+    }
+
     fromEuler(euler) {
       const x = euler.x;
       const y = euler.y;
