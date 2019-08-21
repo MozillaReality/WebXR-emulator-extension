@@ -197,10 +197,32 @@ const loadControllersAsset = (loadRight, loadLeft) => {
     const baseController = gltf.scene;
     baseController.scale.multiplyScalar(6);
 
+    const recursivelyClone = (node) => {
+      const cloneWithMaterial = (object) => {
+        const clonedObject = object.clone();
+        // @TODO: support material array?
+        if (clonedObject.material) {
+          clonedObject.material = clonedObject.material.clone();
+        }
+        return clonedObject;
+      };
+      const traverse = (object, parent) => {
+        const clonedObject = cloneWithMaterial(object);
+        if (parent) {
+          parent.add(clonedObject);
+        }
+        for (const child of object.children) {
+          traverse(child, clonedObject);
+        }
+        return clonedObject;
+      };
+      return traverse(node);
+    };
+
     // key: 'rightHand' or 'leftHand'
     const setupController = (key) => {
       const parent = new THREE.Object3D();
-      const controller = baseController.clone();
+      const controller = recursivelyClone(baseController);
 
       parent.position.copy(defaultTransforms[key].position);
       parent.rotation.copy(defaultTransforms[key].rotation);
@@ -320,6 +342,32 @@ const updateAssetNodes = (deviceIndex) => {
   render();
 };
 
+const updateControllerColor = (node, pressed) => {
+  node.traverse(object => {
+    if (!object.material) {
+      return;
+    }
+    // @TODO: Support material array?
+    const material = object.material;
+    // I tried .color first but the looking of the current controller
+    // models didn't differ well with changing .color so using emissive instead for now.
+    if (!material.emissive) {
+      return;
+    }
+    if (material.userData.originalEmissive === undefined) {
+      material.userData.originalEmissive = material.emissive.clone();
+    }
+    if (pressed) {
+      // redden if button is being pressed
+      // @TODO: what if the origial emissive is red-ish?
+      material.emissive.setRGB(0.5, 0, 0);
+    } else {
+      material.emissive.copy(material.userData.originalEmissive);
+    }
+  });
+  render();
+};
+
 render();
 
 // event handlers
@@ -411,11 +459,13 @@ document.getElementById('translateButton').addEventListener('click', event => {
 document.getElementById('rightPressButton').addEventListener('click', event => {
   states.rightButtonPressed = !states.rightButtonPressed;
   notifyButtonPressed('rightHand', states.rightButtonPressed);
+  updateControllerColor(assetNodes.rightHand, states.rightButtonPressed);
 }, false);
 
 document.getElementById('leftPressButton').addEventListener('click', event => {
   states.leftButtonPressed = !states.leftButtonPressed;
   notifyButtonPressed('leftHand', states.leftButtonPressed);
+  updateControllerColor(assetNodes.leftHand, states.leftButtonPressed);
 }, false);
 
 document.getElementById('resetPoseButton').addEventListener('click', event => {
