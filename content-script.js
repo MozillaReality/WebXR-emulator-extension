@@ -36,9 +36,7 @@ const source =  'let xrDeviceManager;'
 + '(function() {'
 +   'const _Math = (' + MathInjection + ')();'
 +   'const XRDeviceManager = (' + XRDeviceManagerInjection + ')();'
-+   'const XRDeviceBase = (' + XRDeviceBaseInjection + ')();'
-+   'const OculusGoDevice = (' + OculusGoDeviceInjection + ')();'
-+   'const OculusQuestDevice = (' + OculusQuestDeviceInjection + ')();'
++   'const XRDevice = (' + XRDeviceInjection + ')();'
 +   'const Headset = (' + HeadsetInjection + ')();'
 +   'const Controller = (' + ControllerInjection + ')();'
 +   '(' + WebXRPolyfillInjection + ')();'
@@ -50,23 +48,34 @@ script.textContent = source;
 (document.head || document.documentElement).appendChild(script);
 script.parentNode.removeChild(script);
 
-// No synchronous storage API so reluctantly
+// No synchronous storage and fetch APIS so reluctantly
 // reflecting configuration asynchronously
 
-const configurationId = 'webxr-extension';
-
-chrome.storage.local.get(configurationId, result => {
-  const script2 = document.createElement('script');
-  const source2 = ''
-  + '(function() {'
-  +   'xrDeviceManager.deserialize(\'' + (result[configurationId] || '') + '\');'
-//  +   'console.log(xrDeviceManager);' // to check if loaded
-  + '})();';
-  script2.textContent = source2;
-  (document.head || document.documentElement).appendChild(script2);
-  script2.parentNode.removeChild(script2);
-
-  port.postMessage({
-    action: 'webxr-startup'
+fetch(chrome.runtime.getURL('./devices.json'))
+  .then(response => response.json())
+  .then(json => {
+    loadConfiguration(json)
+  }).catch(error => {
+    console.error(error);
   });
-});
+
+const loadConfiguration = (deviceJson) => {
+  const configurationId = 'webxr-extension';
+  chrome.storage.local.get(configurationId, result => {
+    const script2 = document.createElement('script');
+    const source2 = ''
+    + '(function() {'
+    +   'xrDeviceManager'
+    +   '.setup(JSON.parse(\'' + JSON.stringify(deviceJson) + '\'))'
+    +   '.deserialize(\'' + (result[configurationId] || '') + '\');'
+    // +   'console.log(xrDeviceManager);' // to check if loaded
+    + '})();';
+    script2.textContent = source2;
+    (document.head || document.documentElement).appendChild(script2);
+    script2.parentNode.removeChild(script2);
+
+    port.postMessage({
+      action: 'webxr-startup'
+    });
+  });
+};
