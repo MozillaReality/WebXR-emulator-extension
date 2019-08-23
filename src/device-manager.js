@@ -1,22 +1,15 @@
 function XRDeviceManagerInjection() {
   class XRDeviceManager {
     constructor() {
-      this.deviceType = null;
-      this.stereoType = null;
       this.device = null;
+      this.deviceKey = null;
+      this.stereoEffect = null;
+      this.deviceDefinitions = null;
     }
 
-    create(type) {
-      const deviceTypes = XRDeviceManager.deviceTypes();
-      switch(type) {
-        case deviceTypes.OculusGo:
-          return new OculusGoDevice();
-        case deviceTypes.OculusQuest:
-          return new OculusQuestDevice();
-        case deviceTypes.None:
-        default:
-          return new XRDeviceBase();
-      }
+    setup(deviceDefinitions) {
+      this.deviceDefinitions = deviceDefinitions;
+      return this;
     }
 
     setSession(session) {
@@ -33,35 +26,33 @@ function XRDeviceManagerInjection() {
     }
 
     serialize() {
-      return [
-        this.deviceType,
-        this.stereoType
-      ].join(':');
+      JSON.stringify({
+        deviceKey: this.deviceKey,
+        stereoEffect: this.stereoEffect
+      });
     }
 
     deserialize(str) {
-      const defaultValues = XRDeviceManager.defaultValues();
-      const values = str.split(':');
-
-      let deviceType = parseInt(values[0]);
-      let stereoType = parseInt(values[1]);
-
-      if (isNaN(deviceType)) {
-        deviceType = defaultValues.deviceType;
+      if (!str) {
+        str = '{}';
       }
+      const json = JSON.parse(str);
+      const deviceKey = json.deviceKey !== undefined
+        ? json.deviceKey : this.deviceDefinitions.default.deviceKey;
+      const stereoEffect = json.stereoEffect !== undefined
+        ? json.stereoEffect : this.deviceDefinitions.default.stereoEffect;
 
-      if (isNaN(stereoType)) {
-        stereoType = defaultValues.stereoType;
-      }
-
-      this._updateDeviceType(deviceType);
-      this._updateStereoType(stereoType);
+      this._updateDevice(deviceKey);
+      this._updateStereoEffect(stereoEffect);
     }
 
-    _updateDeviceType(type) {
-      if (this.deviceType !== type) {
-        this.deviceType = type;
-        this.device = this.create(this.deviceType);
+    _updateDevice(key) {
+      if (this.deviceDefinitions.devices[key] === undefined) {
+        key = this.deviceDefinitions.default;
+      }
+      if (this.deviceKey !== key) {
+        this.deviceKey = key;
+        this.device = new XRDevice(this.deviceDefinitions.devices[key]);
 
         if (navigator.xr && navigator.xr._activateDevice) {
           navigator.xr._activateDevice(this.device);
@@ -72,37 +63,13 @@ function XRDeviceManagerInjection() {
       return false;
     }
 
-    _updateStereoType(type) {
-      if (this.device && this.stereoType !== type) {
-        this.stereoType = type;
-        this.device.enableStereo(this.stereoType);
+    _updateStereoEffect(enabled) {
+      if (this.device && this.stereoEffect !== enabled) {
+        this.stereoEffect = enabled;
+        this.device.enableStereoEffect(this.stereoEffect);
         return true;
       }
       return false;
-    }
-
-    // @TODO: the following configuration values should be from configuration.js
-
-    static deviceTypes() {
-      return {
-        None: 0,
-        OculusGo: 1,
-        OculusQuest: 2
-      };
-    }
-
-    static stereoTypes() {
-      return {
-        Enable: 0,
-        Disable: 1
-      };
-    }
-
-    static defaultValues() {
-      return {
-        deviceType: XRDeviceManager.deviceTypes().OculusGo,
-        stereoType: XRDeviceManager.stereoTypes().Enable
-      };
     }
   }
 

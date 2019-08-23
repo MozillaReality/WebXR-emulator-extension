@@ -1,0 +1,52 @@
+{
+  "default": {
+    "deviceKey": "Oculus Go",
+    "stereoEffect": true
+  },
+  "devices": {
+    "None": {
+      "id": "None",
+      "name": "None"
+    },
+    "Oculus Go": {
+      "id": "Oculus Go",
+      "name": "Oculus Go",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": false,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "hasPosition": false,
+          "hasRotation": true
+        }
+      ]
+    },
+    "Oculus Quest": {
+      "id": "Oculus Quest",
+      "name": "Oculus Quest",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        },
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        }
+      ]
+    }
+  }
+}

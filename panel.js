@@ -258,7 +258,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
   });
 };
 
-const updateAssetNodes = (deviceIndex) => {
+const updateAssetNodes = (deviceKey, deviceJSON) => {
   // firstly remove all existing resources and disable all panel controls
 
   for (const key in assetNodes) {
@@ -295,25 +295,16 @@ const updateAssetNodes = (deviceIndex) => {
 
   // secondly load new assets and enable necessary panel controls
 
-  let hasHeadset = false;
-  let hasRightController = false;
-  let hasLeftController = false;
+  const deviceDefinition = deviceJSON.devices[deviceKey];
 
-  // @TODO: Get information from device profile file or somewhere?
-  if (deviceIndex === 1) { // Oculus Go
-    hasHeadset = true;
-    hasRightController = true;
-    deviceCapabilities.headset.hasRotation = true;
-    deviceCapabilities.controller.hasRotation = true;
-  } else if (deviceIndex === 2) { // Oculus Quest
-    hasHeadset = true;
-    hasRightController = true;
-    hasLeftController = true;
-    deviceCapabilities.headset.hasPosition = true;
-    deviceCapabilities.headset.hasRotation = true;
-    deviceCapabilities.controller.hasPosition = true;
-    deviceCapabilities.controller.hasRotation = true;
-  }
+  const hasHeadset = !! deviceDefinition.headset;
+  const hasRightController = deviceDefinition.controllers && deviceDefinition.controllers.length > 0;
+  const hasLeftController = deviceDefinition.controllers && deviceDefinition.controllers.length > 1;
+
+  deviceCapabilities.headset.hasPosition = hasHeadset && deviceDefinition.headset.hasPosition;
+  deviceCapabilities.headset.hasRotation = hasHeadset && deviceDefinition.headset.hasRotation;
+  deviceCapabilities.controller.hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
+  deviceCapabilities.controller.hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
 
   if (hasHeadset) {
     loadHeadsetAsset();
@@ -483,46 +474,98 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
   render();
 }, false);
 
-// configurations
+// setup configuration select elements from external devices.json file
 
-const deviceSelect = document.getElementById('deviceSelect');
-const stereoSelect = document.getElementById('stereoSelect');
+fetch('./devices.json')
+  .then(response => response.json())
+  .then(json => {
+    const deviceSelect = document.getElementById('deviceSelect');
+    const devices = json.devices;
+    const defaultKey = json.default.deviceKey;
 
-const storeValues = () => {
-  const storedValue = {};
-  storedValue[configurationId] = [
-    deviceSelect.selectedIndex,
-    stereoSelect.selectedIndex
-  ].join(':');
-  chrome.storage.local.set(storedValue, () => {
-    // window.alert(window); // to check if works
+    const deviceKeys = Object.keys(devices).sort();
+    for (const key of deviceKeys) {
+      const deviceDefinition = devices[key];
+      const option = document.createElement('option');
+      option.text = deviceDefinition.name;
+      option.value = key;
+      if (key === defaultKey) {
+        option.selected = true;
+      }
+      deviceSelect.add(option);
+    }
+
+    const stereoSelect = document.getElementById('stereoSelect');
+    const defaultStereoEffect = json.default.stereoEffect;
+
+    const optionEnabled = document.createElement('option');
+    optionEnabled.text = 'Enabled';
+    optionEnabled.value = 'true';
+    if (defaultStereoEffect) {
+      optionEnabled.selected = true;
+    }
+    stereoSelect.add(optionEnabled);
+
+    const optionDisabled = document.createElement('option');
+    optionDisabled.text = 'Disabled';
+    optionDisabled.value = 'false';
+    if (!defaultStereoEffect) {
+      optionDisabled.selected = true;
+    }
+    stereoSelect.add(optionDisabled);
+
+    return json;
+  })
+  .then((deviceJson) => {
+    loadConfiguration(deviceJson);
+  }).catch(error => {
+    console.error(error);
   });
-  updateAssetNodes(deviceSelect.selectedIndex);
+
+// load/store configurations
+
+const loadConfiguration = (deviceJson) => {
+  const deviceSelect = document.getElementById('deviceSelect');
+  const stereoSelect = document.getElementById('stereoSelect');
+  const configurationId = 'webxr-extension';
+
+  const storeValues = () => {
+    const storedValue = {};
+    const deviceKey = deviceSelect.children[deviceSelect.selectedIndex].value;
+    const stereoEffect = stereoSelect.children[stereoSelect.selectedIndex].value;
+    // @TODO: Remove duplicated code. Serialization code is in XRDeviceManager too.
+    storedValue[configurationId] = JSON.stringify({
+      deviceKey: deviceKey,
+      stereoEffect: stereoEffect === 'true'
+    });
+    chrome.storage.local.set(storedValue, () => {
+      // window.alert(window); // to check if works
+    });
+    updateAssetNodes(deviceKey, deviceJson);
+  };
+
+  // load configuration and then load assets
+
+  chrome.storage.local.get(configurationId, result => {
+    const json = JSON.parse(result[configurationId] || '{}');
+    const deviceKey = json.deviceKey;
+    const stereoEffect = json.stereoEffect;
+
+    for (let index = 0; index < deviceSelect.children.length; index++) {
+      const option = deviceSelect.children[index];
+      if (option.value === deviceKey) {
+        deviceSelect.selectedIndex = index;
+        break;
+      }
+    }
+
+    if (stereoEffect !== undefined) {
+      stereoSelect.selectedIndex = stereoEffect ? 0 : 1;
+    }
+
+    updateAssetNodes(deviceSelect.children[deviceSelect.selectedIndex].value, deviceJson);
+  });
+
+  deviceSelect.addEventListener('change', storeValues);
+  stereoSelect.addEventListener('change', storeValues);
 };
-
-// load configuration and then load assets
-
-const configurationId = 'webxr-extension';
-const initialValues = [1, 0]; // @TODO: Import from Configuration
-
-chrome.storage.local.get(configurationId, result => {
-  const values = (result[configurationId] || '').split(':');
-  let deviceIndex = parseInt(values[0]);
-  let stereoIndex = parseInt(values[1]);
-
-  if (isNaN(deviceIndex)) {
-    deviceIndex = initialValues[0];
-  }
-
-  if (isNaN(stereoIndex)) {
-    stereoIndex = initialValues[1];
-  }
-
-  deviceSelect.selectedIndex = deviceIndex;
-  stereoSelect.selectedIndex = stereoIndex;
-
-  updateAssetNodes(deviceIndex);
-});
-
-deviceSelect.addEventListener('change', storeValues);
-stereoSelect.addEventListener('change', storeValues);

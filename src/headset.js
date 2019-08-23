@@ -54,7 +54,7 @@ function HeadsetInjection() {
       this.updatePose(this.position.toArray([]), this.quaternion.toArray([]));
     }
 
-    enableStereo(enable) {
+    enableStereoEffect(enable) {
       this.stereoEnabled = enable;
     }
 
