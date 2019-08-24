@@ -8,6 +8,40 @@
       "id": "None",
       "name": "None"
     },
+    "Google cardboard" : {
+      "id": "Google cardboard",
+      "name": "Google cardboard",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset" : {
+        "hasPosition": false,
+        "hasRotation": true
+      }
+    },
+    "HTC Vive": {
+      "id": "HTC Vive",
+      "name": "HTC Vive",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        },
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        }
+      ]
+    },
     "Oculus Go": {
       "id": "Oculus Go",
       "name": "Oculus Go",
@@ -44,6 +78,24 @@
         },
         {
           "hasPosition": true,
+          "hasRotation": true
+        }
+      ]
+    },
+    "Samsung Gear VR": {
+      "id": "Samsung Gear VR",
+      "name": "Samsung Gear VR",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": false,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "hasPosition": false,
           "hasRotation": true
         }
       ]

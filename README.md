@@ -54,9 +54,12 @@ You can switch device emulator. Currently the difference is just degrees of free
 
 | Device | Description |
 | ---- | ---- |
+| Google Cardboard | 3dof headset and no controller |
+| HTC Vive | 6dof headset and two 6dof controllers |
 | None | No device |
-| OculusGo | 3dof headset and 3dof controller |
-| OculusQuest | 6dof headset and two 6dof controllers |
+| Oculus Go | 3dof headset and 3dof controller |
+| Oculus Quest | 6dof headset and two 6dof controllers |
+| Samsung Gear VR | 3dof headset and 3dof controller |
 
 ### Stereo Effect
 
