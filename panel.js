@@ -522,6 +522,27 @@ fetch('./devices.json')
     console.error(error);
   });
 
+// Displays message requestig reload the application page
+// when device or stereo effect is changed by user
+
+const displayReloadRequestMessage = () => {
+  const messageSpan = document.getElementById('message');
+  while (messageSpan.childElementCount !== 0) {
+    messageSpan.removeChild(messageSpan.children[0]);
+  }
+  const textSpan = document.createElement('span');
+  textSpan.style.color = '#a00';
+  textSpan.style.background = '#ffd';
+  textSpan.textContent = 'Reload to reflect the change';
+  messageSpan.appendChild(textSpan);
+  // disapears in five seconds.
+  setTimeout(() => {
+    if (textSpan.parentElement !== null) {
+      messageSpan.removeChild(textSpan);
+    }
+  }, 5000);
+};
+
 // load/store configurations
 
 const loadConfiguration = (deviceJson) => {
@@ -541,6 +562,7 @@ const loadConfiguration = (deviceJson) => {
     chrome.storage.local.set(storedValue, () => {
       // window.alert(window); // to check if works
     });
+    displayReloadRequestMessage();
     updateAssetNodes(deviceKey, deviceJson);
   };
 
