@@ -22,6 +22,7 @@ Currently the development of this extension is in very early stage. Note that th
 - is tested only on [Three.js WebVR examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter) so far
 - is based on [WebXR device API draft issued on May 21 2019](https://www.w3.org/TR/webxr/)
 - doesn't fully support entire WebXR API yet
+- supports only trigger button, not other buttons
 - supports only VR, not AR yet
 
 
