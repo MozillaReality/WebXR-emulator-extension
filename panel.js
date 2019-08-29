@@ -134,6 +134,7 @@ const createTransformControls = (target, onChange) => {
   controls.setMode(states.translateMode ? 'translate' : 'rotate');
   controls.setSpace('local');
   controls.attach(target);
+  controls.setSize(1.5);
 
   controls.addEventListener('mouseDown', () => {
     orbitControls.enabled = false;
