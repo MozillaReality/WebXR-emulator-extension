@@ -43,11 +43,11 @@ Go to WebXR application page (for example, [Three.js examples](https://threejs.o
 
 Open "WebXR" tab in browser's developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll devices. You can move headset and controller models and trigger the controller buttons with your mouse there. You will see that their transforms are reflected to WebXR application in immersive mode.
 
+![WebXR tab](./screenshots/tab.png)
+
 ## Configuration
 
 You can congifure some settings from the left top in the tab. To reflect the change, you need to reload the application page.
-
-![Configuration](./screenshots/configuration.png)
 
 ### Device
 
