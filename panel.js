@@ -286,6 +286,7 @@ const updateAssetNodes = (deviceKey, deviceJSON) => {
   deviceCapabilities.headset.hasRotation = false;
   deviceCapabilities.controller.hasPosition = false;
   deviceCapabilities.controller.hasRotation = false;
+  document.getElementById('showGizmosSpan').style.display = 'none';
   document.getElementById('headsetCheckboxSpan').style.display = 'none';
   document.getElementById('rightHandCheckboxSpan').style.display = 'none';
   document.getElementById('leftHandCheckboxSpan').style.display = 'none';
@@ -329,6 +330,7 @@ const updateAssetNodes = (deviceKey, deviceJSON) => {
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
+    document.getElementById('showGizmosSpan').style.display = '';
     document.getElementById('resetPoseButton').style.display = '';
   }
 
