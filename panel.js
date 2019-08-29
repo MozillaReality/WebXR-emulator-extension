@@ -307,6 +307,8 @@ const updateAssetNodes = (deviceKey, deviceJSON) => {
   deviceCapabilities.controller.hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
   deviceCapabilities.controller.hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
 
+  const hasPosition = deviceCapabilities.headset.hasPosition || deviceCapabilities.controller.hasPosition;
+
   if (hasHeadset) {
     loadHeadsetAsset();
     document.getElementById('headsetCheckboxSpan').style.display = '';
@@ -327,8 +329,17 @@ const updateAssetNodes = (deviceKey, deviceJSON) => {
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
-    document.getElementById('translateButton').style.display = '';
     document.getElementById('resetPoseButton').style.display = '';
+  }
+
+  // expect if device has position capability it also has rotation capability
+  if (hasPosition) {
+    document.getElementById('translateButton').style.display = '';
+  }
+
+  // force to rotate mode if device doesn't have position capability
+  if (!hasPosition && states.translateMode) {
+    toggleTranslateMode();
   }
 
   render();
@@ -429,7 +440,7 @@ document.getElementById('leftHandLabel').addEventListener('click', event => {
   onLeftHandCheckboxChange();
 }, false);
 
-document.getElementById('translateButton').addEventListener('click', event => {
+const toggleTranslateMode = () => {
   states.translateMode = !states.translateMode;
 
   for (const key in transformControls) {
@@ -446,6 +457,10 @@ document.getElementById('translateButton').addEventListener('click', event => {
   }
 
   render();
+};
+
+document.getElementById('translateButton').addEventListener('click', event => {
+  toggleTranslateMode();
 }, false);
 
 document.getElementById('rightPressButton').addEventListener('click', event => {
