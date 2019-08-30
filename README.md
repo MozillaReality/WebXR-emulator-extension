@@ -2,7 +2,7 @@
 
 WebXR emulator extension is a browser extension which helps your WebXR content creation. It enables to responsively run [WebXR](https://www.w3.org/TR/webxr/) application on your **desktop** browser without the need of any XR devices.
 
-[Blog post](https://blog.mozvr.com/xxxxxx/)
+[Blog post](https://blog.mozvr.com/webxr-emulator-extension/)
 
 ![Screenshot](./screenshots/screenshot.gif)
 
