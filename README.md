@@ -6,14 +6,12 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 ![Screenshot](./screenshots/screenshot.gif)
 
-
 ## Features
 
 - WebXR API polyfill
 - Multiple XR devices emulation
 - Cross browsers support with [WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 <!-- - [Virtual controller (WIP)](./screenshots/virtual-controller.gif) -->
-
 
 ## Status
 
@@ -26,23 +24,19 @@ Currently the development of this extension is still at an early stage.
 - Supports only trigger button, not other buttons
 - Supports only VR, not AR yet
 
-
 ## Browsers
 
 This extension is built on top of [WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions). It works on Firefox, Chrome, and other browsers supporting the API.
 
-
 ## How to use
 
-### Install
+1. Go to the addon stores to install
+- Firefox: https://addons.mozilla.org/es/firefox/addon/webxr-api-emulator
+- Chrome: **TBD**
 
-Download this project and install the extension into your browser. This extension is in development. I recommend temporary/Developer mode installation. ([Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox), [Chrome](https://developer.chrome.com/extensions/getstarted))
+2. Go to WebXR application page (for example, [Three.js examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter)). You will notice that the application detects that you have a VR device (emulated) and it will let you enter the immersive (VR) mode.
 
-### Usage
-
-Go to WebXR application page (for example, [Three.js examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter)). You will notice that the application detects that you have a VR device (emulated) and it will let you enter the immersive (VR) mode.
-
-Open "WebXR" tab in the browser developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll the emulated devices. You can move the headset and controllers and trigger the controller buttons. You will see their transforms reflected in the WebXR application.
+3. Open "WebXR" tab in the browser developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll the emulated devices. You can move the headset and controllers and trigger the controller buttons. You will see their transforms reflected in the WebXR application.
 
 ![WebXR tab](./screenshots/tab.png)
 
@@ -72,11 +66,13 @@ You can enable/disable Stereo Effect which renders two views.
 | Enable | Enables Stereo effect |
 | Disable | Disables Stereo effect |
 
+## For development
+
+If you want to develp or debug this extension, download this repositoy and install the extension into your browser as developermode. ([Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox), [Chrome](https://developer.chrome.com/extensions/getstarted))
 
 ## Kudos
 
 Thanks to [WebVR-Extension project](https://github.com/spite/WebVR-Extension), it was a true inspiration for us when building this one.
-
 
 ## License
 
