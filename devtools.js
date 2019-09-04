@@ -2,6 +2,6 @@ const port = chrome.runtime.connect(null, {name: 'devtools'});
 
 chrome.devtools.panels.create(
   "WebXR",
-  "icon16.png",
+  "icon128.png",
   "panel.html"
 );
