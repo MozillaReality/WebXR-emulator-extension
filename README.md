@@ -31,7 +31,7 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 ## How to use
 
 1. Go to the addon stores to install
-- Firefox: https://addons.mozilla.org/es/firefox/addon/webxr-api-emulator
+- Firefox: https://addons.mozilla.org/firefox/addon/webxr-api-emulator
 - Chrome: **TBD**
 
 2. Go to WebXR application page (for example, [Three.js examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter)). You will notice that the application detects that you have a VR device (emulated) and it will let you enter the immersive (VR) mode.
