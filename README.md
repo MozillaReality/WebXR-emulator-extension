@@ -10,6 +10,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 - WebXR API polyfill
 - Multiple XR devices emulation
+- Graphical device emulator control with [Three.js](https://threejs.org/)
 - Cross browsers support with [WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 <!-- - [Virtual controller (WIP)](./screenshots/virtual-controller.gif) -->
 
