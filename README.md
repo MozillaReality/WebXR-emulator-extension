@@ -69,6 +69,10 @@ You can enable/disable Stereo Effect which renders two views.
 
 If you want to develop or debug this extension, download this repositoy and install the extension into your browser as developermode. ([Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox), [Chrome](https://developer.chrome.com/extensions/getstarted))
 
+## Note
+
+- (09/11/2019) Currenlty it seems that the extension causes errors on A-Frame and it can stop A-Frame applicaiton so that you need to uninstall the extension for it. The root issue seems A-Frame uses old WebXR API while the extension uses the new one. See [#100](https://github.com/MozillaReality/WebXR-emulator-extension/issues/100) and [#81](https://github.com/MozillaReality/WebXR-emulator-extension/issues/81)
+
 ## Kudos
 
 Thanks to [WebVR-Extension project](https://github.com/spite/WebVR-Extension), it was a true inspiration for us when building this one.
