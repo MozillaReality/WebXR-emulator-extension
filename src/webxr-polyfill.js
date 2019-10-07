@@ -64,7 +64,7 @@ function WebXRPolyfillInjection() {
       this.inputSources = [];
       const gamepads = xrDeviceManager.getGamepads();
       for (let i = 0, il = gamepads.length; i < il; i++) {
-        this.inputSources[i] = new XRInputSource(this, gamepads[i]);
+        this.inputSources[i] = new XRInputSource(this, gamepads[i], i === 0 ? 'right' : 'left');
       }
 
       this._frame = new XRFrame(this);
@@ -383,9 +383,9 @@ function WebXRPolyfillInjection() {
   // https://www.w3.org/TR/webxr/#xrinputsource-interface
 
   class XRInputSource {
-    constructor(session, gamepad) {
+    constructor(session, gamepad, handedness) {
       this._session = session;
-      this.handedness = null;
+      this.handedness = handedness;
       this.targetRayMode = null;
       this.targetRaySpace = new XRSpace();
       this.gripSpace = null;
