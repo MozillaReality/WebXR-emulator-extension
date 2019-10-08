@@ -280,8 +280,9 @@ function WebXRPolyfillInjection() {
 
   // https://www.w3.org/TR/webxr/#xrviewerpose-interface
 
-  class XRViewerPose {
+  class XRViewerPose extends XRPose {
     constructor() {
+      super();
       this.views = [new XRView(XREye.left), new XRView(XREye.right)];
     }
   }
