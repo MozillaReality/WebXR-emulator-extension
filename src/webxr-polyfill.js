@@ -16,19 +16,25 @@ function WebXRPolyfillInjection() {
     }
 
     supportsSession(mode) {
+      console.warn('navigator.xr.supportsSession() has been deprecated. Use navigator.xr.isSessionSupported() instead.');
       return new Promise((resolve, reject) => {
-        const scope = this;
+        this.isSessionSupported(mode).then(supported => {
+          if (supported) {
+            resolve();
+          } else {
+            reject(new DOMException('NotSupportedError'));
+          }
+        });
+      });
+    }
 
-        function checkMode() {
-          scope.removeEventListener('devicechange', checkMode);
-
-          return scope._device.modes.indexOf(mode) !== -1
-            ? resolve()
-            : reject(new DOMException('NotSupportedError'));
+    isSessionSupported(mode) {
+      return new Promise((resolve, reject) => {
+        const checkMode = () => {
+          this.removeEventListener('devicechange', checkMode);
+          return resolve(this._device.modes.indexOf(mode) !== -1);
         }
-
         this.addEventListener('devicechange', checkMode);
-
         if (this._device !== null) {
           checkMode();
         }
