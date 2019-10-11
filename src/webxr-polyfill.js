@@ -369,8 +369,6 @@ function WebXRPolyfillInjection() {
   class XRWebGLLayer {
     constructor(session, context, options) {
       this.framebuffer = null;
-      this.framebufferWidth = 0;
-      this.framebufferHeight = 0;
       this.context = context;
 
       this._viewports = [];
@@ -384,6 +382,14 @@ function WebXRPolyfillInjection() {
 
     requestViewportScaling(viewportScaleFactor) {
 
+    }
+
+    get framebufferWidth() {
+      return this.context.drawingBufferWidth;
+    }
+
+    get framebufferHeight() {
+      return this.context.drawingBufferHeight;
     }
   }
 
