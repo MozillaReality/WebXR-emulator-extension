@@ -436,14 +436,22 @@ function WebXRPolyfillInjection() {
     }
   }
 
-  navigator.xr = new XR();
+  // In Chrome(78) if WebXR API is enabled via chrome://flags
+  // navigator.xr is already defined at the timing of "run_at": "document_start" of content_scripts.
+  // navigator.xr = new XR() couldn't override navigator.xr so using Object.defineProperties().
+
+  Object.defineProperties(navigator, {
+    xr: {
+      value: new XR()
+    }
+  });
 
   // In Chrome(76) window.XR* are overriden by browser
   // after the timing of "run_at": "document_start" of content_scripts.
   // Then defining window.XR* here with defineProperties + writable: false
   // to avoid the overriding.
   // @TODO: investigate how to have XR device emulators interact with
-  //        WebXR API defined by browser.
+  //        native WebXR API implemented by browser.
 
   Object.defineProperties(window, {
     XR: {
