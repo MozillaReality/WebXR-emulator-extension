@@ -16,12 +16,8 @@
   "content_scripts": [{
     "matches": ["<all_urls>"],
     "js": [
-      "src/math.js",
-      "src/controller.js",
-      "src/headset.js",
-      "src/webxr-polyfill.js",
-      "src/device.js",
-      "src/device-manager.js",
+      "polyfill/webxr-polyfill.js",
+      "src/ConfigurationManager.js",
       "content-script.js"
     ],
     "run_at": "document_start",

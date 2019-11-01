@@ -6,7 +6,10 @@
   "devices": {
     "None": {
       "id": "None",
-      "name": "None"
+      "name": "None",
+      "modes": [
+        "inline"
+      ]
     },
     "Google cardboard" : {
       "id": "Google cardboard",
