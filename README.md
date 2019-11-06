@@ -8,7 +8,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 ## Features
 
-- WebXR API polyfill
+- [WebXR API polyfill](https://github.com/immersive-web/webxr-polyfill)
 - Multiple XR devices emulation
 - Graphical device emulator control with [Three.js](https://threejs.org/)
 - Cross browsers support with [WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
@@ -20,9 +20,8 @@ Currently the development of this extension is still at an early stage.
 
 - Tested only on [Three.js WebVR examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter) so far
 - Based on [WebXR device API draft issued on May 21 2019](https://www.w3.org/TR/webxr/)
-- No full WebXR API support yet
 - No precise device emulation yet
-- Supports only trigger button, not other buttons
+- Supports only trigger primary button, not other buttons
 - Supports only VR, not AR yet
 
 ## Browsers
@@ -41,7 +40,7 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 
 ## Configuration
 
-You can congifure some settings from the left top in the WebXR tab. To reflect the change, you need to reload the application page.
+You can congifure some settings from the left top in the WebXR tab.
 
 ### Device
 
@@ -67,10 +66,24 @@ You can enable/disable Stereo Effect which renders two views.
 
 ## For development
 
-If you want to develop or debug this extension or if you want to use the under development (not released yet) version, download this repositoy and install the extension into your browser as developermode. ([Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox), [Chrome](https://developer.chrome.com/extensions/getstarted))
+### How to install the newest version
+
+If you want to develop or debug this extension or if you want to use the under development (not released yet) version, download this repositoy and install the extension into your browser as developer mode. ([Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Temporary_Installation_in_Firefox), [Chrome](https://developer.chrome.com/extensions/getstarted))
+
+### How to build polyfill/webxr-polyfill.js
+
+`polyfill/webxr-polyfill.js` is created with npm.
+
+```sh
+$ git clone https://github.com/MozillaReality/WebXR-emulator-extension.git
+$ cd WebXR-emulator-extension
+$ npm install
+$ npm run build
+```
 
 ## Note
 
+- Even if native WebXR API is available the extension overrides it with WebXR polyfill
 - (09/11/2019) Currenlty it seems that the extension causes errors on [A-Frame](https://aframe.io/) and it can stop A-Frame applicaiton so that you need to uninstall the extension for it. The root issue seems A-Frame uses old WebXR API while the extension uses the new one. See [#100](https://github.com/MozillaReality/WebXR-emulator-extension/issues/100) and [#81](https://github.com/MozillaReality/WebXR-emulator-extension/issues/81) (Update on 09/18/2019) It seems A-Frame updates their WebXR API in next release [aframe/issues/4268](https://github.com/aframevr/aframe/issues/4268)
 
 ## Kudos
