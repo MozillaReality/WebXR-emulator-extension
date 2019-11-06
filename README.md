@@ -19,7 +19,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 Currently the development of this extension is still at an early stage.
 
 - Tested only on [Three.js WebVR examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter) so far
-- Based on [WebXR device API draft issued on May 21 2019](https://www.w3.org/TR/webxr/)
+- Based on [WebXR device API draft issued on 10 October 2019](https://www.w3.org/TR/webxr/)
 - No precise device emulation yet
 - Supports only trigger primary button, not other buttons
 - Supports only VR, not AR yet
