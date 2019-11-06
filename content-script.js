@@ -7,75 +7,82 @@ const dispatchCustomEvent = (type, detail) => {
 };
 
 // receive message from panel via background
+// and transfer to polyfill as event on window
 
 port.onMessage.addListener(message => {
   switch (message.action) {
+    case 'webxr-device':
+      dispatchCustomEvent('webxr-device', {
+        deviceDefinition: message.deviceDefinition
+      });
+      break;
+
     case 'webxr-pose':
       dispatchCustomEvent('webxr-pose', {
+        position: message.position,
+        quaternion: message.quaternion
+      });
+      break;
+
+    case 'webxr-input-pose':
+      dispatchCustomEvent('webxr-input-pose', {
         objectName: message.objectName,
         position: message.position,
         quaternion: message.quaternion
       });
       break;
 
-    case 'webxr-button':
-      dispatchCustomEvent('webxr-button', {
+    case 'webxr-input-button':
+      dispatchCustomEvent('webxr-input-button', {
         objectName: message.objectName,
         pressed: message.pressed
+      });
+      break;
+
+    case 'webxr-stereo-effect':
+      dispatchCustomEvent('webxr-stereo-effect', {
+        enabled: message.enabled
       });
       break;
   }
 });
 
+// function to load script in a web page
+
+const loadScript = source => {
+  const script = document.createElement('script');
+  script.textContent = source;
+  (document.head || document.documentElement).appendChild(script);
+  script.parentNode.removeChild(script);
+};
+
 // Synchronously adding WebXR polyfill because
 // some applications for example Three.js WebVR examples
 // check if WebXR is available by synchronously checking
-// navigator.xr, window.XR or whatever.
+// navigator.xr , window.XR or whatever when the page is loaded.
 
-const source =  'let xrDeviceManager;'
-+ '(function() {'
-+   'const _Math = (' + MathInjection + ')();'
-+   'const XRDeviceManager = (' + XRDeviceManagerInjection + ')();'
-+   'const XRDevice = (' + XRDeviceInjection + ')();'
-+   'const Headset = (' + HeadsetInjection + ')();'
-+   'const Controller = (' + ControllerInjection + ')();'
-+   '(' + WebXRPolyfillInjection + ')();'
-+   'xrDeviceManager = new XRDeviceManager();'
-//+   'console.log(this);' // to check if loaded
-+ '})();';
-const script = document.createElement('script');
-script.textContent = source;
-(document.head || document.documentElement).appendChild(script);
-script.parentNode.removeChild(script);
+loadScript(`
+  (function() {
+    (` + WebXRPolyfillInjection + `)();
+    const polyfill = new CustomWebXRPolyfill();
+    //console.log(this); // to check if loaded
+  })();
+`);
 
-// No synchronous storage and fetch APIS so reluctantly
+// No synchronous storage and fetch APIs so reluctantly
 // reflecting configuration asynchronously
 
-fetch(chrome.runtime.getURL('./devices.json'))
-  .then(response => response.json())
-  .then(json => {
-    loadConfiguration(json)
-  }).catch(error => {
-    console.error(error);
-  });
-
-const loadConfiguration = (deviceJson) => {
-  const configurationId = 'webxr-extension';
-  chrome.storage.local.get(configurationId, result => {
-    const script2 = document.createElement('script');
-    const source2 = ''
-    + '(function() {'
-    +   'xrDeviceManager'
-    +   '.setup(JSON.parse(\'' + JSON.stringify(deviceJson) + '\'))'
-    +   '.deserialize(\'' + (result[configurationId] || '') + '\');'
-    // +   'console.log(xrDeviceManager);' // to check if loaded
-    + '})();';
-    script2.textContent = source2;
-    (document.head || document.documentElement).appendChild(script2);
-    script2.parentNode.removeChild(script2);
-
+ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
+  manager.loadFromStorage().then(() => {
+    // send the configuration parameters to the polyfill as an event
+    dispatchCustomEvent('webxr-device-init', {
+      deviceDefinition: manager.deviceDefinition,
+      stereoEffect: manager.stereoEffect
+    });
     port.postMessage({
       action: 'webxr-startup'
     });
   });
-};
+}).catch(error => {
+  console.error(error);
+});

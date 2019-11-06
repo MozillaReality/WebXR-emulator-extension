@@ -18,27 +18,53 @@ const postMessage = (message) => {
   port.postMessage(message);
 };
 
-const notifyPoseChange = (objectName, node) => {
+const notifyPoseChange = (node) => {
   postMessage({
     action: 'webxr-pose',
+    position: node.position.toArray([]), // @TODO: reuse array
+    quaternion: node.quaternion.toArray([]) // @TODO: reuse array
+  });
+};
+
+const notifyInputPoseChange = (objectName, node) => {
+  postMessage({
+    action: 'webxr-input-pose',
     objectName: objectName,
     position: node.position.toArray([]), // @TODO: reuse array
     quaternion: node.quaternion.toArray([]) // @TODO: reuse array
   });
 };
 
-const notifyButtonPressed = (objectName, pressed) => {
+const notifyInputButtonPressed = (objectName, pressed) => {
   postMessage({
-    action: 'webxr-button',
+    action: 'webxr-input-button',
     objectName: objectName,
     pressed: pressed
+  });
+};
+
+const notifyDeviceChange = (deviceDefinition) => {
+  postMessage({
+    action: 'webxr-device',
+    deviceDefinition: deviceDefinition
+  });
+};
+
+const notifyStereoEffectChange = (enabled) => {
+  postMessage({
+    action: 'webxr-stereo-effect',
+    enabled: enabled
   });
 };
 
 const notifyPoses = () => {
   for (const key in assetNodes) {
     if (assetNodes[key]) {
-      notifyPoseChange(key, assetNodes[key]);
+      if (key === 'headset') {
+        notifyPoseChange(assetNodes[key]);
+      } else {
+        notifyInputPoseChange(key, assetNodes[key]);
+      }
     }
   }
 };
@@ -178,7 +204,7 @@ const loadHeadsetAsset = () => {
     assetNodes.headset = parent;
 
     const onChange = () => {
-      notifyPoseChange('headset', parent);
+      notifyPoseChange(parent);
     };
 
     const controls = createTransformControls(parent, onChange);
@@ -234,7 +260,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       assetNodes[key] = parent;
 
       const onChange = () => {
-        notifyPoseChange(key, parent);
+        notifyInputPoseChange(key, parent);
       };
 
       const controls = createTransformControls(parent, onChange);
@@ -259,7 +285,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
   });
 };
 
-const updateAssetNodes = (deviceKey, deviceJSON) => {
+const updateAssetNodes = (deviceDefinition) => {
   // firstly remove all existing resources and disable all panel controls
 
   for (const key in assetNodes) {
@@ -296,8 +322,6 @@ const updateAssetNodes = (deviceKey, deviceJSON) => {
   document.getElementById('resetPoseButton').style.display = 'none';
 
   // secondly load new assets and enable necessary panel controls
-
-  const deviceDefinition = deviceJSON.devices[deviceKey];
 
   const hasHeadset = !! deviceDefinition.headset;
   const hasRightController = deviceDefinition.controllers && deviceDefinition.controllers.length > 0;
@@ -467,13 +491,13 @@ document.getElementById('translateButton').addEventListener('click', event => {
 
 document.getElementById('rightPressButton').addEventListener('click', event => {
   states.rightButtonPressed = !states.rightButtonPressed;
-  notifyButtonPressed('rightHand', states.rightButtonPressed);
+  notifyInputButtonPressed('rightHand', states.rightButtonPressed);
   updateControllerColor(assetNodes.rightHand, states.rightButtonPressed);
 }, false);
 
 document.getElementById('leftPressButton').addEventListener('click', event => {
   states.leftButtonPressed = !states.leftButtonPressed;
-  notifyButtonPressed('leftHand', states.leftButtonPressed);
+  notifyInputButtonPressed('leftHand', states.leftButtonPressed);
   updateControllerColor(assetNodes.leftHand, states.leftButtonPressed);
 }, false);
 
@@ -492,104 +516,81 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
   render();
 }, false);
 
-// setup configuration select elements from external devices.json file
+// setup configurations and start
+// 1. load external devices.json file
+// 2. set up dom elements from it
+// 3. load configuration from storage and load assets
 
-fetch('./devices.json')
-  .then(response => response.json())
-  .then(json => {
-    const deviceSelect = document.getElementById('deviceSelect');
-    const devices = json.devices;
-    const defaultKey = json.default.deviceKey;
-
-    const deviceKeys = Object.keys(devices).sort();
-    for (const key of deviceKeys) {
-      const deviceDefinition = devices[key];
-      const option = document.createElement('option');
-      option.text = deviceDefinition.name;
-      option.value = key;
-      if (key === defaultKey) {
-        option.selected = true;
-      }
-      deviceSelect.add(option);
-    }
-
-    const stereoSelect = document.getElementById('stereoSelect');
-    const defaultStereoEffect = json.default.stereoEffect;
-
-    const optionEnabled = document.createElement('option');
-    optionEnabled.text = 'Enabled';
-    optionEnabled.value = 'true';
-    if (defaultStereoEffect) {
-      optionEnabled.selected = true;
-    }
-    stereoSelect.add(optionEnabled);
-
-    const optionDisabled = document.createElement('option');
-    optionDisabled.text = 'Disabled';
-    optionDisabled.value = 'false';
-    if (!defaultStereoEffect) {
-      optionDisabled.selected = true;
-    }
-    stereoSelect.add(optionDisabled);
-
-    return json;
-  })
-  .then((deviceJson) => {
-    loadConfiguration(deviceJson);
-  }).catch(error => {
-    console.error(error);
-  });
-
-// Displays message requestig reload the application page
-// when device or stereo effect is changed by user
-
-const displayReloadRequestMessage = () => {
-  const messageSpan = document.getElementById('message');
-  while (messageSpan.childElementCount !== 0) {
-    messageSpan.removeChild(messageSpan.children[0]);
-  }
-  const textSpan = document.createElement('span');
-  textSpan.style.color = '#a00';
-  textSpan.style.background = '#ffd';
-  textSpan.textContent = 'Reload to reflect the change';
-  messageSpan.appendChild(textSpan);
-  // disapears in five seconds.
-  setTimeout(() => {
-    if (textSpan.parentElement !== null) {
-      messageSpan.removeChild(textSpan);
-    }
-  }, 5000);
-};
-
-// load/store configurations
-
-const loadConfiguration = (deviceJson) => {
+ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
   const deviceSelect = document.getElementById('deviceSelect');
   const stereoSelect = document.getElementById('stereoSelect');
-  const configurationId = 'webxr-extension';
 
-  const storeValues = () => {
-    const storedValue = {};
+  // set up devices select element
+
+  const devices = manager.devices;
+  const deviceKeys = Object.keys(devices).sort();
+  for (const key of deviceKeys) {
+    const deviceDefinition = devices[key];
+    const option = document.createElement('option');
+    option.text = deviceDefinition.name;
+    option.value = key;
+    if (key === manager.defaultDeviceKey) {
+      option.selected = true;
+    }
+    deviceSelect.add(option);
+  }
+
+  // setup stereo effect select element
+
+  const optionEnabled = document.createElement('option');
+  optionEnabled.text = 'Enabled';
+  optionEnabled.value = 'true';
+  if (manager.defaultStereoEffect) {
+    optionEnabled.selected = true;
+  }
+  stereoSelect.add(optionEnabled);
+
+  const optionDisabled = document.createElement('option');
+  optionDisabled.text = 'Disabled';
+  optionDisabled.value = 'false';
+  if (!manager.defaultStereoEffect) {
+    optionDisabled.selected = true;
+  }
+  stereoSelect.add(optionDisabled);
+
+  // update assets and store configuration if selects are changed
+
+  const onChange = () => {
     const deviceKey = deviceSelect.children[deviceSelect.selectedIndex].value;
-    const stereoEffect = stereoSelect.children[stereoSelect.selectedIndex].value;
-    // @TODO: Remove duplicated code. Serialization code is in XRDeviceManager too.
-    storedValue[configurationId] = JSON.stringify({
-      deviceKey: deviceKey,
-      stereoEffect: stereoEffect === 'true'
-    });
-    chrome.storage.local.set(storedValue, () => {
-      // window.alert(window); // to check if works
-    });
-    displayReloadRequestMessage();
-    updateAssetNodes(deviceKey, deviceJson);
+    const stereoEffect = stereoSelect.children[stereoSelect.selectedIndex].value === 'true';
+
+    const deviceKeyIsUpdated = manager.updateDeviceKey(deviceKey);
+    const stereoEffectIsUpdated = manager.updateStereoEffect(stereoEffect);
+
+    if (deviceKeyIsUpdated || stereoEffectIsUpdated) {
+      manager.storeToStorage().then(storedValues => {
+        // console.log(storedValues);
+      });
+    }
+
+    if (deviceKeyIsUpdated) {
+      notifyDeviceChange(manager.deviceDefinition);
+      updateAssetNodes(manager.deviceDefinition);
+    }
+
+    if (stereoEffectIsUpdated) {
+      notifyStereoEffectChange(stereoEffect);
+    }
   };
+
+  deviceSelect.addEventListener('change', onChange);
+  stereoSelect.addEventListener('change', onChange);
 
   // load configuration and then load assets
 
-  chrome.storage.local.get(configurationId, result => {
-    const json = JSON.parse(result[configurationId] || '{}');
-    const deviceKey = json.deviceKey;
-    const stereoEffect = json.stereoEffect;
+  manager.loadFromStorage().then(result => {
+    const deviceKey = manager.deviceKey;
+    const stereoEffect = manager.stereoEffect;
 
     for (let index = 0; index < deviceSelect.children.length; index++) {
       const option = deviceSelect.children[index];
@@ -599,13 +600,9 @@ const loadConfiguration = (deviceJson) => {
       }
     }
 
-    if (stereoEffect !== undefined) {
-      stereoSelect.selectedIndex = stereoEffect ? 0 : 1;
-    }
-
-    updateAssetNodes(deviceSelect.children[deviceSelect.selectedIndex].value, deviceJson);
+    stereoSelect.selectedIndex = stereoEffect ? 0 : 1;
+    updateAssetNodes(manager.deviceDefinition);
   });
-
-  deviceSelect.addEventListener('change', storeValues);
-  stereoSelect.addEventListener('change', storeValues);
-};
+}).catch(error => {
+  console.error(error);
+});
