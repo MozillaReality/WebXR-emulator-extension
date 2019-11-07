@@ -65,8 +65,12 @@ export default class EmulatedXRDevice extends XRDevice {
     if(!this.isSessionSupported(mode)) {
       return Promise.reject();
     }
+    const immersive = mode === 'immersive-vr' || mode === 'immersive-ar';
     const session = new Session(mode, enabledFeatures);
     this.sessions.set(session.id, session);
+    if (immersive) {
+      this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
+    }
     return Promise.resolve(session.id);
   }
 
@@ -127,6 +131,9 @@ export default class EmulatedXRDevice extends XRDevice {
 
   endSession(sessionId) {
     const session = this.sessions.get(sessionId);
+    if (session.immersive) {
+      this.dispatchEvent('@@webxr-polyfill/vr-present-end', session.id);
+    }
     session.ended = true;
   }
 
