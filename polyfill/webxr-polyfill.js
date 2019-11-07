@@ -6592,8 +6592,12 @@ to native implementations of the API.`;
                     if(!this.isSessionSupported(mode)) {
                       return Promise.reject();
                     }
+                    const immersive = mode === 'immersive-vr' || mode === 'immersive-ar';
                     const session = new Session$1(mode, enabledFeatures);
                     this.sessions.set(session.id, session);
+                    if (immersive) {
+                      this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
+                    }
                     return Promise.resolve(session.id);
                   }
                   requestAnimationFrame(callback) {
@@ -6638,6 +6642,9 @@ to native implementations of the API.`;
                   }
                   endSession(sessionId) {
                     const session = this.sessions.get(sessionId);
+                    if (session.immersive) {
+                      this.dispatchEvent('@@webxr-polyfill/vr-present-end', session.id);
+                    }
                     session.ended = true;
                   }
                   doesSessionSupportReferenceSpace(sessionId, type) {
