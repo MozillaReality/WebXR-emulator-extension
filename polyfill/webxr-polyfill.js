@@ -6614,18 +6614,20 @@ to native implementations of the API.`;
                     invert$2(this.viewMatrix, this.matrix);
                     invert$2(this.leftViewMatrix, translateOnX(copy$4(this.leftViewMatrix, this.matrix), -0.2));
                     invert$2(this.rightViewMatrix, translateOnX(copy$4(this.rightViewMatrix, this.matrix), 0.2));
-                    for (let i = 0; i < this.gamepads.length; ++i) {
-                      const gamepad = this.gamepads[i];
-                      const inputSourceImpl = this.gamepadInputSources[i];
-                      inputSourceImpl.updateFromGamepad(gamepad);
-                      if (inputSourceImpl.primaryButtonIndex !== -1) {
-                        const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
-                        if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
-                          this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
-                        } else if (!primaryActionPressed && inputSourceImpl.primaryActionPressed) {
-                          this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                    if (session.immersive) {
+                      for (let i = 0; i < this.gamepads.length; ++i) {
+                        const gamepad = this.gamepads[i];
+                        const inputSourceImpl = this.gamepadInputSources[i];
+                        inputSourceImpl.updateFromGamepad(gamepad);
+                        if (inputSourceImpl.primaryButtonIndex !== -1) {
+                          const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
+                          if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
+                            this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                          } else if (!primaryActionPressed && inputSourceImpl.primaryActionPressed) {
+                            this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                          }
+                          inputSourceImpl.primaryActionPressed = primaryActionPressed;
                         }
-                        inputSourceImpl.primaryActionPressed = primaryActionPressed;
                       }
                     }
                   }
@@ -6777,6 +6779,7 @@ to native implementations of the API.`;
                 class Session$1 {
                   constructor(mode, enabledFeatures) {
                     this.mode = mode;
+                    this.immersive = mode == 'immersive-vr' || mode == 'immersive-ar';
                     this.id = ++SESSION_ID$1;
                     this.baseLayer = null;
                     this.ended = false;
