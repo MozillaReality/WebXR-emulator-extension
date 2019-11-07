@@ -6716,6 +6716,7 @@ to native implementations of the API.`;
                     if (index >= this.gamepads.length) { return; }
                     const gamepad = this.gamepads[index];
                     gamepad.buttons[0].pressed = pressed;
+                    gamepad.buttons[0].value = pressed ? 1.0 : 0.0;
                   }
                   _initializeControllers(config) {
                     const hasController = config.controllers !== undefined;
@@ -6794,8 +6795,16 @@ to native implementations of the API.`;
                       orientation: [0, 0, 0, 1]
                     },
                     buttons: [
-                      {pressed: false},
-                      {pressed: false}
+                      {
+                        pressed: false,
+                        touched: false,
+                        value: 0.0
+                      },
+                      {
+                        pressed: false,
+                        touched: false,
+                        value: 0.0
+                      }
                     ],
                     hand: hand,
                     mapping: 'xr-standard',
