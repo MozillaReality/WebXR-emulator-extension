@@ -104,7 +104,7 @@ const assetNodes = {
 //        Set more appropriate values.
 const defaultTransforms = {
   headset: {
-    position: new THREE.Vector3(0, 2, 0),
+    position: new THREE.Vector3(0, 1.6, 0),
     rotation: new THREE.Euler(0, 0, 0)
   },
   rightHand: {
