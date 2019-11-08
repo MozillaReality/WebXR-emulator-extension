@@ -195,6 +195,11 @@ export default class EmulatedXRDevice extends XRDevice {
     return null;
   }
 
+  onInlineVerticalFieldOfViewSet(sessionId, value) {
+    const session = this.sessions.get(sessionId);
+    session.inlineVerticalFieldOfView = value;
+  }
+
   onWindowResize() {
     // @TODO: implement
   }
@@ -314,6 +319,7 @@ class Session {
     this.immersive = mode == 'immersive-vr' || mode == 'immersive-ar';
     this.id = ++SESSION_ID;
     this.baseLayer = null;
+    this.inlineVerticalFieldOfView = Math.PI * 0.5;
     this.ended = false;
     this.enabledFeatures = enabledFeatures;
   }
