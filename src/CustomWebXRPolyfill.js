@@ -13,21 +13,21 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
       console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
     }
 
-    // Note: Regardless whether native WebXR API is available we set up WebXR API in global scope
-    //       by using Object.defineProperties() with writable:false because
+    // Note: Regardless whether native WebXR API is available we set up read-only WebXR API
+    //       in global scope by using Object.defineProperties() because
     //       1. In case native WebXR API is available.
     //          We override them with WebXR polyfill as commented above
     //       2. In case native WebXR API isn't available, meaning WebXR API polyfill is injected in
     //          parent constructor.
     //          The WebXR API polyfill can be overriden by native WebXR API on Chrome
     //          after CustomWebXRPolyfill is instanciated if WebXR origin-trial is set in a web page.
-    //          To prevent the override we define WebXR API again with writable:false in glocal scope.
+    //          To prevent the override we define WebXR API again as read-only in global scope.
     const defines = {};
     for (const className of Object.keys(API)) {
       defines[className] = {
-        value: API[className],
-        configurable: false,
-        writable: false
+        // We don't use value because window.foo = bar will throw an error in strict mode
+        get: () => { return API[className]; },
+        set: (value) => {}
       };
     }
     Object.defineProperties(this.global, defines);
