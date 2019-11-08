@@ -39,11 +39,24 @@ export default class EmulatedXRDevice extends XRDevice {
     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
 
     this._setupEventListeners();
+
+    this.div = document.createElement('div');
+    this.div.style.position = 'absolute';
+    this.div.style.width = '100%';
+    this.div.style.height = '100%';
+    this.div.style.top = '0';
+    this.div.style.left = '0';
   }
 
   onBaseLayerSet(sessionId, layer) {
     const session = this.sessions.get(sessionId);
+    if (session.immersive) {
+      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+    }
     session.baseLayer = layer;
+    if (session.immersive) {
+      this._appendBaseLayerCanvasToBodyIfNeeded(sessionId);
+    }
   }
 
   isSessionSupported(mode) {
@@ -139,7 +152,8 @@ export default class EmulatedXRDevice extends XRDevice {
   endSession(sessionId) {
     const session = this.sessions.get(sessionId);
     if (session.immersive) {
-      this.dispatchEvent('@@webxr-polyfill/vr-present-end', session.id);
+      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+      this.dispatchEvent('@@webxr-polyfill/vr-present-end', sessionId);
     }
     session.ended = true;
   }
@@ -211,7 +225,39 @@ export default class EmulatedXRDevice extends XRDevice {
     // @TODO: implement
   }
 
-  // Private device status update methods invoked from event listeners.
+  // Private methods
+
+  // If baseLayer's canvas of immersive session isn't appended to document
+  // nothing will be rendered in immersive mode.
+  // So append the canvas to the document when entering immersive mode and
+  // removing it when exiting.
+  // @TODO: Simplify the method names
+
+  _appendBaseLayerCanvasToBodyIfNeeded(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session.baseLayer || !session.immersive) { return; }
+    const canvas = session.baseLayer.context.canvas;
+    if (canvas.parentElement) { return; }
+    // window size for now
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    this.div.appendChild(canvas);
+    document.body.appendChild(this.div);
+  }
+
+  _removeBaseLayerCanvasFromBodyIfNeeded(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session.baseLayer || !session.immersive) { return; }
+    const canvas = session.baseLayer.context.canvas;
+    // Not equal may mean an application may have moved the canvas
+    // somewhere else so we don't touch in that case.
+    if (canvas.parentElement !== this.div) { return; }
+    document.body.removeChild(this.div);
+    this.div.removeChild(canvas);
+    // @TODO: Restore canvas width/height
+  }
+
+  // Device status update methods invoked from event listeners.
 
   _updateStereoEffect(enabled) {
     this.stereoEffectEnabled = enabled;
