@@ -7,6 +7,8 @@ import {
   mat4
 } from 'gl-matrix';
 
+const DEFAULT_HEIGHT = 1.6; // @TODO: This value should shared with panel.js?
+
 export default class EmulatedXRDevice extends XRDevice {
 
   // @TODO: write config parameter comment
@@ -18,7 +20,7 @@ export default class EmulatedXRDevice extends XRDevice {
     this.modes = config.modes || ['inline'];
 
     // headset
-    this.position = vec3.create();
+    this.position = vec3.fromValues(0, DEFAULT_HEIGHT, 0);
     this.quaternion = quat.create();
     this.scale = vec3.fromValues(1, 1, 1);
     this.matrix = mat4.create();
@@ -145,8 +147,23 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   async requestFrameOfReferenceTransform(type, options) {
-    // Note:
-    return mat4.create();
+    // @TODO: Add note
+    const matrix = mat4.create();
+    switch (type) {
+      case 'viewer':
+      case 'local':
+        matrix[13] = -DEFAULT_HEIGHT;
+        return matrix;
+
+      case 'local-floor':
+        return matrix;
+
+      case 'bounded-floor':
+      case 'unbound':
+      default:
+        // @TODO: Throw an error?
+        return matrix;
+    }
   }
 
   endSession(sessionId) {
