@@ -68,7 +68,7 @@ export default class EmulatedXRDevice extends XRDevice {
       case 'viewer': return true;
       case 'local': return true;
       case 'local-floor': return true;
-      case 'bounded': return false;
+      case 'bounded-floor': return false;
       case 'unbounded': return false;
       default: return false;
     }
