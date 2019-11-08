@@ -81,16 +81,23 @@ export default class EmulatedXRDevice extends XRDevice {
   onFrameStart(sessionId) {
     const session = this.sessions.get(sessionId);
     const renderState = session.baseLayer._session.renderState;
-    const canvas = session.baseLayer.context.canvas;
+    const canvas = session.baseLayer ? session.baseLayer.context.canvas : null;
     const near = renderState.depthNear;
     const far = renderState.depthFar;
-    const width = canvas.width;
-    const height = canvas.height;
-    const aspect = width / height;
+    // @TODO: Proper handling in case baseLayer is null
+    const width = canvas ? canvas.width : 640;
+    const height = canvas ? canvas.height : 480;
 
-    // @TODO: proper FOV 
-    mat4.perspective(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
-    mat4.perspective(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
+    if (session.immersive) {
+      // @TODO: proper FOV
+      const aspect = width * (this.stereoEffectEnabled ? 0.5 : 1.0) / height;
+      mat4.perspective(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
+      mat4.perspective(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
+    } else {
+      // For inline mode only leftProjectionMatrix is used
+      const aspect = width / height;
+      mat4.perspective(this.leftProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+    }
     mat4.fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
     mat4.invert(this.viewMatrix, this.matrix);
 
