@@ -1695,7 +1695,13 @@ to native implementations of the API.`;
                       }
                     }
                     if (this[PRIVATE$f].pendingRenderState === null) {
-                      this[PRIVATE$f].pendingRenderState = Object.assign({}, this[PRIVATE$f].activeRenderState);
+                      const activeRenderState = this[PRIVATE$f].activeRenderState;
+                      this[PRIVATE$f].pendingRenderState = {
+                        depthNear: activeRenderState.depthNear,
+                        depthFar: activeRenderState.depthFar,
+                        inlineVerticalFieldOfView: activeRenderState.inlineVerticalFieldOfView,
+                        baseLayer: activeRenderState.baseLayer
+                      };
                     }
                     Object.assign(this[PRIVATE$f].pendingRenderState, newState);
                   }
@@ -6549,12 +6555,13 @@ to native implementations of the API.`;
                   };
                 }();
 
+                const DEFAULT_HEIGHT = 1.6;
                 class EmulatedXRDevice extends XRDevice {
                   constructor(global, config={}) {
                     super(global);
                     this.sessions = new Map();
                     this.modes = config.modes || ['inline'];
-                    this.position = create$c();
+                    this.position = fromValues$4(0, DEFAULT_HEIGHT, 0);
                     this.quaternion = create$e();
                     this.scale = fromValues$4(1, 1, 1);
                     this.matrix = create$b();
@@ -6570,10 +6577,22 @@ to native implementations of the API.`;
                     this._initializeControllers(config);
                     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
                     this._setupEventListeners();
+                    this.div = document.createElement('div');
+                    this.div.style.position = 'absolute';
+                    this.div.style.width = '100%';
+                    this.div.style.height = '100%';
+                    this.div.style.top = '0';
+                    this.div.style.left = '0';
                   }
                   onBaseLayerSet(sessionId, layer) {
                     const session = this.sessions.get(sessionId);
+                    if (session.immersive) {
+                      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+                    }
                     session.baseLayer = layer;
+                    if (session.immersive) {
+                      this._appendBaseLayerCanvasToBodyIfNeeded(sessionId);
+                    }
                   }
                   isSessionSupported(mode) {
                     return this.modes.includes(mode);
@@ -6583,7 +6602,7 @@ to native implementations of the API.`;
                       case 'viewer': return true;
                       case 'local': return true;
                       case 'local-floor': return true;
-                      case 'bounded': return false;
+                      case 'bounded-floor': return false;
                       case 'unbounded': return false;
                       default: return false;
                     }
@@ -6606,14 +6625,19 @@ to native implementations of the API.`;
                   onFrameStart(sessionId) {
                     const session = this.sessions.get(sessionId);
                     const renderState = session.baseLayer._session.renderState;
-                    const canvas = session.baseLayer.context.canvas;
+                    const canvas = session.baseLayer ? session.baseLayer.context.canvas : null;
                     const near = renderState.depthNear;
                     const far = renderState.depthFar;
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const aspect = width / height;
-                    perspective$1(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
-                    perspective$1(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
+                    const width = canvas ? canvas.width : 640;
+                    const height = canvas ? canvas.height : 480;
+                    if (session.immersive) {
+                      const aspect = width * (this.stereoEffectEnabled ? 0.5 : 1.0) / height;
+                      perspective$1(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
+                      perspective$1(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
+                    } else {
+                      const aspect = width / height;
+                      perspective$1(this.leftProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+                    }
                     fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
                     invert$2(this.viewMatrix, this.matrix);
                     invert$2(this.leftViewMatrix, translateOnX(copy$4(this.leftViewMatrix, this.matrix), -0.2));
@@ -6638,12 +6662,25 @@ to native implementations of the API.`;
                   onFrameEnd(sessionId) {
                   }
                   async requestFrameOfReferenceTransform(type, options) {
-                    return create$b();
+                    const matrix = create$b();
+                    switch (type) {
+                      case 'viewer':
+                      case 'local':
+                        matrix[13] = -DEFAULT_HEIGHT;
+                        return matrix;
+                      case 'local-floor':
+                        return matrix;
+                      case 'bounded-floor':
+                      case 'unbound':
+                      default:
+                        return matrix;
+                    }
                   }
                   endSession(sessionId) {
                     const session = this.sessions.get(sessionId);
                     if (session.immersive) {
-                      this.dispatchEvent('@@webxr-polyfill/vr-present-end', session.id);
+                      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+                      this.dispatchEvent('@@webxr-polyfill/vr-present-end', sessionId);
                     }
                     session.ended = true;
                   }
@@ -6695,7 +6732,29 @@ to native implementations of the API.`;
                     }
                     return null;
                   }
+                  onInlineVerticalFieldOfViewSet(sessionId, value) {
+                    const session = this.sessions.get(sessionId);
+                    session.inlineVerticalFieldOfView = value;
+                  }
                   onWindowResize() {
+                  }
+                  _appendBaseLayerCanvasToBodyIfNeeded(sessionId) {
+                    const session = this.sessions.get(sessionId);
+                    if (!session.baseLayer || !session.immersive) { return; }
+                    const canvas = session.baseLayer.context.canvas;
+                    if (canvas.parentElement) { return; }
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    this.div.appendChild(canvas);
+                    document.body.appendChild(this.div);
+                  }
+                  _removeBaseLayerCanvasFromBodyIfNeeded(sessionId) {
+                    const session = this.sessions.get(sessionId);
+                    if (!session.baseLayer || !session.immersive) { return; }
+                    const canvas = session.baseLayer.context.canvas;
+                    if (canvas.parentElement !== this.div) { return; }
+                    document.body.removeChild(this.div);
+                    this.div.removeChild(canvas);
                   }
                   _updateStereoEffect(enabled) {
                     this.stereoEffectEnabled = enabled;
@@ -6790,6 +6849,7 @@ to native implementations of the API.`;
                     this.immersive = mode == 'immersive-vr' || mode == 'immersive-ar';
                     this.id = ++SESSION_ID$1;
                     this.baseLayer = null;
+                    this.inlineVerticalFieldOfView = Math.PI * 0.5;
                     this.ended = false;
                     this.enabledFeatures = enabledFeatures;
                   }
@@ -6837,9 +6897,8 @@ to native implementations of the API.`;
                     const defines = {};
                     for (const className of Object.keys(API)) {
                       defines[className] = {
-                        value: API[className],
-                        configurable: false,
-                        writable: false
+                        get: () => { return API[className]; },
+                        set: (value) => {}
                       };
                     }
                     Object.defineProperties(this.global, defines);
