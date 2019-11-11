@@ -11,7 +11,7 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     // Note: Experimental.
     //       Override some XR APIs to track active immersive session to
     //       enable to exit immersive by the extension.
-    //       Exiting out of user gesture might violate security policy
+    //       Exiting without user gesture in the page might violate security policy
     //       so there might be a chance that we remove this feature at some point.
 
     let activeImmersiveSession = null;
