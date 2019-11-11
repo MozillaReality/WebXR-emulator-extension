@@ -44,6 +44,10 @@ port.onMessage.addListener(message => {
         enabled: message.enabled
       });
       break;
+
+    case 'webxr-exit-immersive':
+      dispatchCustomEvent('webxr-exit-immersive', {});
+      break;
   }
 });
 

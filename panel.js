@@ -69,6 +69,12 @@ const notifyPoses = () => {
   }
 };
 
+const notifyExitImmersive = () => {
+  postMessage({
+    action: 'webxr-exit-immersive'
+  });
+};
+
 //
 
 const states = {
@@ -320,6 +326,7 @@ const updateAssetNodes = (deviceDefinition) => {
   document.getElementById('rightPressButton').style.display = 'none';
   document.getElementById('leftPressButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
+  document.getElementById('exitButton').style.display = 'none';
 
   // secondly load new assets and enable necessary panel controls
 
@@ -337,6 +344,7 @@ const updateAssetNodes = (deviceDefinition) => {
   if (hasHeadset) {
     loadHeadsetAsset();
     document.getElementById('headsetCheckboxSpan').style.display = '';
+    document.getElementById('exitButton').style.display = '';
   }
 
   if (hasRightController || hasLeftController) {
@@ -514,6 +522,10 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
   }
   notifyPoses();
   render();
+}, false);
+
+document.getElementById('exitButton').addEventListener('click', event => {
+  notifyExitImmersive();
 }, false);
 
 // setup configurations and start
