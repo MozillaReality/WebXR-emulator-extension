@@ -1,10 +1,46 @@
 import WebXRPolyfill from 'webxr-polyfill/src/WebXRPolyfill';
+import XR from 'webxr-polyfill/src/api/XR';
+import XRSession from 'webxr-polyfill/src/api/XRSession';
 import API from 'webxr-polyfill/src/api/index';
 import EmulatedXRDevice from './EmulatedXRDevice';
 
 export default class CustomWebXRPolyfill extends WebXRPolyfill {
   constructor() {
     super();
+
+    // Note: Experimental.
+    //       Override some XR APIs to track active immersive session to
+    //       enable to exit immersive by the extension.
+    //       Exiting out of user gesture might violate security policy
+    //       so there might be a chance that we remove this feature at some point.
+
+    let activeImmersiveSession = null;
+    const originalRequestSession = XR.prototype.requestSession;
+    XR.prototype.requestSession = function(mode, enabledFeatures) {
+      return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
+        if (mode === 'immersive-vr') {
+          activeImmersiveSession = session;
+        }
+        return session;
+      });
+    };
+
+    const originalEnd = XRSession.prototype.end;
+    XRSession.prototype.end = function () {
+      return originalEnd.call(this).then(() => {
+        if (activeImmersiveSession === this) {
+          activeImmersiveSession = null;
+        }
+      });
+    };
+
+    window.addEventListener('webxr-exit-immersive', event => {
+      if (activeImmersiveSession && !activeImmersiveSession.ended) {
+        activeImmersiveSession.end().then(() => {
+          activeImmersiveSession = null;
+        });
+      }
+    });
 
     // Note: Even if native WebXR API is available the extension overrides
     //       it with WebXR polyfill because the extension doesn't work with
