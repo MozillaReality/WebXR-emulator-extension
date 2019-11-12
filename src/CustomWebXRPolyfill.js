@@ -119,7 +119,7 @@ const isNativeFunction = func => {
   return /\[native code\]/i.test(func.toString());
 };
 
-const overrideAPI = function (global) {
+const overrideAPI = global => {
   console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
   for (const className in API) {
     global[className] = API[className];
