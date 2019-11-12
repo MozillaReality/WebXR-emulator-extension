@@ -6891,32 +6891,78 @@ to native implementations of the API.`;
                 class CustomWebXRPolyfill extends WebXRPolyfill {
                   constructor() {
                     super();
+                    let activeImmersiveSession = null;
+                    const originalRequestSession = XR$1.prototype.requestSession;
+                    XR$1.prototype.requestSession = function(mode, enabledFeatures) {
+                      return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
+                        if (mode === 'immersive-vr') {
+                          activeImmersiveSession = session;
+                        }
+                        return session;
+                      });
+                    };
+                    const originalEnd = XRSession$1.prototype.end;
+                    XRSession$1.prototype.end = function () {
+                      return originalEnd.call(this).then(() => {
+                        if (activeImmersiveSession === this) {
+                          activeImmersiveSession = null;
+                        }
+                      });
+                    };
+                    window.addEventListener('webxr-exit-immersive', event => {
+                      if (activeImmersiveSession && !activeImmersiveSession.ended) {
+                        activeImmersiveSession.end().then(() => {
+                          activeImmersiveSession = null;
+                        });
+                      }
+                    });
                     if (this.nativeWebXR) {
-                      console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
-                    }
-                    const defines = {};
-                    for (const className of Object.keys(API)) {
-                      defines[className] = {
-                        get: () => { return API[className]; },
-                        set: (value) => {}
-                      };
-                    }
-                    Object.defineProperties(this.global, defines);
-                    if (this.nativeWebXR) {
+                      overrideAPI(this.global);
                       this.injected = true;
                       this._patchNavigatorXR();
+                    } else {
+                      let overridden = false;
+                      const overrideIfNeeded = () => {
+                        if (overridden) { return false; }
+                        if (isNativeFunction(this.global.XR)) {
+                          overrideAPI(this.global);
+                          overridden = true;
+                          return true;
+                        }
+                        return false;
+                      };
+                      const observer = new MutationObserver(list => {
+                        for (const record of list) {
+                          for (const node of record.addedNodes) {
+                            if (node.localName === 'script' && overrideIfNeeded()) {
+                              observer.disconnect();
+                              break;
+                            }
+                          }
+                          if (overridden) { break; }
+                        }
+                      });
+                      observer.observe(document, {subtree: true, childList: true});
+                      const onLoad = event => {
+                        if (!overridden) {
+                          observer.disconnect();
+                          overrideIfNeeded();
+                        }
+                        document.removeEventListener('DOMContentLoaded', onLoad);
+                      };
+                      document.addEventListener('DOMContentLoaded', onLoad);
                     }
                   }
                   _patchNavigatorXR() {
                     const devicePromise = requestXRDevice$1(this.global);
-                    this.xr = new XR(devicePromise);
+                    this.xr = new XR$1(devicePromise);
                     Object.defineProperty(this.global.navigator, 'xr', {
                       value: this.xr,
                       configurable: true,
                     });
                   }
                 }
-                const requestXRDevice$1 = async function (global, config) {
+                const requestXRDevice$1 = async (global, config) => {
                   return new Promise((resolve, reject) => {
                     const callback = (event) => {
                       window.removeEventListener('webxr-device-init', callback);
@@ -6928,6 +6974,15 @@ to native implementations of the API.`;
                     };
                     window.addEventListener('webxr-device-init', callback, false);
                   });
+                };
+                const isNativeFunction = func => {
+                  return /\[native code\]/i.test(func.toString());
+                };
+                const overrideAPI = global => {
+                  console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
+                  for (const className in API) {
+                    global[className] = API[className];
+                  }
                 };
 
                 return CustomWebXRPolyfill;
