@@ -45,7 +45,8 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     if (this.nativeWebXR) {
       // Note: Even if native WebXR API is available the extension overrides
       //       it with WebXR polyfill because the extension doesn't work with
-      //       the native one (yet).  　　　　overrideAPI(this.global);
+      //       the native one (yet).
+      overrideAPI(this.global);
       this.injected = true;
       this._patchNavigatorXR();
     } else {
