@@ -75,9 +75,11 @@
         align-items: center;
         padding: 0 22px;
       }
+
       .device-properties-component .title-bar {
         cursor: pointer;
       }
+
       .device-properties-component .title-bar:hover {
         background-color: #f2f2f2;
       }
@@ -150,7 +152,7 @@
       </div>
       <div id="renderComponent" class="component main-component"></div>
       <div class="title-bar border-top">
-        <button id="translateButton">Rotate</button>
+        <button id="controlModeButton">Rotate</button>
         <button id="resetPoseButton">Reset pose</button>
         <button id="exitButton">Exit immersive</button>
       </div>
@@ -167,19 +169,19 @@
       <div id="rightControllerComponent" class="component device-property-component">
         <div class="title-bar"><span class="icon">&#9660;</span>Right controller</div>
         <div class="component device-property-content">
-          <div><label><input id="rightHandCheckbox" type="checkbox" checked> Gizmo</label></div>
+          <div><label><input id="rightControllerCheckbox" type="checkbox" checked> Gizmo</label></div>
           <div><span class="key">position:</span> <span class="value" id="rightControllerPosition"></span></div>
           <div><span class="key">rotation:</span> <span class="value" id="rightControllerRotation"></span></div>
-          <div><button class="trigger-button" id="rightPressButton">Trigger button</button></div>
+          <div><button class="trigger-button" id="rightTriggerButton">Trigger button</button></div>
         </div>
       </div>
       <div id="leftControllerComponent" class="component device-property-component">
         <div class="title-bar"><span class="icon">&#9660;</span>Left controller</div>
         <div class="component device-property-content">
-          <div><label><input id="leftHandCheckbox" type="checkbox" checked> Gizmo</label></div>
+          <div><label><input id="leftControllerCheckbox" type="checkbox" checked> Gizmo</label></div>
           <div><span class="key">position:</span> <span class="value" id="leftControllerPosition"></span></div>
           <div><span class="key">rotation:</span> <span class="value" id="leftControllerRotation"></span></div>
-          <div><button class="trigger-button" id="leftPressButton">Trigger button</button></div>
+          <div><button class="trigger-button" id="leftTriggerButton">Trigger button</button></div>
         </div>
       </div>
     </div>
