@@ -129,15 +129,33 @@ const defaultTransforms = {
 
 const renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.setSize(1, 1);
+document.getElementById('renderComponent').appendChild(renderer.domElement);
+
+// Canvas size relying on browser's flexbox
+// then waiting for the flex box determines the size.
+const onResize = () => {
+  const div = document.getElementById('renderComponent');
+  renderer.setSize(1, 1);
+  // Not sure if 1ms is long enough but seems working fine for now.
+  setTimeout(() => {
+    const width = div.offsetWidth;
+    const height = div.offsetHeight;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+    render();
+  }, 1);
+};
+
+onResize();
 
 // scene, camera, light, grid
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(45, 1 / 1, 0.1, 100);
 camera.position.set(-3, 3, 4);
 camera.lookAt(new THREE.Vector3(0, 2, 0));
 
@@ -210,6 +228,7 @@ const loadHeadsetAsset = () => {
     assetNodes.headset = parent;
 
     const onChange = () => {
+      updateHeadsetPropertyComponent();
       notifyPoseChange(parent);
     };
 
@@ -266,6 +285,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       assetNodes[key] = parent;
 
       const onChange = () => {
+        updateControllerPropertyComponent(key);
         notifyInputPoseChange(key, parent);
       };
 
@@ -318,15 +338,14 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities.headset.hasRotation = false;
   deviceCapabilities.controller.hasPosition = false;
   deviceCapabilities.controller.hasRotation = false;
-  document.getElementById('showGizmosSpan').style.display = 'none';
-  document.getElementById('headsetCheckboxSpan').style.display = 'none';
-  document.getElementById('rightHandCheckboxSpan').style.display = 'none';
-  document.getElementById('leftHandCheckboxSpan').style.display = 'none';
+  document.getElementById('headsetComponent').style.display = 'none';
+  document.getElementById('rightControllerComponent').style.display = 'none';
+  document.getElementById('leftControllerComponent').style.display = 'none';
   document.getElementById('translateButton').style.display = 'none';
-  document.getElementById('rightPressButton').style.display = 'none';
-  document.getElementById('leftPressButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
+  updateTriggerButtonColor('rightHand', false);
+  updateTriggerButtonColor('leftHand', false);
 
   // secondly load new assets and enable necessary panel controls
 
@@ -343,7 +362,7 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasHeadset) {
     loadHeadsetAsset();
-    document.getElementById('headsetCheckboxSpan').style.display = '';
+    document.getElementById('headsetComponent').style.display = 'flex';
     document.getElementById('exitButton').style.display = '';
   }
 
@@ -352,17 +371,16 @@ const updateAssetNodes = (deviceDefinition) => {
   }
 
   if (hasRightController) {
-    document.getElementById('rightHandCheckboxSpan').style.display = '';
+    document.getElementById('rightControllerComponent').style.display = 'flex';
     document.getElementById('rightPressButton').style.display = '';
   }
 
   if (hasLeftController) {
-    document.getElementById('leftHandCheckboxSpan').style.display = '';
+    document.getElementById('leftControllerComponent').style.display = 'flex';
     document.getElementById('leftPressButton').style.display = '';
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
-    document.getElementById('showGizmosSpan').style.display = '';
     document.getElementById('resetPoseButton').style.display = '';
   }
 
@@ -409,11 +427,68 @@ render();
 
 // event handlers
 
+const updateHeadsetPropertyComponent = () => {
+  const headset = assetNodes.headset;
+  if (!headset) { return; }
+  const position = headset.position;
+  const rotation = headset.rotation;
+  document.getElementById('headsetPosition').textContent =
+    position.x.toFixed(2) + ' ' + position.y.toFixed(2) + ' ' + position.z.toFixed(2);
+  document.getElementById('headsetRotation').textContent =
+    rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
+};
+
+// key: 'rightHand' or 'leftHand'
+const updateControllerPropertyComponent = (key) => {
+  const hand = assetNodes[key];
+  if (!hand) { return; }
+  const position = hand.position;
+  const rotation = hand.rotation;
+  const positionId = key === 'rightHand' ? 'rightControllerPosition' : 'leftControllerPosition';
+  const rotationId = key === 'rightHand' ? 'rightControllerRotation' : 'leftControllerRotation';
+  document.getElementById(positionId).textContent =
+    position.x.toFixed(2) + ' ' + position.y.toFixed(2) + ' ' + position.z.toFixed(2);
+  document.getElementById(rotationId).textContent =
+    rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
+};
+
+const updateTriggerButtonColor = (key, pressed) => {
+  const buttonId = key === 'rightHand' ? 'rightPressButton' : 'leftPressButton';
+  const button = document.getElementById(buttonId);
+  button.style.color = pressed ? '#fff' : '#000';
+  button.style.backgroundColor = pressed ? '#d66' : '#eee';
+  button.style.borderColor = pressed ? '#d66' : '#ddd';
+};
+
+for (const component of document.getElementsByClassName('device-property-component')) {
+  const title = component.getElementsByClassName('title-bar')[0];
+  const content = component.getElementsByClassName('device-property-content')[0];
+  const icon = title.getElementsByClassName('icon')[0];
+  title.addEventListener('click', event => {
+    if (content.style.display === 'none') {
+      icon.textContent = '-';
+      content.style.display = 'flex';
+    } else {
+      icon.textContent = '+';
+      content.style.display = 'none';
+    }
+  }, false);
+}
+
+document.getElementById('devicePropertiesExpandIcon').addEventListener('click', event => {
+  const component = document.getElementById('devicePropertiesComponent');
+  if (component.style.display === 'none') {
+    component.style.display = 'flex';
+    event.target.textContent = '-';
+  } else {
+    component.style.display = 'none';
+    event.target.textContent = '+';
+  }
+  onResize();
+}, false);
+
 window.addEventListener('resize', event => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  render();
+  onResize();
 }, false);
 
 const onHeadsetCheckboxChange = () => {
@@ -490,6 +565,9 @@ const toggleTranslateMode = () => {
       deviceCapabilities[key === 'headset' ? key : 'controller']);
   }
 
+  document.getElementById('translateButton').textContent =
+    states.translateMode ? 'translate' : 'rotate';
+
   render();
 };
 
@@ -500,12 +578,14 @@ document.getElementById('translateButton').addEventListener('click', event => {
 document.getElementById('rightPressButton').addEventListener('click', event => {
   states.rightButtonPressed = !states.rightButtonPressed;
   notifyInputButtonPressed('rightHand', states.rightButtonPressed);
+  updateTriggerButtonColor('rightHand', states.rightButtonPressed);
   updateControllerColor(assetNodes.rightHand, states.rightButtonPressed);
 }, false);
 
 document.getElementById('leftPressButton').addEventListener('click', event => {
   states.leftButtonPressed = !states.leftButtonPressed;
   notifyInputButtonPressed('leftHand', states.leftButtonPressed);
+  updateTriggerButtonColor('leftHand', states.leftButtonPressed);
   updateControllerColor(assetNodes.leftHand, states.leftButtonPressed);
 }, false);
 
@@ -520,6 +600,10 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
     device.position.copy(defaultTransforms[key].position);
     device.rotation.copy(defaultTransforms[key].rotation);
   }
+  updateHeadsetPropertyComponent();
+  updateControllerPropertyComponent('rightHand');
+  updateControllerPropertyComponent('leftHand');
+
   notifyPoses();
   render();
 }, false);
@@ -535,7 +619,7 @@ document.getElementById('exitButton').addEventListener('click', event => {
 
 ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
   const deviceSelect = document.getElementById('deviceSelect');
-  const stereoSelect = document.getElementById('stereoSelect');
+  const stereoCheckbox = document.getElementById('stereoCheckbox');
 
   // set up devices select element
 
@@ -552,29 +636,15 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
     deviceSelect.add(option);
   }
 
-  // setup stereo effect select element
+  // setup stereo effect checkbox element
 
-  const optionEnabled = document.createElement('option');
-  optionEnabled.text = 'Enabled';
-  optionEnabled.value = 'true';
-  if (manager.defaultStereoEffect) {
-    optionEnabled.selected = true;
-  }
-  stereoSelect.add(optionEnabled);
-
-  const optionDisabled = document.createElement('option');
-  optionDisabled.text = 'Disabled';
-  optionDisabled.value = 'false';
-  if (!manager.defaultStereoEffect) {
-    optionDisabled.selected = true;
-  }
-  stereoSelect.add(optionDisabled);
+  stereoCheckbox.checked = manager.defaultStereoEffect;
 
   // update assets and store configuration if selects are changed
 
   const onChange = () => {
     const deviceKey = deviceSelect.children[deviceSelect.selectedIndex].value;
-    const stereoEffect = stereoSelect.children[stereoSelect.selectedIndex].value === 'true';
+    const stereoEffect = stereoCheckbox.checked;
 
     const deviceKeyIsUpdated = manager.updateDeviceKey(deviceKey);
     const stereoEffectIsUpdated = manager.updateStereoEffect(stereoEffect);
@@ -596,7 +666,13 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
   };
 
   deviceSelect.addEventListener('change', onChange);
-  stereoSelect.addEventListener('change', onChange);
+  stereoCheckbox.addEventListener('change', onChange);
+
+  document.getElementById('stereoEffectLabel').addEventListener('click', event => {
+    const checkbox = document.getElementById('stereoCheckbox');
+    checkbox.checked = !checkbox.checked;
+    onChange();
+  });
 
   // load configuration and then load assets
 
@@ -612,7 +688,7 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
       }
     }
 
-    stereoSelect.selectedIndex = stereoEffect ? 0 : 1;
+    stereoCheckbox.checked = stereoEffect;
     updateAssetNodes(manager.deviceDefinition);
   });
 }).catch(error => {
