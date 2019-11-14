@@ -670,3 +670,19 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
 }).catch(error => {
   console.error(error);
 });
+
+
+// copy values to clipboard on click
+const onTransformFieldClick = event => {
+  let el= event.target;
+  navigator.clipboard.writeText(el.innerHTML.split(' ').join(', '))
+}
+
+const setupTransformFields = () => {
+  let fields = document.getElementsByClassName('value');
+  for (var i = 0; i < fields.length; i++) {
+    fields[i].addEventListener('click', onTransformFieldClick);
+    fields[i].title = 'Click to copy to clipboard';
+  }
+}
+setupTransformFields();
