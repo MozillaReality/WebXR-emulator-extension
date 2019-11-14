@@ -355,10 +355,10 @@ export default class EmulatedXRDevice extends XRDevice {
       const objectName = event.detail.objectName;
 
       switch (objectName) {
-        case 'rightHand':
-        case 'leftHand':
+        case 'rightController':
+        case 'leftController':
           this._updateInputPose(positionArray, quaternionArray,
-            objectName === 'rightHand' ? 0 : 1); // @TODO: remove magic number
+            objectName === 'rightController' ? 0 : 1); // @TODO: remove magic number
           break;
       }
     });
@@ -368,10 +368,10 @@ export default class EmulatedXRDevice extends XRDevice {
       const objectName = event.detail.objectName;
 
       switch (objectName) {
-        case 'rightHand':
-        case 'leftHand':
+        case 'rightController':
+        case 'leftController':
           this._updateInputButtonPressed(pressed,
-            objectName === 'rightHand' ? 0 : 1); // @TODO: remove magic number
+            objectName === 'rightController' ? 0 : 1); // @TODO: remove magic number
           break;
       }
     }, false);

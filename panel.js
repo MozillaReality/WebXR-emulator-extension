@@ -26,19 +26,19 @@ const notifyPoseChange = (node) => {
   });
 };
 
-const notifyInputPoseChange = (objectName, node) => {
+const notifyInputPoseChange = (key, node) => {
   postMessage({
     action: 'webxr-input-pose',
-    objectName: objectName,
+    objectName: OBJECT_NAME[key],
     position: node.position.toArray([]), // @TODO: reuse array
     quaternion: node.quaternion.toArray([]) // @TODO: reuse array
   });
 };
 
-const notifyInputButtonPressed = (objectName, pressed) => {
+const notifyInputButtonPressed = (key, pressed) => {
   postMessage({
     action: 'webxr-input-button',
-    objectName: objectName,
+    objectName: OBJECT_NAME[key],
     pressed: pressed
   });
 };
@@ -77,50 +77,64 @@ const notifyExitImmersive = () => {
 
 //
 
+const CONTROL_MODE = {
+  TRANSLATE: 0,
+  ROTATE: 1
+};
+
+const DEVICE = {
+  HEADSET: '0',
+  CONTROLLER: '1', // use this in case you don't distinguish left/right
+  RIGHT_CONTROLLER: '2',
+  LEFT_CONTROLLER: '3'
+};
+
+const OBJECT_NAME = {};
+OBJECT_NAME[DEVICE.HEADSET] = 'headset';
+OBJECT_NAME[DEVICE.RIGHT_CONTROLLER] = 'rightController';
+OBJECT_NAME[DEVICE.LEFT_CONTROLLER] = 'leftController';
+
 const states = {
-  translateMode: false, // true: translate mode, false: rotate mode
-  rightButtonPressed: false,
-  leftButtonPressed: false
+  controlMode: CONTROL_MODE.ROTATE,
+  buttonPressed: {}
+};
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER] = false;
+
+const deviceCapabilities = {};
+deviceCapabilities[DEVICE.HEADSET] = {
+  hasPosition: false,
+  hasRotation: false
+};
+deviceCapabilities[DEVICE.CONTROLLER] = {
+  hasPosition: false,
+  hasRotation: false
 };
 
-const deviceCapabilities = {
-  headset: {
-    hasPosition: false,
-    hasRotation: false
-  },
-  controller: {
-    hasPosition: false,
-    hasRotation: false
-  }
-};
+const transformControls = {};
+transformControls[DEVICE.HEADSET] = null;
+transformControls[DEVICE.RIGHT_CONTROLLER] = null;
+transformControls[DEVICE.LEFT_CONTROLLER] = null;
 
-const transformControls = {
-  headset: null,
-  rightHand: null,
-  leftHand: null
-};
-
-const assetNodes = {
-  headset: null,
-  rightHand: null,
-  leftHand: null
-};
+const assetNodes = {};
+assetNodes[DEVICE.HEADSET] = null;
+assetNodes[DEVICE.RIGHT_CONTROLLER] = null;
+assetNodes[DEVICE.LEFT_CONTROLLER] = null;
 
 // @TODO: Currently the values are　groundless.
 //        Set more appropriate values.
-const defaultTransforms = {
-  headset: {
-    position: new THREE.Vector3(0, 1.6, 0),
-    rotation: new THREE.Euler(0, 0, 0)
-  },
-  rightHand: {
-    position: new THREE.Vector3(0.5, 1.5, -1.0),
-    rotation: new THREE.Euler(0, 0, 0)
-  },
-  leftHand: {
-    position: new THREE.Vector3(-0.5, 1.5, -1.0),
-    rotation: new THREE.Euler(0, 0, 0)
-  }
+const defaultTransforms = {};
+defaultTransforms[DEVICE.HEADSET] = {
+  position: new THREE.Vector3(0, 1.6, 0),
+  rotation: new THREE.Euler(0, 0, 0)
+};
+defaultTransforms[DEVICE.RIGHT_CONTROLLER] = {
+  position: new THREE.Vector3(0.5, 1.5, -1.0),
+  rotation: new THREE.Euler(0, 0, 0)
+};
+defaultTransforms[DEVICE.LEFT_CONTROLLER] = {
+  position: new THREE.Vector3(-0.5, 1.5, -1.0),
+  rotation: new THREE.Euler(0, 0, 0)
 };
 
 // initialize Three.js objects
@@ -181,7 +195,7 @@ orbitControls.update(); // seems like this line is necessary if I set non-zero a
 
 const createTransformControls = (target, onChange) => {
   const controls = new THREE.TransformControls(camera, renderer.domElement);
-  controls.setMode(states.translateMode ? 'translate' : 'rotate');
+  controls.setMode(states.controlMode === CONTROL_MODE.TRANSLATE ? 'translate' : 'rotate');
   controls.setSpace('local');
   controls.attach(target);
   controls.setSize(1.5);
@@ -208,8 +222,8 @@ const setupTransformControlsEnability = (controls, enabled, capabilities) => {
 
   // disable if device doesn't have capability of current transform mode
   if (controls.enabled) {
-    if ((states.translateMode && !capabilities.hasPosition) ||
-        (!states.translateMode && !capabilities.hasRotation)) {
+    if ((states.controlMode === CONTROL_MODE.TRANSLATE && !capabilities.hasPosition) ||
+        (states.controlMode === CONTROL_MODE.ROTATE && !capabilities.hasRotation)) {
       controls.enabled = false;
     }
   }
@@ -220,12 +234,12 @@ const setupTransformControlsEnability = (controls, enabled, capabilities) => {
 const loadHeadsetAsset = () => {
   new THREE.OBJLoader().load('assets/headset.obj', headset => {
     const parent = new THREE.Object3D();
-    parent.position.copy(defaultTransforms.headset.position);
-    parent.rotation.copy(defaultTransforms.headset.rotation);
+    parent.position.copy(defaultTransforms[DEVICE.HEADSET].position);
+    parent.rotation.copy(defaultTransforms[DEVICE.HEADSET].rotation);
     headset.rotation.y = -Math.PI;
 
     scene.add(parent.add(headset));
-    assetNodes.headset = parent;
+    assetNodes[DEVICE.HEADSET] = parent;
 
     const onChange = () => {
       updateHeadsetPropertyComponent();
@@ -235,10 +249,10 @@ const loadHeadsetAsset = () => {
     const controls = createTransformControls(parent, onChange);
     setupTransformControlsEnability(controls,
       document.getElementById('headsetCheckbox').checked,
-      deviceCapabilities.headset);
+      deviceCapabilities[DEVICE.HEADSET]);
 
     scene.add(controls);
-    transformControls.headset = controls;
+    transformControls[DEVICE.HEADSET] = controls;
     onChange();
     render();
   });
@@ -271,7 +285,6 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       return traverse(node);
     };
 
-    // key: 'rightHand' or 'leftHand'
     const setupController = (key) => {
       const parent = new THREE.Object3D();
       const controller = recursivelyClone(baseController);
@@ -289,10 +302,13 @@ const loadControllersAsset = (loadRight, loadLeft) => {
         notifyInputPoseChange(key, parent);
       };
 
+      const checkboxId = key === DEVICE.RIGHT_CONTROLLER ?
+        'rightControllerCheckbox' : 'leftControllerCheckbox';
+
       const controls = createTransformControls(parent, onChange);
       setupTransformControlsEnability(controls,
-        document.getElementById(key + 'Checkbox').checked,
-        deviceCapabilities.controller);
+        document.getElementById(checkboxId).checked,
+        deviceCapabilities[DEVICE.CONTROLLER]);
 
       scene.add(controls);
       transformControls[key] = controls;
@@ -300,11 +316,11 @@ const loadControllersAsset = (loadRight, loadLeft) => {
     };
 
     if (loadRight) {
-      setupController('rightHand');
+      setupController(DEVICE.RIGHT_CONTROLLER);
     }
 
     if (loadLeft) {
-      setupController('leftHand');
+      setupController(DEVICE.LEFT_CONTROLLER);
     }
 
     render();
@@ -332,20 +348,20 @@ const updateAssetNodes = (deviceDefinition) => {
     transformControls[key] = null;
   }
 
-  states.rightButtonPressed = false;
-  states.leftButtonPressed = false;
-  deviceCapabilities.headset.hasPosition = false;
-  deviceCapabilities.headset.hasRotation = false;
-  deviceCapabilities.controller.hasPosition = false;
-  deviceCapabilities.controller.hasRotation = false;
+  states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = false;
+  states.buttonPressed[DEVICE.LEFT_CONTROLLER] = false;
+  deviceCapabilities[DEVICE.HEADSET].hasPosition = false;
+  deviceCapabilities[DEVICE.HEADSET].hasRotation = false;
+  deviceCapabilities[DEVICE.CONTROLLER].hasPosition = false;
+  deviceCapabilities[DEVICE.CONTROLLER].hasRotation = false;
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
-  document.getElementById('translateButton').style.display = 'none';
+  document.getElementById('controlModeButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
-  updateTriggerButtonColor('rightHand', false);
-  updateTriggerButtonColor('leftHand', false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, false);
 
   // secondly load new assets and enable necessary panel controls
 
@@ -353,12 +369,13 @@ const updateAssetNodes = (deviceDefinition) => {
   const hasRightController = deviceDefinition.controllers && deviceDefinition.controllers.length > 0;
   const hasLeftController = deviceDefinition.controllers && deviceDefinition.controllers.length > 1;
 
-  deviceCapabilities.headset.hasPosition = hasHeadset && deviceDefinition.headset.hasPosition;
-  deviceCapabilities.headset.hasRotation = hasHeadset && deviceDefinition.headset.hasRotation;
-  deviceCapabilities.controller.hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
-  deviceCapabilities.controller.hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
+  deviceCapabilities[DEVICE.HEADSET].hasPosition = hasHeadset && deviceDefinition.headset.hasPosition;
+  deviceCapabilities[DEVICE.HEADSET].hasRotation = hasHeadset && deviceDefinition.headset.hasRotation;
+  deviceCapabilities[DEVICE.CONTROLLER].hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
+  deviceCapabilities[DEVICE.CONTROLLER].hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
 
-  const hasPosition = deviceCapabilities.headset.hasPosition || deviceCapabilities.controller.hasPosition;
+  const hasPosition = deviceCapabilities[DEVICE.HEADSET].hasPosition ||
+    deviceCapabilities[DEVICE.CONTROLLER].hasPosition;
 
   if (hasHeadset) {
     loadHeadsetAsset();
@@ -372,12 +389,12 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasRightController) {
     document.getElementById('rightControllerComponent').style.display = 'flex';
-    document.getElementById('rightPressButton').style.display = '';
+    document.getElementById('rightTriggerButton').style.display = '';
   }
 
   if (hasLeftController) {
     document.getElementById('leftControllerComponent').style.display = 'flex';
-    document.getElementById('leftPressButton').style.display = '';
+    document.getElementById('leftTriggerButton').style.display = '';
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
@@ -386,12 +403,12 @@ const updateAssetNodes = (deviceDefinition) => {
 
   // expect if device has position capability it also has rotation capability
   if (hasPosition) {
-    document.getElementById('translateButton').style.display = '';
+    document.getElementById('controlModeButton').style.display = '';
   }
 
   // force to rotate mode if device doesn't have position capability
-  if (!hasPosition && states.translateMode) {
-    toggleTranslateMode();
+  if (!hasPosition && states.controlMode === CONTROL_MODE.TRANSLATE) {
+    toggleControlMode();
   }
 
   render();
@@ -413,8 +430,8 @@ const updateControllerColor = (node, pressed) => {
       material.userData.originalEmissive = material.emissive.clone();
     }
     if (pressed) {
-      // redden if button is being pressed
-      // @TODO: what if the origial emissive is red-ish?
+      // blue if button is being pressed
+      // @TODO: what if the origial emissive is blue-ish?
       material.emissive.set(0x004e9c);
     } else {
       material.emissive.copy(material.userData.originalEmissive);
@@ -427,39 +444,41 @@ render();
 
 // event handlers
 
-const updateHeadsetPropertyComponent = () => {
-  const headset = assetNodes.headset;
-  if (!headset) { return; }
-  const position = headset.position;
-  const rotation = headset.rotation;
-  document.getElementById('headsetPosition').textContent =
-    position.x.toFixed(2) + ' ' + position.y.toFixed(2) + ' ' + position.z.toFixed(2);
-  document.getElementById('headsetRotation').textContent =
-    rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
-};
-
-// key: 'rightHand' or 'leftHand'
-const updateControllerPropertyComponent = (key) => {
-  const hand = assetNodes[key];
-  if (!hand) { return; }
-  const position = hand.position;
-  const rotation = hand.rotation;
-  const positionId = key === 'rightHand' ? 'rightControllerPosition' : 'leftControllerPosition';
-  const rotationId = key === 'rightHand' ? 'rightControllerRotation' : 'leftControllerRotation';
+const updateDevicePropertyContent = (positionId, rotationId, position, rotation) => {
   document.getElementById(positionId).textContent =
     position.x.toFixed(2) + ' ' + position.y.toFixed(2) + ' ' + position.z.toFixed(2);
   document.getElementById(rotationId).textContent =
     rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
 };
 
+const updateHeadsetPropertyComponent = () => {
+  const headset = assetNodes[DEVICE.HEADSET];
+  if (!headset) { return; }
+  updateDevicePropertyContent('headsetPosition', 'headsetRotation',
+    headset.position, headset.rotation);
+};
+
+const updateControllerPropertyComponent = (key) => {
+  const controller = assetNodes[key];
+  if (!controller) { return; }
+  updateDevicePropertyContent(
+    key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerPosition' : 'leftControllerPosition',
+    key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerRotation' : 'leftControllerRotation',
+    controller.position, controller.rotation
+  );
+};
 
 const updateTriggerButtonColor = (key, pressed) => {
-  const buttonId = key === 'rightHand' ? 'rightPressButton' : 'leftPressButton';
+  const buttonId = key === DEVICE.RIGHT_CONTROLLER ? 'rightTriggerButton' : 'leftTriggerButton';
   const button = document.getElementById(buttonId);
   button.classList.toggle('pressed', pressed);
 };
 
+// Show/Hide device property component
+
 for (const component of document.getElementsByClassName('device-property-component')) {
+  // Expects device-property-component class has a title-bar class element and
+  // a device-property-content class element as children
   const title = component.getElementsByClassName('title-bar')[0];
   const content = component.getElementsByClassName('device-property-content')[0];
   const icon = title.getElementsByClassName('icon')[0];
@@ -491,13 +510,13 @@ window.addEventListener('resize', event => {
 }, false);
 
 const onHeadsetCheckboxChange = () => {
-  if (!transformControls.headset) {
+  if (!transformControls[DEVICE.HEADSET]) {
     return;
   }
 
-  setupTransformControlsEnability(transformControls.headset,
+  setupTransformControlsEnability(transformControls[DEVICE.HEADSET],
     document.getElementById('headsetCheckbox').checked,
-    deviceCapabilities.headset);
+    deviceCapabilities[DEVICE.HEADSET]);
   render();
 };
 
@@ -505,34 +524,39 @@ document.getElementById('headsetCheckbox')
   .addEventListener('change', onHeadsetCheckboxChange, false);
 
 
-// key: 'rightHand' or 'leftHand'
 const onControllerCheckboxChange = (key) => {
   if (!transformControls[key]) {
     return;
   }
 
+  const checkboxId = key === DEVICE.RIGHT_CONTROLLER
+    ? 'rightControllerCheckbox' : 'leftControllerCheckbox';
+
   setupTransformControlsEnability(transformControls[key],
-    document.getElementById(key + 'Checkbox').checked,
-    deviceCapabilities.controller);
+    document.getElementById(checkboxId).checked,
+    deviceCapabilities[DEVICE.CONTROLLER]);
   render();
 };
 
-const onRightHandCheckboxChange = () => {
-  onControllerCheckboxChange('rightHand');
+const onRightControllerCheckboxChange = () => {
+  onControllerCheckboxChange(DEVICE.RIGHT_CONTROLLER);
 };
 
-document.getElementById('rightHandCheckbox')
-  .addEventListener('change', onRightHandCheckboxChange, false);
+document.getElementById('rightControllerCheckbox')
+  .addEventListener('change', onRightControllerCheckboxChange, false);
 
-const onLeftHandCheckboxChange = () => {
-  onControllerCheckboxChange('leftHand');
+const onLeftControllerCheckboxChange = () => {
+  onControllerCheckboxChange(DEVICE.LEFT_CONTROLLER);
 };
 
-document.getElementById('leftHandCheckbox')
-  .addEventListener('change', onLeftHandCheckboxChange, false);
+document.getElementById('leftControllerCheckbox')
+  .addEventListener('change', onLeftControllerCheckboxChange, false);
 
-const toggleTranslateMode = () => {
-  states.translateMode = !states.translateMode;
+const toggleControlMode = () => {
+  states.controlMode = states.controlMode === CONTROL_MODE.TRANSLATE
+    ? CONTROL_MODE.ROTATE : CONTROL_MODE.TRANSLATE;
+
+  const isTranslateMode = states.controlMode === CONTROL_MODE.TRANSLATE;
 
   for (const key in transformControls) {
     const controls = transformControls[key];
@@ -541,34 +565,40 @@ const toggleTranslateMode = () => {
       continue;
     }
 
-    controls.setMode(states.translateMode ? 'translate' : 'rotate');
+    const checkboxId =
+      key === DEVICE.HEADSET ? 'headsetCheckbox' :
+      key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerCheckbox' :
+      'leftControllerCheckbox';
+    controls.setMode(isTranslateMode ? 'translate' : 'rotate');
     setupTransformControlsEnability(controls,
-      document.getElementById(key + 'Checkbox').checked,
-      deviceCapabilities[key === 'headset' ? key : 'controller']);
+      document.getElementById(checkboxId).checked,
+      deviceCapabilities[key === DEVICE.HEADSET ? DEVICE.HEADSET : DEVICE.CONTROLLER]);
   }
 
-  document.getElementById('translateButton').textContent =
-    states.translateMode ? 'Translate' : 'Rotate';
+  document.getElementById('controlModeButton').textContent =
+    isTranslateMode ? 'Translate' : 'Rotate';
 
   render();
 };
 
-document.getElementById('translateButton').addEventListener('click', event => {
-  toggleTranslateMode();
+document.getElementById('controlModeButton').addEventListener('click', event => {
+  toggleControlMode();
 }, false);
 
-document.getElementById('rightPressButton').addEventListener('click', event => {
-  states.rightButtonPressed = !states.rightButtonPressed;
-  notifyInputButtonPressed('rightHand', states.rightButtonPressed);
-  updateTriggerButtonColor('rightHand', states.rightButtonPressed);
-  updateControllerColor(assetNodes.rightHand, states.rightButtonPressed);
+const toggleButtonPressed = key => {
+  states.buttonPressed[key] = !states.buttonPressed[key];
+  const pressed = states.buttonPressed[key];
+  notifyInputButtonPressed(key, pressed);
+  updateTriggerButtonColor(key, pressed);
+  updateControllerColor(assetNodes[key], pressed);
+};
+
+document.getElementById('rightTriggerButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER);
 }, false);
 
-document.getElementById('leftPressButton').addEventListener('click', event => {
-  states.leftButtonPressed = !states.leftButtonPressed;
-  notifyInputButtonPressed('leftHand', states.leftButtonPressed);
-  updateTriggerButtonColor('leftHand', states.leftButtonPressed);
-  updateControllerColor(assetNodes.leftHand, states.leftButtonPressed);
+document.getElementById('leftTriggerButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER);
 }, false);
 
 document.getElementById('resetPoseButton').addEventListener('click', event => {
@@ -583,9 +613,8 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
     device.rotation.copy(defaultTransforms[key].rotation);
   }
   updateHeadsetPropertyComponent();
-  updateControllerPropertyComponent('rightHand');
-  updateControllerPropertyComponent('leftHand');
-
+  updateControllerPropertyComponent(DEVICE.RIGHT_CONTROLLER);
+  updateControllerPropertyComponent(DEVICE.LEFT_CONTROLLER);
   notifyPoses();
   render();
 }, false);
@@ -593,6 +622,17 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
 document.getElementById('exitButton').addEventListener('click', event => {
   notifyExitImmersive();
 }, false);
+
+// copy values to clipboard on click
+const onTransformFieldClick = event => {
+  const el = event.target;
+  navigator.clipboard.writeText(el.innerHTML.split(' ').join(', '));
+}
+
+for (const field of document.getElementsByClassName('value')) {
+  field.addEventListener('click', onTransformFieldClick, false);
+  field.title = 'Click to copy to clipboard';
+}
 
 // setup configurations and start
 // 1. load external devices.json file
@@ -670,19 +710,3 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
 }).catch(error => {
   console.error(error);
 });
-
-
-// copy values to clipboard on click
-const onTransformFieldClick = event => {
-  let el= event.target;
-  navigator.clipboard.writeText(el.innerHTML.split(' ').join(', '))
-}
-
-const setupTransformFields = () => {
-  let fields = document.getElementsByClassName('value');
-  for (var i = 0; i < fields.length; i++) {
-    fields[i].addEventListener('click', onTransformFieldClick);
-    fields[i].title = 'Click to copy to clipboard';
-  }
-}
-setupTransformFields();
