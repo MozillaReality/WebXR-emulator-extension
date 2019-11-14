@@ -153,7 +153,7 @@ onResize();
 // scene, camera, light, grid
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
+scene.background = new THREE.Color(0xf3f3f3);
 
 const camera = new THREE.PerspectiveCamera(45, 1 / 1, 0.1, 100);
 camera.position.set(-3, 3, 4);
@@ -167,7 +167,7 @@ const light = new THREE.DirectionalLight(0xffffff);
 light.position.set(-1, 1, -1);
 scene.add(light);
 
-const gridHelper = new THREE.PolarGridHelper(10, 5);
+const gridHelper = new THREE.GridHelper(20, 20);
 scene.add(gridHelper);
 
 // orbit controls for camera
@@ -415,7 +415,7 @@ const updateControllerColor = (node, pressed) => {
     if (pressed) {
       // redden if button is being pressed
       // @TODO: what if the origial emissive is red-ish?
-      material.emissive.setRGB(0.5, 0, 0);
+      material.emissive.set(0x004e9c);
     } else {
       material.emissive.copy(material.userData.originalEmissive);
     }
@@ -452,12 +452,11 @@ const updateControllerPropertyComponent = (key) => {
     rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
 };
 
+
 const updateTriggerButtonColor = (key, pressed) => {
   const buttonId = key === 'rightHand' ? 'rightPressButton' : 'leftPressButton';
   const button = document.getElementById(buttonId);
-  button.style.color = pressed ? '#fff' : '#000';
-  button.style.backgroundColor = pressed ? '#d66' : '#eee';
-  button.style.borderColor = pressed ? '#d66' : '#ddd';
+  button.classList.toggle('pressed', pressed);
 };
 
 for (const component of document.getElementsByClassName('device-property-component')) {
@@ -466,10 +465,10 @@ for (const component of document.getElementsByClassName('device-property-compone
   const icon = title.getElementsByClassName('icon')[0];
   title.addEventListener('click', event => {
     if (content.style.display === 'none') {
-      icon.textContent = '-';
+      icon.innerHTML = '&#9660;';
       content.style.display = 'flex';
     } else {
-      icon.textContent = '+';
+      icon.innerHTML = '&#9654;';
       content.style.display = 'none';
     }
   }, false);
@@ -479,10 +478,10 @@ document.getElementById('devicePropertiesExpandIcon').addEventListener('click', 
   const component = document.getElementById('devicePropertiesComponent');
   if (component.style.display === 'none') {
     component.style.display = 'flex';
-    event.target.textContent = '-';
+    event.target.innerHTML = '&#9660;';
   } else {
     component.style.display = 'none';
-    event.target.textContent = '+';
+    event.target.innerHTML = '&#9654;';
   }
   onResize();
 }, false);
@@ -505,11 +504,6 @@ const onHeadsetCheckboxChange = () => {
 document.getElementById('headsetCheckbox')
   .addEventListener('change', onHeadsetCheckboxChange, false);
 
-document.getElementById('headsetLabel').addEventListener('click', event => {
-  const checkbox = document.getElementById('headsetCheckbox');
-  checkbox.checked = !checkbox.checked;
-  onHeadsetCheckboxChange();
-});
 
 // key: 'rightHand' or 'leftHand'
 const onControllerCheckboxChange = (key) => {
@@ -530,24 +524,12 @@ const onRightHandCheckboxChange = () => {
 document.getElementById('rightHandCheckbox')
   .addEventListener('change', onRightHandCheckboxChange, false);
 
-document.getElementById('rightHandLabel').addEventListener('click', event => {
-  const checkbox = document.getElementById('rightHandCheckbox');
-  checkbox.checked = !checkbox.checked;
-  onRightHandCheckboxChange();
-}, false);
-
 const onLeftHandCheckboxChange = () => {
   onControllerCheckboxChange('leftHand');
 };
 
 document.getElementById('leftHandCheckbox')
   .addEventListener('change', onLeftHandCheckboxChange, false);
-
-document.getElementById('leftHandLabel').addEventListener('click', event => {
-  const checkbox = document.getElementById('leftHandCheckbox');
-  checkbox.checked = !checkbox.checked;
-  onLeftHandCheckboxChange();
-}, false);
 
 const toggleTranslateMode = () => {
   states.translateMode = !states.translateMode;
@@ -566,7 +548,7 @@ const toggleTranslateMode = () => {
   }
 
   document.getElementById('translateButton').textContent =
-    states.translateMode ? 'translate' : 'rotate';
+    states.translateMode ? 'Translate' : 'Rotate';
 
   render();
 };
@@ -624,7 +606,7 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
   // set up devices select element
 
   const devices = manager.devices;
-  const deviceKeys = Object.keys(devices).sort();
+  const deviceKeys = Object.keys(devices);
   for (const key of deviceKeys) {
     const deviceDefinition = devices[key];
     const option = document.createElement('option');
@@ -668,12 +650,6 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
   deviceSelect.addEventListener('change', onChange);
   stereoCheckbox.addEventListener('change', onChange);
 
-  document.getElementById('stereoEffectLabel').addEventListener('click', event => {
-    const checkbox = document.getElementById('stereoCheckbox');
-    checkbox.checked = !checkbox.checked;
-    onChange();
-  });
-
   // load configuration and then load assets
 
   manager.loadFromStorage().then(result => {
@@ -694,3 +670,19 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
 }).catch(error => {
   console.error(error);
 });
+
+
+// copy values to clipboard on click
+const onTransformFieldClick = event => {
+  let el= event.target;
+  navigator.clipboard.writeText(el.innerHTML.split(' ').join(', '))
+}
+
+const setupTransformFields = () => {
+  let fields = document.getElementsByClassName('value');
+  for (var i = 0; i < fields.length; i++) {
+    fields[i].addEventListener('click', onTransformFieldClick);
+    fields[i].title = 'Click to copy to clipboard';
+  }
+}
+setupTransformFields();

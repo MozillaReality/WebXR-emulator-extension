@@ -1,12 +1,13 @@
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap" rel="stylesheet">
     <style>
       body {
         margin: 0;
         background-color: #fff;
-        color: #000;
-        font-size: 0.8em;
+        color: #2a2a2a;
+        font-size: 12px;
         user-select: none;
         -moz-user-select: none;
         -webkit-user-select: none;
@@ -14,16 +15,23 @@
         flex-wrap: nowrap;
         flex-direction: row;
         height: 100%;
+        font-family: sans-serif;
       }
 
       select {
-        font-size: 0.8em;
+        margin: 0 0.6rem;
+      }
+
+      label {
+        cursor: pointer;
       }
 
       input[type=checkbox] {
         transform: scale(0.8);
         -moz-transform: scale(0.8);
         -webkit-transform: scale(0.8);
+        margin: 0;
+        margin-right: 2px;
       }
 
       canvas {
@@ -40,7 +48,7 @@
       }
 
       .device-properties-component {
-        width: 180px;
+        width: 260px;
         border-left: 1px solid #ddd;
       }
 
@@ -52,32 +60,53 @@
         padding: 10px;
       }
 
+      .device-property-content > div {
+        margin: 4px 10px;
+      }
+
       .title-bar {
         display: flex;
         flex-direction: row;
-        height: 18px;
-        background-color: #f5f5f5;
+        height: 25px;
+        background-color: #f9f9fa;
         border-width: 0px 0px 1px 0px;
         border-style: solid;
-        border-color: #dddddd;
+        border-color: #ddd;
         align-items: center;
-        padding: 1px 0.8em;
+        padding: 0 22px;
+      }
+      .device-properties-component .title-bar {
+        cursor: pointer;
+      }
+      .device-properties-component .title-bar:hover {
+        background-color: #f2f2f2;
       }
 
       button {
-        margin: 2px;
-        font-size: 0.8em;
-        border-radius: 5px;
-        -webkit-border-radius: 5px;
-        -moz-border-radius: 5px;
-        background-color: #eee;
-        border-color: #ddd;
-        border-style: solid;
+        margin: 0 2px;
+        background-color: #f3f3f3;
+        border: 1px solid #ccc;
+        border-radius: 2px;
+        color: #363636;
+        cursor: pointer;
+        outline-style: none;
+      }
+
+      button:hover {
+        background-color: #e8e8e8;
+      }
+
+      button.pressed {
+        background-color: #0074e8;
+        border-color: #fff;
+        color: #fff;
       }
 
       .trigger-button {
-        width: 80%;
-        background-color: #eee;
+        height: 30px;
+        width: 100%;
+        border-radius: 5px;
+        margin: 10px 0;
       }
 
       .item-right {
@@ -88,13 +117,27 @@
         border-top: 1px solid #ddd;
       }
 
+      .key, .value {
+        font-family: 'Roboto Mono', monospace;
+      }
+
       .key {
-        color: #00f;
+        color: #0074e8;
+      }
+
+      .value {
+        color: #dd00a9;
+        cursor: pointer;
+      }
+
+      .value:hover {
+        background: #f0f0f0;
       }
 
       .icon {
-        padding-left: 4px;
-        padding-right: 4px;
+        position: absolute;
+        color: #929294;
+        margin-left: -15px;
       }
     </style>
   </head>
@@ -102,41 +145,41 @@
     <div class="component main-component">
       <div class="title-bar">
         <select id="deviceSelect"></select>
-        <input id="stereoCheckbox" type="checkbox" checked><span id="stereoEffectLabel">stereo effect</span></input>
-        <span id="devicePropertiesExpandIcon" class="item-right icon">-</span>
+        <label><input id="stereoCheckbox" type="checkbox" checked>Stereo effect</label>
+        <span id="devicePropertiesExpandIcon" class="item-left icon">&#9660;</span>
       </div>
       <div id="renderComponent" class="component main-component"></div>
       <div class="title-bar border-top">
-        <button id="translateButton">rotate</button>
-        <button id="resetPoseButton">reset pose</button>
-        <button id="exitButton">exit immersive</button>
+        <button id="translateButton">Rotate</button>
+        <button id="resetPoseButton">Reset pose</button>
+        <button id="exitButton">Exit immersive</button>
       </div>
     </div>
     <div id="devicePropertiesComponent" class="component device-properties-component">
       <div id="headsetComponent" class="component device-property-component">
-        <div class="title-bar"><span class="icon">-</span>Headset</div>
+        <div class="title-bar"><span class="icon">&#9660;</span>Headset</div>
         <div class="component device-property-content">
-          <div><input id="headsetCheckbox" type="checkbox" checked><span id="headsetLabel">Gizmo</span></input></div>
-          <div><span class="key">position:</span> <span id="headsetPosition"></span></div>
-          <div><span class="key">rotation:</span> <span id="headsetRotation"></span></div>
+          <div><label><input id="headsetCheckbox" type="checkbox" checked> Gizmo</label></div>
+          <div><span class="key">position:</span> <span class="value" id="headsetPosition"></span></div>
+          <div><span class="key">rotation:</span> <span class="value" id="headsetRotation"></span></div>
         </div>
       </div>
       <div id="rightControllerComponent" class="component device-property-component">
-        <div class="title-bar"><span class="icon">-</span>Right controller</div>
+        <div class="title-bar"><span class="icon">&#9660;</span>Right controller</div>
         <div class="component device-property-content">
-          <div><input id="rightHandCheckbox" type="checkbox" checked><span id="rightHandLabel">Gizmo</span></input></div>
-          <div><span class="key">position:</span> <span id="rightControllerPosition"></span></div>
-          <div><span class="key">rotation:</span> <span id="rightControllerRotation"></span></div>
-          <div><button class="trigger-button" id="rightPressButton">trigger button</button></div>
+          <div><label><input id="rightHandCheckbox" type="checkbox" checked> Gizmo</label></div>
+          <div><span class="key">position:</span> <span class="value" id="rightControllerPosition"></span></div>
+          <div><span class="key">rotation:</span> <span class="value" id="rightControllerRotation"></span></div>
+          <div><button class="trigger-button" id="rightPressButton">Trigger button</button></div>
         </div>
       </div>
       <div id="leftControllerComponent" class="component device-property-component">
-        <div class="title-bar"><span class="icon">-</span>Left controller</div>
+        <div class="title-bar"><span class="icon">&#9660;</span>Left controller</div>
         <div class="component device-property-content">
-          <div><input id="leftHandCheckbox" type="checkbox" checked><span id="leftHandLabel">Gizmo</span></input></div>
-          <div><span class="key">position:</span> <span id="leftControllerPosition"></span></div>
-          <div><span class="key">rotation:</span> <span id="leftControllerRotation"></span></div>
-          <div><button class="trigger-button" id="leftPressButton">trigger button</button></div>
+          <div><label><input id="leftHandCheckbox" type="checkbox" checked> Gizmo</label></div>
+          <div><span class="key">position:</span> <span class="value" id="leftControllerPosition"></span></div>
+          <div><span class="key">rotation:</span> <span class="value" id="leftControllerRotation"></span></div>
+          <div><button class="trigger-button" id="leftPressButton">Trigger button</button></div>
         </div>
       </div>
     </div>
