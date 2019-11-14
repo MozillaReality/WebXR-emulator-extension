@@ -77,7 +77,7 @@ const notifyExitImmersive = () => {
 
 //
 
-const CONTROL_MODE = {
+const TRANSFORM_MODE = {
   TRANSLATE: 0,
   ROTATE: 1
 };
@@ -95,7 +95,7 @@ OBJECT_NAME[DEVICE.RIGHT_CONTROLLER] = 'rightController';
 OBJECT_NAME[DEVICE.LEFT_CONTROLLER] = 'leftController';
 
 const states = {
-  controlMode: CONTROL_MODE.ROTATE,
+  transformMode: TRANSFORM_MODE.ROTATE,
   buttonPressed: {}
 };
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = false;
@@ -195,7 +195,7 @@ orbitControls.update(); // seems like this line is necessary if I set non-zero a
 
 const createTransformControls = (target, onChange) => {
   const controls = new THREE.TransformControls(camera, renderer.domElement);
-  controls.setMode(states.controlMode === CONTROL_MODE.TRANSLATE ? 'translate' : 'rotate');
+  controls.setMode(states.transformMode === TRANSFORM_MODE.TRANSLATE ? 'translate' : 'rotate');
   controls.setSpace('local');
   controls.attach(target);
   controls.setSize(1.5);
@@ -222,8 +222,8 @@ const setupTransformControlsEnability = (controls, enabled, capabilities) => {
 
   // disable if device doesn't have capability of current transform mode
   if (controls.enabled) {
-    if ((states.controlMode === CONTROL_MODE.TRANSLATE && !capabilities.hasPosition) ||
-        (states.controlMode === CONTROL_MODE.ROTATE && !capabilities.hasRotation)) {
+    if ((states.transformMode === TRANSFORM_MODE.TRANSLATE && !capabilities.hasPosition) ||
+        (states.transformMode === TRANSFORM_MODE.ROTATE && !capabilities.hasRotation)) {
       controls.enabled = false;
     }
   }
@@ -357,7 +357,7 @@ const updateAssetNodes = (deviceDefinition) => {
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
-  document.getElementById('controlModeButton').style.display = 'none';
+  document.getElementById('transformModeButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
   updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, false);
@@ -403,11 +403,11 @@ const updateAssetNodes = (deviceDefinition) => {
 
   // expect if device has position capability it also has rotation capability
   if (hasPosition) {
-    document.getElementById('controlModeButton').style.display = '';
+    document.getElementById('transformModeButton').style.display = '';
   }
 
   // force to rotate mode if device doesn't have position capability
-  if (!hasPosition && states.controlMode === CONTROL_MODE.TRANSLATE) {
+  if (!hasPosition && states.transformMode === TRANSFORM_MODE.TRANSLATE) {
     toggleControlMode();
   }
 
@@ -553,10 +553,10 @@ document.getElementById('leftControllerCheckbox')
   .addEventListener('change', onLeftControllerCheckboxChange, false);
 
 const toggleControlMode = () => {
-  states.controlMode = states.controlMode === CONTROL_MODE.TRANSLATE
-    ? CONTROL_MODE.ROTATE : CONTROL_MODE.TRANSLATE;
+  states.transformMode = states.transformMode === TRANSFORM_MODE.TRANSLATE
+    ? TRANSFORM_MODE.ROTATE : TRANSFORM_MODE.TRANSLATE;
 
-  const isTranslateMode = states.controlMode === CONTROL_MODE.TRANSLATE;
+  const isTranslateMode = states.transformMode === TRANSFORM_MODE.TRANSLATE;
 
   for (const key in transformControls) {
     const controls = transformControls[key];
@@ -575,13 +575,13 @@ const toggleControlMode = () => {
       deviceCapabilities[key === DEVICE.HEADSET ? DEVICE.HEADSET : DEVICE.CONTROLLER]);
   }
 
-  document.getElementById('controlModeButton').textContent =
+  document.getElementById('transformModeButton').textContent =
     isTranslateMode ? 'Translate' : 'Rotate';
 
   render();
 };
 
-document.getElementById('controlModeButton').addEventListener('click', event => {
+document.getElementById('transformModeButton').addEventListener('click', event => {
   toggleControlMode();
 }, false);
 
