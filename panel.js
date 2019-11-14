@@ -153,7 +153,7 @@ onResize();
 // scene, camera, light, grid
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
+scene.background = new THREE.Color(0xf3f3f3);
 
 const camera = new THREE.PerspectiveCamera(45, 1 / 1, 0.1, 100);
 camera.position.set(-3, 3, 4);
@@ -415,7 +415,7 @@ const updateControllerColor = (node, pressed) => {
     if (pressed) {
       // redden if button is being pressed
       // @TODO: what if the origial emissive is red-ish?
-      material.emissive.setRGB(0.5, 0, 0);
+      material.emissive.set(0x004e9c);
     } else {
       material.emissive.copy(material.userData.originalEmissive);
     }
@@ -451,6 +451,7 @@ const updateControllerPropertyComponent = (key) => {
   document.getElementById(rotationId).textContent =
     rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
 };
+
 
 const updateTriggerButtonColor = (key, pressed) => {
   const buttonId = key === 'rightHand' ? 'rightPressButton' : 'leftPressButton';
@@ -648,12 +649,6 @@ ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
 
   deviceSelect.addEventListener('change', onChange);
   stereoCheckbox.addEventListener('change', onChange);
-
-  document.getElementById('stereoEffectLabel').addEventListener('click', event => {
-    const checkbox = document.getElementById('stereoCheckbox');
-    checkbox.checked = !checkbox.checked;
-    onChange();
-  });
 
   // load configuration and then load assets
 
