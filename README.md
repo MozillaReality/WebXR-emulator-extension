@@ -17,7 +17,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 ## Status
 
 - Based on [WebXR device API draft issued on 10 October 2019](https://www.w3.org/TR/webxr/)
-- No precise device emulation yet
+- No device specific emulation yet
 - Supports only trigger primary button, not other buttons
 - Supports only VR, not AR yet
 
