@@ -650,7 +650,7 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   // set up devices select element
 
   // Assuming the order of Object.keys() isn't predictable.
-  // Alphabetical sort first and the place 'None' at top of the list.
+  // Alphabetical sort first and then place 'None' at top of the list.
   const devices = manager.devices;
   const deviceKeys = Object.keys(devices).sort();
   if (deviceKeys.includes('None')) {
