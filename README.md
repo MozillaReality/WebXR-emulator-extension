@@ -16,9 +16,6 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 ## Status
 
-Currently the development of this extension is still at an early stage.
-
-- Tested only on [Three.js WebVR examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter) so far
 - Based on [WebXR device API draft issued on 10 October 2019](https://www.w3.org/TR/webxr/)
 - No precise device emulation yet
 - Supports only trigger primary button, not other buttons
@@ -40,7 +37,7 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 
 ## Configuration
 
-You can congifure some settings from the left top in the WebXR tab.
+You can congifure some settings from the top in the WebXR tab.
 
 ### Device
 
@@ -48,9 +45,9 @@ You can switch emulated device. The difference between devices is just degrees o
 
 | Device | Description |
 | ---- | ---- |
+| None | No device |
 | Google Cardboard | 3dof headset and no controller |
 | HTC Vive | 6dof headset and two 6dof controllers |
-| None | No device |
 | Oculus Go | 3dof headset and 3dof controller |
 | Oculus Quest | 6dof headset and two 6dof controllers |
 | Samsung Gear VR | 3dof headset and 3dof controller |
@@ -58,11 +55,6 @@ You can switch emulated device. The difference between devices is just degrees o
 ### Stereo Effect
 
 You can enable/disable Stereo Effect which renders two views.
-
-| StereoEffect | Description |
-| ---- | ---- |
-| Enable | Enables Stereo effect |
-| Disable | Disables Stereo effect |
 
 ## For development
 
