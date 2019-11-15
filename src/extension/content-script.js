@@ -76,7 +76,7 @@ loadScript(`
 // No synchronous storage and fetch APIs so reluctantly
 // reflecting configuration asynchronously
 
-ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
+ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   manager.loadFromStorage().then(() => {
     // send the configuration parameters to the polyfill as an event
     dispatchCustomEvent('webxr-device-init', {

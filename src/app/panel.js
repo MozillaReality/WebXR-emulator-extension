@@ -89,6 +89,10 @@ const DEVICE = {
   LEFT_CONTROLLER: '3'
 };
 
+const ASSET_PATH = {};
+ASSET_PATH[DEVICE.HEADSET] = '../../assets/headset.obj';
+ASSET_PATH[DEVICE.CONTROLLER] = '../../assets/oculus-go-controller.gltf';
+
 const OBJECT_NAME = {};
 OBJECT_NAME[DEVICE.HEADSET] = 'headset';
 OBJECT_NAME[DEVICE.RIGHT_CONTROLLER] = 'rightController';
@@ -232,7 +236,7 @@ const setupTransformControlsEnability = (controls, enabled, capabilities) => {
 // device assets
 
 const loadHeadsetAsset = () => {
-  new THREE.OBJLoader().load('assets/headset.obj', headset => {
+  new THREE.OBJLoader().load(ASSET_PATH[DEVICE.HEADSET], headset => {
     const parent = new THREE.Object3D();
     parent.position.copy(defaultTransforms[DEVICE.HEADSET].position);
     parent.rotation.copy(defaultTransforms[DEVICE.HEADSET].rotation);
@@ -259,7 +263,7 @@ const loadHeadsetAsset = () => {
 };
 
 const loadControllersAsset = (loadRight, loadLeft) => {
-  new THREE.GLTFLoader().load('assets/oculus-go-controller.gltf', gltf => {
+  new THREE.GLTFLoader().load(ASSET_PATH[DEVICE.CONTROLLER], gltf => {
     const baseController = gltf.scene;
     baseController.scale.multiplyScalar(6);
 
@@ -639,7 +643,7 @@ for (const field of document.getElementsByClassName('value')) {
 // 2. set up dom elements from it
 // 3. load configuration from storage and load assets
 
-ConfigurationManager.createFromJsonFile('./devices.json').then(manager => {
+ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   const deviceSelect = document.getElementById('deviceSelect');
   const stereoCheckbox = document.getElementById('stereoCheckbox');
 

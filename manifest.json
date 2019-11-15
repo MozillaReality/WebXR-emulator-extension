@@ -3,10 +3,10 @@
   "short_name": "WebXR Emu",
   "version": "0.1.3",
   "minimum_chrome_version": "10.0",
-  "devtools_page": "devtools.html",
+  "devtools_page": "src/extension/devtools.html",
   "description": "WebXR API Emulator",
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["src/extension/background.js"]
   },
   "permissions": [
     "tabs",
@@ -18,22 +18,22 @@
     "js": [
       "polyfill/webxr-polyfill.js",
       "src/ConfigurationManager.js",
-      "content-script.js"
+      "src/extension/content-script.js"
     ],
     "run_at": "document_start",
     "all_frames": true
   }],
   "browser_action": {
     "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     },
     "default_title": "WebXR API Emulator",
-    "default_popup": "popup.html"
+    "default_popup": "src/extension/popup.html"
   },
   "manifest_version": 2,
   "web_accessible_resources": [
-    "devices.json"
+    "src/devices.json"
   ]
 }
