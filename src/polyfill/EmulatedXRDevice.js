@@ -118,8 +118,8 @@ export default class EmulatedXRDevice extends XRDevice {
 
     // Move matrices left/right a bit and then calculate left/rightViewMatrix
     // @TODO: proper left/right distance
-    mat4.invert(this.leftViewMatrix, translateOnX(mat4.copy(this.leftViewMatrix, this.matrix), -0.2));
-    mat4.invert(this.rightViewMatrix, translateOnX(mat4.copy(this.rightViewMatrix, this.matrix), 0.2));
+    mat4.invert(this.leftViewMatrix, translateOnX(mat4.copy(this.leftViewMatrix, this.matrix), -0.02));
+    mat4.invert(this.rightViewMatrix, translateOnX(mat4.copy(this.rightViewMatrix, this.matrix), 0.02));
 
     // @TODO: Confirm if input events are only for immersive session
     // @TODO: If there are multiple immersive sessions, input events are fired only for the first session.
