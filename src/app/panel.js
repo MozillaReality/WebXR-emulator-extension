@@ -91,7 +91,7 @@ const DEVICE = {
 
 const ASSET_PATH = {};
 ASSET_PATH[DEVICE.HEADSET] = '../../assets/headset.obj';
-ASSET_PATH[DEVICE.CONTROLLER] = '../../assets/oculus-go-controller.gltf';
+ASSET_PATH[DEVICE.CONTROLLER] = '../../assets/oculus-go-controller.glb';
 
 const OBJECT_NAME = {};
 OBJECT_NAME[DEVICE.HEADSET] = 'headset';
