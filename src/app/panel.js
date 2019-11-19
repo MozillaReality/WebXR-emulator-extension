@@ -60,7 +60,7 @@ const notifyStereoEffectChange = (enabled) => {
 const notifyPoses = () => {
   for (const key in assetNodes) {
     if (assetNodes[key]) {
-      if (key === 'headset') {
+      if (key === DEVICE.HEADSET) {
         notifyPoseChange(assetNodes[key]);
       } else {
         notifyInputPoseChange(key, assetNodes[key]);
