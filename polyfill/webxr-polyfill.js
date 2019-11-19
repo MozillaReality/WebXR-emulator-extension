@@ -6645,8 +6645,8 @@ to native implementations of the API.`;
                     }
                     fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
                     invert$2(this.viewMatrix, this.matrix);
-                    invert$2(this.leftViewMatrix, translateOnX(copy$4(this.leftViewMatrix, this.matrix), -0.2));
-                    invert$2(this.rightViewMatrix, translateOnX(copy$4(this.rightViewMatrix, this.matrix), 0.2));
+                    invert$2(this.leftViewMatrix, translateOnX(copy$4(this.leftViewMatrix, this.matrix), -0.02));
+                    invert$2(this.rightViewMatrix, translateOnX(copy$4(this.rightViewMatrix, this.matrix), 0.02));
                     if (session.immersive) {
                       for (let i = 0; i < this.gamepads.length; ++i) {
                         const gamepad = this.gamepads[i];
