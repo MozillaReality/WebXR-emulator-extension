@@ -37,11 +37,13 @@
       "controllers": [
         {
           "hasPosition": true,
-          "hasRotation": true
+          "hasRotation": true,
+          "hasSqueezeButton": true
         },
         {
           "hasPosition": true,
-          "hasRotation": true
+          "hasRotation": true,
+          "hasSqueezeButton": true
         }
       ]
     },
@@ -59,7 +61,8 @@
       "controllers": [
         {
           "hasPosition": false,
-          "hasRotation": true
+          "hasRotation": true,
+          "hasSqueezeButton": false
         }
       ]
     },
@@ -77,11 +80,13 @@
       "controllers": [
         {
           "hasPosition": true,
-          "hasRotation": true
+          "hasRotation": true,
+          "hasSqueezeButton": true
         },
         {
           "hasPosition": true,
-          "hasRotation": true
+          "hasRotation": true,
+          "hasSqueezeButton": true
         }
       ]
     },

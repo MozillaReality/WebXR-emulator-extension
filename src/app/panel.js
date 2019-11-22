@@ -35,10 +35,11 @@ const notifyInputPoseChange = (key, node) => {
   });
 };
 
-const notifyInputButtonPressed = (key, pressed) => {
+const notifyInputButtonPressed = (key, buttonKey, pressed) => {
   postMessage({
     action: 'webxr-input-button',
     objectName: OBJECT_NAME[key],
+    buttonIndex: buttonKey,
     pressed: pressed
   });
 };
@@ -89,6 +90,11 @@ const DEVICE = {
   LEFT_CONTROLLER: '3'
 };
 
+const BUTTON = {
+  SELECT: 0,
+  SQUEEZE: 1
+};
+
 const ASSET_PATH = {};
 ASSET_PATH[DEVICE.HEADSET] = '../../assets/headset.obj';
 ASSET_PATH[DEVICE.CONTROLLER] = '../../assets/oculus-go-controller.glb';
@@ -102,8 +108,12 @@ const states = {
   transformMode: TRANSFORM_MODE.ROTATE,
   buttonPressed: {}
 };
-states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = false;
-states.buttonPressed[DEVICE.LEFT_CONTROLLER] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = {};
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SELECT] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SQUEEZE] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER] = {};
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SELECT] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SQUEEZE] = false;
 
 const deviceCapabilities = {};
 deviceCapabilities[DEVICE.HEADSET] = {
@@ -112,7 +122,8 @@ deviceCapabilities[DEVICE.HEADSET] = {
 };
 deviceCapabilities[DEVICE.CONTROLLER] = {
   hasPosition: false,
-  hasRotation: false
+  hasRotation: false,
+  hasSqueezeButton: false
 };
 
 const transformControls = {};
@@ -332,6 +343,24 @@ const loadControllersAsset = (loadRight, loadLeft) => {
 };
 
 const updateAssetNodes = (deviceDefinition) => {
+  // Workaround for a bug in Three.js r110 that
+  // default material can be shared across GLTFLoader.
+  // So even if we load gltf asset with a new GLTFLoader instance
+  // it can return the same default material instance then
+  // controller material color won't be reset.
+  // To resolve the issue, explicilty reseting the color here.
+  // @TODO: Remove this workaround if the issue is fixed in Three.js side.
+  if (assetNodes[DEVICE.RIGHT_CONTROLLER]) {
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SELECT] = false;
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SQUEEZE] = false;
+    updateControllerColor(DEVICE.RIGHT_CONTROLLER);
+  }
+  if (assetNodes[DEVICE.LEFT_CONTROLLER]) {
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SELECT] = false;
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SQUEEZE] = false;
+    updateControllerColor(DEVICE.LEFT_CONTROLLER);
+  }
+
   // firstly remove all existing resources and disable all panel controls
 
   for (const key in assetNodes) {
@@ -352,20 +381,23 @@ const updateAssetNodes = (deviceDefinition) => {
     transformControls[key] = null;
   }
 
-  states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = false;
-  states.buttonPressed[DEVICE.LEFT_CONTROLLER] = false;
   deviceCapabilities[DEVICE.HEADSET].hasPosition = false;
   deviceCapabilities[DEVICE.HEADSET].hasRotation = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasPosition = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = false;
+  deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = false;
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
   document.getElementById('transformModeButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
-  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, false);
-  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, false);
+  document.getElementById('rightSqueezeButton').style.display = 'none';
+  document.getElementById('leftSqueezeButton').style.display = 'none';
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT, false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SELECT, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE, false);
 
   // secondly load new assets and enable necessary panel controls
 
@@ -377,6 +409,7 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.HEADSET].hasRotation = hasHeadset && deviceDefinition.headset.hasRotation;
   deviceCapabilities[DEVICE.CONTROLLER].hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
+  deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = hasRightController && deviceDefinition.controllers[0].hasSqueezeButton;
 
   const hasPosition = deviceCapabilities[DEVICE.HEADSET].hasPosition ||
     deviceCapabilities[DEVICE.CONTROLLER].hasPosition;
@@ -393,12 +426,16 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasRightController) {
     document.getElementById('rightControllerComponent').style.display = 'flex';
-    document.getElementById('rightTriggerButton').style.display = '';
+    if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
+      document.getElementById('rightSqueezeButton').style.display = '';
+    }
   }
 
   if (hasLeftController) {
     document.getElementById('leftControllerComponent').style.display = 'flex';
-    document.getElementById('leftTriggerButton').style.display = '';
+    if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
+      document.getElementById('leftSqueezeButton').style.display = '';
+    }
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
@@ -418,7 +455,9 @@ const updateAssetNodes = (deviceDefinition) => {
   render();
 };
 
-const updateControllerColor = (node, pressed) => {
+const updateControllerColor = (key) => {
+  const node = assetNodes[key];
+  const pressed = states.buttonPressed[key][BUTTON.SELECT] || states.buttonPressed[key][BUTTON.SQUEEZE];
   node.traverse(object => {
     if (!object.material) {
       return;
@@ -472,8 +511,10 @@ const updateControllerPropertyComponent = (key) => {
   );
 };
 
-const updateTriggerButtonColor = (key, pressed) => {
-  const buttonId = key === DEVICE.RIGHT_CONTROLLER ? 'rightTriggerButton' : 'leftTriggerButton';
+const updateTriggerButtonColor = (key, buttonKey, pressed) => {
+  let buttonId = key === DEVICE.RIGHT_CONTROLLER ? 'right' : 'left';
+  buttonId += buttonKey === BUTTON.SELECT ? 'Select' : 'Squeeze';
+  buttonId += 'Button';
   const button = document.getElementById(buttonId);
   button.classList.toggle('pressed', pressed);
 };
@@ -589,20 +630,28 @@ document.getElementById('transformModeButton').addEventListener('click', event =
   toggleControlMode();
 }, false);
 
-const toggleButtonPressed = key => {
-  states.buttonPressed[key] = !states.buttonPressed[key];
-  const pressed = states.buttonPressed[key];
-  notifyInputButtonPressed(key, pressed);
-  updateTriggerButtonColor(key, pressed);
-  updateControllerColor(assetNodes[key], pressed);
+const toggleButtonPressed = (key, buttonKey) => {
+  states.buttonPressed[key][buttonKey] = !states.buttonPressed[key][buttonKey];
+  const pressed = states.buttonPressed[key][buttonKey];
+  notifyInputButtonPressed(key, buttonKey, pressed);
+  updateTriggerButtonColor(key, buttonKey, pressed);
+  updateControllerColor(key);
 };
 
-document.getElementById('rightTriggerButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER);
+document.getElementById('rightSelectButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT);
 }, false);
 
-document.getElementById('leftTriggerButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.LEFT_CONTROLLER);
+document.getElementById('leftSelectButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SELECT);
+}, false);
+
+document.getElementById('rightSqueezeButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE);
+}, false);
+
+document.getElementById('leftSqueezeButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE);
 }, false);
 
 document.getElementById('resetPoseButton').addEventListener('click', event => {
