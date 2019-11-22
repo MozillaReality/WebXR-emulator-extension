@@ -980,7 +980,7 @@ to native implementations of the API.`;
                         refSpace._originOffsetMatrix());
                     }
                     for (let view of this[PRIVATE$6].views) {
-                      if (view.eye == "left") {
+                      if (view.eye == "left" || view.eye == "none") {
                         view._updateViewMatrix(this[PRIVATE$6].leftViewMatrix);
                       } else if (view.eye == "right") {
                         view._updateViewMatrix(this[PRIVATE$6].rightViewMatrix);
@@ -1000,7 +1000,7 @@ to native implementations of the API.`;
                   get height() { return this[PRIVATE$7].target.height; }
                 }
 
-                const XREyes = ['left', 'right'];
+                const XREyes = ['left', 'right', 'none'];
                 const PRIVATE$8 = Symbol('@@webxr-polyfill/XRView');
                 class XRView {
                   constructor(device, eye, sessionId) {
@@ -1352,15 +1352,20 @@ to native implementations of the API.`;
                 }();
 
                 const PRIVATE$9 = Symbol('@@webxr-polyfill/XRFrame');
+                const NON_ACTIVE_MSG = "XRFrame access outside the callback that produced it is invalid.";
+                const NON_ANIMFRAME_MSG = "getViewerPose can only be called on XRFrame objects passed to XRSession.requestAnimationFrame callbacks.";
                 class XRFrame {
-                  constructor(device, session, sessionId) {
-                    const views = [
-                      new XRView(device, 'left', sessionId),
-                    ];
-                    if (session.immersive) {
-                      views.push(new XRView(device, 'right', sessionId));
+                  constructor(device, session, stereo, sessionId) {
+                    const views = [];
+                    if (stereo) {
+                      views.push(new XRView(device, 'left', sessionId),
+                                 new XRView(device, 'right', sessionId));
+                    } else {
+                      views.push(new XRView(device, 'none', sessionId));
                     }
                     this[PRIVATE$9] = {
+                      active: false,
+                      animationFrame: false,
                       device,
                       viewerPose: new XRViewerPose(device, views),
                       views,
@@ -1369,10 +1374,19 @@ to native implementations of the API.`;
                   }
                   get session() { return this[PRIVATE$9].session; }
                   getViewerPose(space) {
+                    if (!this[PRIVATE$9].animationFrame) {
+                      throw new DOMException(NON_ANIMFRAME_MSG, 'InvalidStateError');
+                    }
+                    if (!this[PRIVATE$9].active) {
+                      throw new DOMException(NON_ACTIVE_MSG, 'InvalidStateError');
+                    }
                     this[PRIVATE$9].viewerPose._updateFromReferenceSpace(space);
                     return this[PRIVATE$9].viewerPose;
                   }
                   getPose(space, baseSpace) {
+                    if (!this[PRIVATE$9].active) {
+                      throw new DOMException(NON_ACTIVE_MSG, 'InvalidStateError');
+                    }
                     if (space._specialType === "viewer") {
                       let viewerPose = this.getViewerPose(baseSpace);
                       return new XRPose(
@@ -1496,34 +1510,83 @@ to native implementations of the API.`;
                   constructor(device, mode, id) {
                     super();
                     let immersive = mode != 'inline';
-                    let outputContext = null;
                     this[PRIVATE$f] = {
                       device,
                       mode,
                       immersive,
-                      outputContext,
                       ended: false,
                       suspended: false,
-                      suspendedCallback: null,
+                      frameCallbacks: [],
+                      currentFrameCallbacks: null,
+                      frameHandle: 0,
+                      deviceFrameHandle: null,
                       id,
                       activeRenderState: new XRRenderState(),
                       pendingRenderState: null,
                       currentInputSources: []
                     };
-                    const frame = new XRFrame(device, this, this[PRIVATE$f].id);
-                    this[PRIVATE$f].frame = frame;
+                    this[PRIVATE$f].onDeviceFrame = () => {
+                      if (this[PRIVATE$f].ended || this[PRIVATE$f].suspended) {
+                        return;
+                      }
+                      this[PRIVATE$f].deviceFrameHandle = null;
+                      this[PRIVATE$f].startDeviceFrameLoop();
+                      if (this[PRIVATE$f].pendingRenderState !== null) {
+                        this[PRIVATE$f].activeRenderState = new XRRenderState(this[PRIVATE$f].pendingRenderState);
+                        this[PRIVATE$f].pendingRenderState = null;
+                        if (this[PRIVATE$f].activeRenderState.baseLayer) {
+                          this[PRIVATE$f].device.onBaseLayerSet(
+                            this[PRIVATE$f].id,
+                            this[PRIVATE$f].activeRenderState.baseLayer);
+                        }
+                      }
+                      if (this[PRIVATE$f].activeRenderState.baseLayer === null) {
+                        return;
+                      }
+                      const frame = new XRFrame(device, this, immersive, this[PRIVATE$f].id);
+                      const callbacks = this[PRIVATE$f].currentFrameCallbacks = this[PRIVATE$f].frameCallbacks;
+                      this[PRIVATE$f].frameCallbacks = [];
+                      frame[PRIVATE$9].active = true;
+                      frame[PRIVATE$9].animationFrame = true;
+                      this[PRIVATE$f].device.onFrameStart(this[PRIVATE$f].id, this[PRIVATE$f].activeRenderState);
+                      this._checkInputSourcesChange();
+                      const rightNow = now$1();
+                      for (let i = 0; i < callbacks.length; i++) {
+                        try {
+                          if (!callbacks[i].cancelled && typeof callbacks[i].callback === 'function') {
+                            callbacks[i].callback(rightNow, frame);
+                          }
+                        } catch(err) {
+                          console.error(err);
+                        }
+                      }
+                      this[PRIVATE$f].currentFrameCallbacks = null;
+                      frame[PRIVATE$9].active = false;
+                      this[PRIVATE$f].device.onFrameEnd(this[PRIVATE$f].id);
+                    };
+                    this[PRIVATE$f].startDeviceFrameLoop = () => {
+                      if (this[PRIVATE$f].deviceFrameHandle === null) {
+                        this[PRIVATE$f].deviceFrameHandle = this[PRIVATE$f].device.requestAnimationFrame(
+                          this[PRIVATE$f].onDeviceFrame
+                        );
+                      }
+                    };
+                    this[PRIVATE$f].stopDeviceFrameLoop = () => {
+                      const handle = this[PRIVATE$f].deviceFrameHandle;
+                      if (handle !== null) {
+                        this[PRIVATE$f].device.cancelAnimationFrame(handle);
+                        this[PRIVATE$f].deviceFrameHandle = null;
+                      }
+                    };
                     this[PRIVATE$f].onPresentationEnd = sessionId => {
                       if (sessionId !== this[PRIVATE$f].id) {
                         this[PRIVATE$f].suspended = false;
+                        this[PRIVATE$f].startDeviceFrameLoop();
                         this.dispatchEvent('focus', { session: this });
-                        const suspendedCallback = this[PRIVATE$f].suspendedCallback;
-                        this[PRIVATE$f].suspendedCallback = null;
-                        if (suspendedCallback) {
-                          this.requestAnimationFrame(suspendedCallback);
-                        }
                         return;
                       }
                       this[PRIVATE$f].ended = true;
+                      this[PRIVATE$f].stopDeviceFrameLoop();
                       device.removeEventListener('@webvr-polyfill/vr-present-end', this[PRIVATE$f].onPresentationEnd);
                       device.removeEventListener('@webvr-polyfill/vr-present-start', this[PRIVATE$f].onPresentationStart);
                       device.removeEventListener('@@webvr-polyfill/input-select-start', this[PRIVATE$f].onSelectStart);
@@ -1536,6 +1599,7 @@ to native implementations of the API.`;
                         return;
                       }
                       this[PRIVATE$f].suspended = true;
+                      this[PRIVATE$f].stopDeviceFrameLoop();
                       this.dispatchEvent('blur', { session: this });
                     };
                     device.addEventListener('@@webxr-polyfill/vr-present-start', this[PRIVATE$f].onPresentationStart);
@@ -1543,26 +1607,40 @@ to native implementations of the API.`;
                       if (evt.sessionId !== this[PRIVATE$f].id) {
                         return;
                       }
-                      this.dispatchEvent('selectstart', new XRInputSourceEvent('selectstart', {
-                        frame: this[PRIVATE$f].frame,
-                        inputSource: evt.inputSource
-                      }));
+                      this[PRIVATE$f].dispatchInputSourceEvent('selectstart',  evt.inputSource);
                     };
                     device.addEventListener('@@webxr-polyfill/input-select-start', this[PRIVATE$f].onSelectStart);
                     this[PRIVATE$f].onSelectEnd = evt => {
                       if (evt.sessionId !== this[PRIVATE$f].id) {
                         return;
                       }
-                      this.dispatchEvent('selectend', new XRInputSourceEvent('selectend', {
-                        frame: this[PRIVATE$f].frame,
-                        inputSource: evt.inputSource
-                      }));
-                      this.dispatchEvent('select',  new XRInputSourceEvent('select', {
-                        frame: this[PRIVATE$f].frame,
-                        inputSource: evt.inputSource
-                      }));
+                      this[PRIVATE$f].dispatchInputSourceEvent('selectend',  evt.inputSource);
+                      this[PRIVATE$f].dispatchInputSourceEvent('select',  evt.inputSource);
                     };
                     device.addEventListener('@@webxr-polyfill/input-select-end', this[PRIVATE$f].onSelectEnd);
+                    this[PRIVATE$f].onSqueezeStart = evt => {
+                      if (evt.sessionId !== this[PRIVATE$f].id) {
+                        return;
+                      }
+                      this[PRIVATE$f].dispatchInputSourceEvent('squeezestart',  evt.inputSource);
+                    };
+                    device.addEventListener('@@webxr-polyfill/input-squeeze-start', this[PRIVATE$f].onSqueezeStart);
+                    this[PRIVATE$f].onSqueezeEnd = evt => {
+                      if (evt.sessionId !== this[PRIVATE$f].id) {
+                        return;
+                      }
+                      this[PRIVATE$f].dispatchInputSourceEvent('squeezeend',  evt.inputSource);
+                      this[PRIVATE$f].dispatchInputSourceEvent('squeeze',  evt.inputSource);
+                    };
+                    device.addEventListener('@@webxr-polyfill/input-squeeze-end', this[PRIVATE$f].onSqueezeEnd);
+                    this[PRIVATE$f].dispatchInputSourceEvent = (type, inputSource) => {
+                      const frame = new XRFrame(device, this, this[PRIVATE$f].immersive, this[PRIVATE$f].id);
+                      const event = new XRInputSourceEvent(type, { frame, inputSource });
+                      frame[PRIVATE$9].active = true;
+                      this.dispatchEvent(type, event);
+                      frame[PRIVATE$9].active = false;
+                    };
+                    this[PRIVATE$f].startDeviceFrameLoop();
                     this.onblur = undefined;
                     this.onfocus = undefined;
                     this.onresetpose = undefined;
@@ -1572,22 +1650,8 @@ to native implementations of the API.`;
                     this.onselectend = undefined;
                   }
                   get renderState() { return this[PRIVATE$f].activeRenderState; }
-                  get immersive() { return this[PRIVATE$f].immersive; }
-                  get outputContext() { return this[PRIVATE$f].outputContext; }
-                  get depthNear() { return this[PRIVATE$f].device.depthNear; }
-                  set depthNear(value) { this[PRIVATE$f].device.depthNear = value; }
-                  get depthFar() { return this[PRIVATE$f].device.depthFar; }
-                  set depthFar(value) { this[PRIVATE$f].device.depthFar = value; }
                   get environmentBlendMode() {
                     return this[PRIVATE$f].device.environmentBlendMode || 'opaque';
-                  }
-                  get baseLayer() { return this[PRIVATE$f].baseLayer; }
-                  set baseLayer(value) {
-                    if (this[PRIVATE$f].ended) {
-                      return;
-                    }
-                    this[PRIVATE$f].baseLayer = value;
-                    this[PRIVATE$f].device.onBaseLayerSet(this[PRIVATE$f].id, value);
                   }
                   async requestReferenceSpace(type) {
                     if (this[PRIVATE$f].ended) {
@@ -1616,38 +1680,28 @@ to native implementations of the API.`;
                     if (this[PRIVATE$f].ended) {
                       return;
                     }
-                    if (this[PRIVATE$f].suspended && this[PRIVATE$f].suspendedCallback) {
-                      return;
-                    }
-                    if (this[PRIVATE$f].suspended && !this[PRIVATE$f].suspendedCallback) {
-                      this[PRIVATE$f].suspendedCallback = callback;
-                    }
-                    return this[PRIVATE$f].device.requestAnimationFrame(() => {
-                      if (this[PRIVATE$f].pendingRenderState !== null) {
-                        this[PRIVATE$f].activeRenderState = new XRRenderState(this[PRIVATE$f].pendingRenderState);
-                        this[PRIVATE$f].pendingRenderState = null;
-                        if (this[PRIVATE$f].activeRenderState.baseLayer) {
-                          this[PRIVATE$f].device.onBaseLayerSet(
-                            this[PRIVATE$f].id,
-                            this[PRIVATE$f].activeRenderState.baseLayer);
-                        }
-                        if (this[PRIVATE$f].activeRenderState.inlineVerticalFieldOfView) {
-                          this[PRIVATE$f].device.onInlineVerticalFieldOfViewSet(
-                            this[PRIVATE$f].id,
-                            this[PRIVATE$f].activeRenderState.inlineVerticalFieldOfView);
-                        }
-                      }
-                      this[PRIVATE$f].device.onFrameStart(this[PRIVATE$f].id);
-                      this._checkInputSourcesChange();
-                      callback(now$1(), this[PRIVATE$f].frame);
-                      this[PRIVATE$f].device.onFrameEnd(this[PRIVATE$f].id);
+                    const handle = ++this[PRIVATE$f].frameHandle;
+                    this[PRIVATE$f].frameCallbacks.push({
+                      handle,
+                      callback,
+                      cancelled: false
                     });
+                    return handle;
                   }
                   cancelAnimationFrame(handle) {
-                    if (this[PRIVATE$f].ended) {
-                      return;
+                    let callbacks = this[PRIVATE$f].frameCallbacks;
+                    let index = callbacks.findIndex(d => d && d.handle === handle);
+                    if (index > -1) {
+                      callbacks[index].cancelled = true;
+                      callbacks.splice(index, 1);
                     }
-                    this[PRIVATE$f].device.cancelAnimationFrame(handle);
+                    callbacks = this[PRIVATE$f].currentFrameCallbacks;
+                    if (callbacks) {
+                      index = callbacks.findIndex(d => d && d.handle === handle);
+                      if (index > -1) {
+                        callbacks[index].cancelled = true;
+                      }
+                    }
                   }
                   get inputSources() {
                     return this[PRIVATE$f].device.getInputSources();
@@ -1668,6 +1722,7 @@ to native implementations of the API.`;
                                                                  this[PRIVATE$f].onSelectEnd);
                       this.dispatchEvent('end', new XRSessionEvent('end', { session: this }));
                     }
+                    this[PRIVATE$f].stopDeviceFrameLoop();
                     return this[PRIVATE$f].device.endSession(this[PRIVATE$f].id);
                   }
                   updateRenderState(newState) {
@@ -1817,6 +1872,11 @@ to native implementations of the API.`;
                 const isImageBitmapSupported = global =>
                   !!(global.ImageBitmapRenderingContext &&
                      global.createImageBitmap);
+                const isMobile = global => {
+                  var check = false;
+                  (function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4)))check = true;})(global.navigator.userAgent||global.navigator.vendor||global.opera);
+                  return check;
+                };
                 const applyCanvasStylesForMinimalRendering = canvas => {
                   canvas.style.display = 'block';
                   canvas.style.position = 'absolute';
@@ -4986,12 +5046,7 @@ to native implementations of the API.`;
                     this.global.window.addEventListener('resize', this.onWindowResize);
                     this.environmentBlendMode = 'opaque';
                   }
-                  get depthNear() { throw new Error('Not implemented'); }
-                  set depthNear(val) { throw new Error('Not implemented'); }
-                  get depthFar() { throw new Error('Not implemented'); }
-                  set depthFar(val) { throw new Error('Not implemented'); }
                   onBaseLayerSet(sessionId, layer) { throw new Error('Not implemented'); }
-                  onInlineVerticalFieldOfViewSet(sessionId, value) { throw new Error('Not implemented'); }
                   isSessionSupported(mode) { throw new Error('Not implemented'); }
                   isFeatureSupported(featureDescriptor) { throw new Error('Not implemented'); }
                   async requestSession(mode, enabledFeatures) { throw new Error('Not implemented'); }
@@ -5016,9 +5071,19 @@ to native implementations of the API.`;
                   }
                 }
 
+                let daydream = {
+                  mapping: '',
+                  profiles: ['daydream', 'generic-trigger-touchpad'],
+                  buttons: {
+                    length: 3,
+                    0: null,
+                    1: null,
+                    2: 0
+                  },
+                };
                 let oculusGo = {
                   mapping: 'xr-standard',
-                  profiles: ['oculus-go', 'touchpad-controller'],
+                  profiles: ['oculus-go', 'generic-trigger-touchpad'],
                   buttons: {
                     length: 3,
                     0: 1,
@@ -5032,9 +5097,9 @@ to native implementations of the API.`;
                 let oculusTouch = {
                   mapping: 'xr-standard',
                   displayProfiles: {
-                    'Oculus Quest': ['oculus-quest', 'oculus-touch', 'thumbstick-controller']
+                    'Oculus Quest': ['oculus-touch-s', 'oculus-touch', 'generic-trigger-squeeze-thumbstick']
                   },
-                  profiles: ['oculus-touch', 'thumbstick-controller'],
+                  profiles: ['oculus-touch', 'generic-trigger-squeeze-thumbstick'],
                   axes: {
                     length: 4,
                     0: null,
@@ -5058,10 +5123,11 @@ to native implementations of the API.`;
                 };
                 let openVr = {
                   mapping: 'xr-standard',
-                  profiles: ['openvr-controller', 'touchpad-controller'],
+                  profiles: ['openvr-controller', 'generic-trigger-squeeze-touchpad'],
                   displayProfiles: {
-                    'HTC Vive': ['htc-vive', 'touchpad-controller'],
-                    'HTC Vive DVT': ['htc-vive', 'touchpad-controller']
+                    'HTC Vive': ['htc-vive', 'generic-trigger-squeeze-touchpad'],
+                    'HTC Vive DVT': ['htc-vive', 'generic-trigger-squeeze-touchpad'],
+                    'Valve Index': ['valve-index', 'generic-trigger-squeeze-touchpad-thumbstick']
                   },
                   buttons: {
                     length: 3,
@@ -5076,9 +5142,37 @@ to native implementations of the API.`;
                     orientation: [Math.PI * -0.08, 0, 0, 1]
                   }
                 };
+                let samsungGearVR = {
+                  mapping: 'xr-standard',
+                  profiles: ['samsung-gearvr', 'generic-trigger-touchpad'],
+                  buttons: {
+                    length: 3,
+                    0: 1,
+                    1: null,
+                    2: 0
+                  },
+                  gripTransform: {
+                    orientation: [Math.PI * 0.11, 0, 0, 1]
+                  }
+                };
+                let samsungOdyssey = {
+                  mapping: 'xr-standard',
+                  profiles: ['samsung-odyssey', 'microsoft-mixed-reality', 'generic-trigger-squeeze-touchpad-thumbstick'],
+                  buttons: {
+                    length: 4,
+                    0: 1,
+                    1: 0,
+                    2: 2,
+                    3: 4,
+                  },
+                  gripTransform: {
+                    position: [0, -0.02, 0.04, 1],
+                    orientation: [Math.PI * 0.11, 0, 0, 1]
+                  }
+                };
                 let windowsMixedReality = {
                   mapping: 'xr-standard',
-                  profiles: ['windows-mixed-reality', 'touchpad-thumbstick-controller'],
+                  profiles: ['microsoft-mixed-reality', 'generic-trigger-squeeze-touchpad-thumbstick'],
                   buttons: {
                     length: 4,
                     0: 1,
@@ -5092,10 +5186,14 @@ to native implementations of the API.`;
                   }
                 };
                 let GamepadMappings = {
+                  'Daydream Controller': daydream,
+                  'Gear VR Controller': samsungGearVR,
                   'Oculus Go Controller': oculusGo,
                   'Oculus Touch (Right)': oculusTouch,
                   'Oculus Touch (Left)': oculusTouch,
                   'OpenVR Gamepad': openVr,
+                  'Spatial Controller (Spatial Interaction Source) 045E-065A': windowsMixedReality,
+                  'Spatial Controller (Spatial Interaction Source) 045E-065D': samsungOdyssey,
                   'Windows Mixed Reality (Right)': windowsMixedReality,
                   'Windows Mixed Reality (Left)': windowsMixedReality,
                 };
@@ -5360,7 +5458,7 @@ to native implementations of the API.`;
                   }
                 }
                 class GamepadXRInputSource {
-                  constructor(polyfill, display, primaryButtonIndex = 0) {
+                  constructor(polyfill, display, primaryButtonIndex = 0, primarySqueezeButtonIndex = -1) {
                     this.polyfill = polyfill;
                     this.display = display;
                     this.nativeGamepad = null;
@@ -5372,6 +5470,8 @@ to native implementations of the API.`;
                     this.outputMatrix = create();
                     this.primaryButtonIndex = primaryButtonIndex;
                     this.primaryActionPressed = false;
+                    this.primarySqueezeButtonIndex = primarySqueezeButtonIndex;
+                    this.primarySqueezeActionPressed = false;
                     this.handedness = '';
                     this.targetRayMode = 'gaze';
                     this.armModel = null;
@@ -5474,7 +5574,6 @@ to native implementations of the API.`;
                     this.immersive = mode == 'immersive-vr' || mode == 'immersive-ar';
                     this.ended = null;
                     this.baseLayer = null;
-                    this.inlineVerticalFieldOfView = Math.PI * 0.5;
                     this.id = ++SESSION_ID;
                     this.modifiedCanvasLayer = false;
                     if (this.outputContext && !TEST_ENV) {
@@ -5525,10 +5624,6 @@ to native implementations of the API.`;
                     else {
                       session.baseLayer = layer;
                     }
-                  }
-                  onInlineVerticalFieldOfViewSet(sessionId, value) {
-                    const session = this.sessions.get(sessionId);
-                    session.inlineVerticalFieldOfView = value;
                   }
                   isSessionSupported(mode) {
                     if (mode == 'immersive-ar') {
@@ -5586,7 +5681,9 @@ to native implementations of the API.`;
                     }
                     return Math.min(primaryButton, gamepad.buttons.length - 1);
                   }
-                  onFrameStart(sessionId) {
+                  onFrameStart(sessionId, renderState) {
+                    this.display.depthNear = renderState.depthNear;
+                    this.display.depthFar = renderState.depthFar;
                     this.display.getFrameData(this.frame);
                     const session = this.sessions.get(sessionId);
                     if (session.immersive && this.CAN_USE_GAMEPAD) {
@@ -5611,13 +5708,22 @@ to native implementations of the API.`;
                             }
                             inputSourceImpl.primaryActionPressed = primaryActionPressed;
                           }
+                          if (inputSourceImpl.primarySqueezeButtonIndex != -1) {
+                            let primarySqueezeActionPressed = gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed;
+                            if (primarySqueezeActionPressed && !inputSourceImpl.primarySqueezeActionPressed) {
+                              this.dispatchEvent('@@webxr-polyfill/input-squeeze-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                            } else if (!primarySqueezeActionPressed && inputSourceImpl.primarySqueezeActionPressed) {
+                              this.dispatchEvent('@@webxr-polyfill/input-squeeze-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                            }
+                            inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
+                          }
                         }
                       }
                     }
                     if (!session.immersive && session.baseLayer) {
                       const canvas = session.baseLayer.context.canvas;
-                      perspective(this.frame.leftProjectionMatrix, session.inlineVerticalFieldOfView,
-                          canvas.width/canvas.height, this.depthNear, this.depthFar);
+                      perspective(this.frame.leftProjectionMatrix, renderState.inlineVerticalFieldOfView,
+                          canvas.width/canvas.height, renderState.depthNear, renderState.depthFar);
                     }
                   }
                   onFrameEnd(sessionId) {
@@ -5723,7 +5829,7 @@ to native implementations of the API.`;
                       target.height = height;
                       return true;
                     }
-                    if (eye === 'left') {
+                    if (eye === 'left' || eye === 'none') {
                       target.x = 0;
                     } else if (eye === 'right') {
                       target.x = width / 2;
@@ -5748,7 +5854,7 @@ to native implementations of the API.`;
                     return this.baseModelMatrix;
                   }
                   getBaseViewMatrix(eye) {
-                    if (eye === 'left') {
+                    if (eye === 'left' || eye === 'none') {
                       return this.frame.leftViewMatrix;
                     } else if (eye === 'right') {
                       return this.frame.rightViewMatrix;
@@ -5812,6 +5918,103 @@ to native implementations of the API.`;
                   }
                 }
 
+                let SESSION_ID$1 = 0;
+                class Session$1 {
+                  constructor(mode, enabledFeatures) {
+                    this.mode = mode;
+                    this.enabledFeatures = enabledFeatures;
+                    this.ended = null;
+                    this.baseLayer = null;
+                    this.id = ++SESSION_ID$1;
+                  }
+                }class InlineDevice extends XRDevice {
+                  constructor(global) {
+                    super(global);
+                    this.sessions = new Map();
+                    this.projectionMatrix = create();
+                    this.identityMatrix = create();
+                  }
+                  onBaseLayerSet(sessionId, layer) {
+                    const session = this.sessions.get(sessionId);
+                    session.baseLayer = layer;
+                  }
+                  isSessionSupported(mode) {
+                    return mode == 'inline';
+                  }
+                  isFeatureSupported(featureDescriptor) {
+                    switch(featureDescriptor) {
+                      case 'viewer': return true;
+                      default: return false;
+                    }
+                  }
+                  async requestSession(mode, enabledFeatures) {
+                    if (!this.isSessionSupported(mode)) {
+                      return Promise.reject();
+                    }
+                    const session = new Session$1(mode, enabledFeatures);
+                    this.sessions.set(session.id, session);
+                    return Promise.resolve(session.id);
+                  }
+                  requestAnimationFrame(callback) {
+                    return window.requestAnimationFrame(callback);
+                  }
+                  cancelAnimationFrame(handle) {
+                    window.cancelAnimationFrame(handle);
+                  }
+                  onFrameStart(sessionId, renderState) {
+                    const session = this.sessions.get(sessionId);
+                    if (session.baseLayer) {
+                      const canvas = session.baseLayer.context.canvas;
+                      perspective(this.projectionMatrix, renderState.inlineVerticalFieldOfView,
+                          canvas.width/canvas.height, renderState.depthNear, renderState.depthFar);
+                    }
+                  }
+                  onFrameEnd(sessionId) {
+                  }
+                  async endSession(sessionId) {
+                    const session = this.sessions.get(sessionId);
+                    session.ended = true;
+                  }
+                  doesSessionSupportReferenceSpace(sessionId, type) {
+                    const session = this.sessions.get(sessionId);
+                    if (session.ended) {
+                      return false;
+                    }
+                    return session.enabledFeatures.has(type);
+                  }
+                  requestStageBounds() {
+                    return null;
+                  }
+                  async requestFrameOfReferenceTransform(type, options) {
+                    return null;
+                  }
+                  getProjectionMatrix(eye) {
+                    return this.projectionMatrix;
+                  }
+                  getViewport(sessionId, eye, layer, target) {
+                    const session = this.sessions.get(sessionId);
+                    const { width, height } = layer.context.canvas;
+                    target.x = target.y = 0;
+                    target.width = width;
+                    target.height = height;
+                    return true;
+                  }
+                  getBasePoseMatrix() {
+                    return this.identityMatrix;
+                  }
+                  getBaseViewMatrix(eye) {
+                    return this.identityMatrix;
+                  }
+                  getInputSources() {
+                    return [];
+                  }
+                  getInputPose(inputSource, coordinateSystem, poseType) {
+                    return null;
+                  }
+                  onWindowResize() {
+                  }
+                }
+
                 const getWebVRDevice = async function (global) {
                   let device = null;
                   if ('getVRDisplays' in global.navigator) {
@@ -5831,16 +6034,21 @@ to native implementations of the API.`;
                       return xr;
                     }
                   }
-                  if (!global.VRFrameData) {
-                    global.VRFrameData = function () {
-                      this.rightViewMatrix = new Float32Array(16);
-                      this.leftViewMatrix = new Float32Array(16);
-                      this.rightProjectionMatrix = new Float32Array(16);
-                      this.leftProjectionMatrix = new Float32Array(16);
-                      this.pose = null;
-                    };
+                  let mobile = isMobile(global);
+                  if ((mobile && config.cardboard) ||
+                      (!mobile && config.allowCardboardOnDesktop)) {
+                    if (!global.VRFrameData) {
+                      global.VRFrameData = function () {
+                        this.rightViewMatrix = new Float32Array(16);
+                        this.leftViewMatrix = new Float32Array(16);
+                        this.rightProjectionMatrix = new Float32Array(16);
+                        this.leftProjectionMatrix = new Float32Array(16);
+                        this.pose = null;
+                      };
+                    }
+                    return new CardboardXRDevice(global, config.cardboardConfig);
                   }
-                  return new CardboardXRDevice(global, config.cardboardConfig);
+                  return new InlineDevice(global);
                 };
 
                 const CONFIG_DEFAULTS = {
@@ -6617,7 +6825,7 @@ to native implementations of the API.`;
                       return Promise.reject();
                     }
                     const immersive = mode === 'immersive-vr' || mode === 'immersive-ar';
-                    const session = new Session$1(mode, enabledFeatures);
+                    const session = new Session$2(mode, enabledFeatures);
                     this.sessions.set(session.id, session);
                     if (immersive) {
                       this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
@@ -6847,12 +7055,12 @@ to native implementations of the API.`;
                       this._updateStereoEffect(event.detail.enabled);
                     });
                   }
-                }let SESSION_ID$1 = 0;
-                class Session$1 {
+                }let SESSION_ID$2 = 0;
+                class Session$2 {
                   constructor(mode, enabledFeatures) {
                     this.mode = mode;
                     this.immersive = mode == 'immersive-vr' || mode == 'immersive-ar';
-                    this.id = ++SESSION_ID$1;
+                    this.id = ++SESSION_ID$2;
                     this.baseLayer = null;
                     this.inlineVerticalFieldOfView = Math.PI * 0.5;
                     this.ended = false;
