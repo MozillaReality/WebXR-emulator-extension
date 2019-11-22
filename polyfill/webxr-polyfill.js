@@ -6835,6 +6835,9 @@ to native implementations of the API.`;
                   requestAnimationFrame(callback) {
                     this.global.requestAnimationFrame(callback);
                   }
+                  cancelAnimationFrame(handle) {
+                    this.global.cancelAnimationFrame(handle);
+                  }
                   onFrameStart(sessionId) {
                     const session = this.sessions.get(sessionId);
                     const renderState = session.baseLayer._session.renderState;
@@ -6868,6 +6871,15 @@ to native implementations of the API.`;
                             this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
                           }
                           inputSourceImpl.primaryActionPressed = primaryActionPressed;
+                        }
+                        if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
+                          const primarySqueezeActionPressed = gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed;
+                          if (primarySqueezeActionPressed && !inputSourceImpl.primarySqueezeActionPressed) {
+                            this.dispatchEvent('@@webxr-polyfill/input-squeeze-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                          } else if (!primarySqueezeActionPressed && inputSourceImpl.primarySqueezeActionPressed) {
+                            this.dispatchEvent('@@webxr-polyfill/input-squeeze-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                          }
+                          inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
                         }
                       }
                     }
@@ -6991,11 +7003,12 @@ to native implementations of the API.`;
                       pose.orientation[i] = quaternionArray[i];
                     }
                   }
-                  _updateInputButtonPressed(pressed, index) {
-                    if (index >= this.gamepads.length) { return; }
-                    const gamepad = this.gamepads[index];
-                    gamepad.buttons[0].pressed = pressed;
-                    gamepad.buttons[0].value = pressed ? 1.0 : 0.0;
+                  _updateInputButtonPressed(pressed, controllerIndex, buttonIndex) {
+                    if (controllerIndex >= this.gamepads.length) { return; }
+                    const gamepad = this.gamepads[controllerIndex];
+                    if (buttonIndex >= gamepad.buttons.length) { return; }
+                    gamepad.buttons[buttonIndex].pressed = pressed;
+                    gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
                   }
                   _initializeControllers(config) {
                     const hasController = config.controllers !== undefined;
@@ -7005,7 +7018,7 @@ to native implementations of the API.`;
                     for (let i = 0; i < controllerNum; i++) {
                       const hasPosition = config.controllers[i].hasPosition;
                       this.gamepads.push(createGamepad(i === 0 ? 'right' : 'left', hasPosition));
-                      this.gamepadInputSources.push(new GamepadXRInputSource(this, null));
+                      this.gamepadInputSources.push(new GamepadXRInputSource(this, null, 0, 1));
                     }
                   }
                   _setupEventListeners() {
@@ -7015,6 +7028,9 @@ to native implementations of the API.`;
                         const inputSourceImpl = this.gamepadInputSources[i];
                         if (inputSourceImpl.primaryButtonIndex !== -1) {
                           gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed = false;
+                        }
+                        if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
+                          gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed = false;
                         }
                       }
                       this.requestAnimationFrame(() => {
@@ -7043,11 +7059,13 @@ to native implementations of the API.`;
                     window.addEventListener('webxr-input-button', event => {
                       const pressed = event.detail.pressed;
                       const objectName = event.detail.objectName;
+                      const buttonIndex = event.detail.buttonIndex;
                       switch (objectName) {
                         case 'rightController':
                         case 'leftController':
                           this._updateInputButtonPressed(pressed,
-                            objectName === 'rightController' ? 0 : 1);
+                            objectName === 'rightController' ? 0 : 1,
+                            buttonIndex);
                           break;
                       }
                     }, false);

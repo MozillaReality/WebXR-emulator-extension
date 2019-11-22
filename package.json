@@ -19,6 +19,6 @@
   },
   "dependencies": {
     "gl-matrix": "^3.1.0",
-    "webxr-polyfill": "https://github.com/immersive-web/webxr-polyfill.git"
+    "webxr-polyfill": "git://github.com/takahirox/webxr-polyfill.git#SqueezeButton"
   }
 }
