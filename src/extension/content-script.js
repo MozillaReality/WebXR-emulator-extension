@@ -35,7 +35,8 @@ port.onMessage.addListener(message => {
     case 'webxr-input-button':
       dispatchCustomEvent('webxr-input-button', {
         objectName: message.objectName,
-        pressed: message.pressed
+        pressed: message.pressed,
+        buttonIndex: message.buttonIndex
       });
       break;
 
