@@ -29,7 +29,7 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 
 1. Go to the addon stores to install ([Firefox](https://addons.mozilla.org/firefox/addon/webxr-api-emulator), [Chrome](https://chrome.google.com/webstore/detail/webxr-api-emulator/mjddjgeghkdijejnciaefnkjmkafnnje))
 
-2. Go to WebXR application page (for example, [Three.js examples](https://threejs.org/examples/?q=webvr#webvr_ballshooter)). You will notice that the application detects that you have a XR device (emulated) and it will let you enter the immersive (VR) mode.
+2. Go to WebXR application page (for example [WebXR examples](#WebXR-examples)). You will notice that the application detects that you have a XR device (emulated) and it will let you enter the immersive (VR) mode.
 
 3. Open "WebXR" tab in the browser developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll the emulated devices. You can move the headset and controllers, and trigger the controller buttons. You will see their transforms reflected in the WebXR application.
 
@@ -77,6 +77,12 @@ $ npm run build
 
 - Even if native WebXR API is available the extension overrides it with WebXR polyfill
 - (09/11/2019) Currenlty it seems that the extension causes errors on [A-Frame](https://aframe.io/) and it can stop A-Frame applicaiton so that you need to uninstall the extension for it. The root issue seems A-Frame uses old WebXR API while the extension uses the new one. See [#100](https://github.com/MozillaReality/WebXR-emulator-extension/issues/100) and [#81](https://github.com/MozillaReality/WebXR-emulator-extension/issues/81) (Update on 09/18/2019) It seems A-Frame updates their WebXR API in next release [aframe/issues/4268](https://github.com/aframevr/aframe/issues/4268)
+
+## WebXR examples
+
+- [WebXR Samples](https://immersive-web.github.io/webxr-samples/)
+- [Three.js VR examples](https://threejs.org/examples/?q=WebVR#webvr_ballshooter)
+- [Babylon.js WebXR examples](https://doc.babylonjs.com/how_to/webxr#examples)
 
 ## Kudos
 

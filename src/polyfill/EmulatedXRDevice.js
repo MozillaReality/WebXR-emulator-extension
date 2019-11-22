@@ -93,6 +93,10 @@ export default class EmulatedXRDevice extends XRDevice {
     this.global.requestAnimationFrame(callback);
   }
 
+  cancelAnimationFrame(handle) {
+    this.global.cancelAnimationFrame(handle);
+  }
+
   onFrameStart(sessionId) {
     const session = this.sessions.get(sessionId);
     const renderState = session.baseLayer._session.renderState;
@@ -137,6 +141,15 @@ export default class EmulatedXRDevice extends XRDevice {
             this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
           }
           inputSourceImpl.primaryActionPressed = primaryActionPressed; 
+        }
+        if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
+          const primarySqueezeActionPressed = gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed;
+          if (primarySqueezeActionPressed && !inputSourceImpl.primarySqueezeActionPressed) {
+            this.dispatchEvent('@@webxr-polyfill/input-squeeze-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+          } else if (!primarySqueezeActionPressed && inputSourceImpl.primarySqueezeActionPressed) {
+            this.dispatchEvent('@@webxr-polyfill/input-squeeze-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+          }
+          inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
         }
       }
     }
@@ -301,12 +314,12 @@ export default class EmulatedXRDevice extends XRDevice {
     }
   }
 
-  // @TODO: Take button index
-  _updateInputButtonPressed(pressed, index) {
-    if (index >= this.gamepads.length) { return; }
-    const gamepad = this.gamepads[index];
-    gamepad.buttons[0].pressed = pressed;
-    gamepad.buttons[0].value = pressed ? 1.0 : 0.0;
+  _updateInputButtonPressed(pressed, controllerIndex, buttonIndex) {
+    if (controllerIndex >= this.gamepads.length) { return; }
+    const gamepad = this.gamepads[controllerIndex];
+    if (buttonIndex >= gamepad.buttons.length) { return; }
+    gamepad.buttons[buttonIndex].pressed = pressed;
+    gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
   }
 
   _initializeControllers(config) {
@@ -317,7 +330,7 @@ export default class EmulatedXRDevice extends XRDevice {
     for (let i = 0; i < controllerNum; i++) {
       const hasPosition = config.controllers[i].hasPosition;
       this.gamepads.push(createGamepad(i === 0 ? 'right' : 'left', hasPosition));
-      this.gamepadInputSources.push(new GamepadXRInputSource(this, null));
+      this.gamepadInputSources.push(new GamepadXRInputSource(this, null, 0, 1));
     }
   }
 
@@ -333,6 +346,9 @@ export default class EmulatedXRDevice extends XRDevice {
         const inputSourceImpl = this.gamepadInputSources[i];
         if (inputSourceImpl.primaryButtonIndex !== -1) {
           gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed = false;
+        }
+        if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
+          gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed = false;
         }
       }
 
@@ -366,12 +382,14 @@ export default class EmulatedXRDevice extends XRDevice {
     window.addEventListener('webxr-input-button', event => {
       const pressed = event.detail.pressed;
       const objectName = event.detail.objectName;
+      const buttonIndex = event.detail.buttonIndex;
 
       switch (objectName) {
         case 'rightController':
         case 'leftController':
           this._updateInputButtonPressed(pressed,
-            objectName === 'rightController' ? 0 : 1); // @TODO: remove magic number
+            objectName === 'rightController' ? 0 : 1, // @TODO: remove magic number
+            buttonIndex);
           break;
       }
     }, false);
@@ -403,11 +421,13 @@ const createGamepad = (hand, hasPosition) => {
       orientation: [0, 0, 0, 1]
     },
     buttons: [
+      // select
       {
         pressed: false,
         touched: false,
         value: 0.0
       },
+      // squeeze
       {
         pressed: false,
         touched: false,
