@@ -6778,6 +6778,7 @@ to native implementations of the API.`;
                     this.quaternion = create$e();
                     this.scale = fromValues$4(1, 1, 1);
                     this.matrix = create$b();
+                    this.inlineProjectionMatrix = create$b();
                     this.leftProjectionMatrix = create$b();
                     this.rightProjectionMatrix = create$b();
                     this.viewMatrix = create$b();
@@ -6838,21 +6839,20 @@ to native implementations of the API.`;
                   cancelAnimationFrame(handle) {
                     this.global.cancelAnimationFrame(handle);
                   }
-                  onFrameStart(sessionId) {
+                  onFrameStart(sessionId, renderState) {
                     const session = this.sessions.get(sessionId);
-                    const renderState = session.baseLayer._session.renderState;
-                    const canvas = session.baseLayer ? session.baseLayer.context.canvas : null;
+                    const canvas = session.baseLayer.context.canvas;
                     const near = renderState.depthNear;
                     const far = renderState.depthFar;
-                    const width = canvas ? canvas.width : 640;
-                    const height = canvas ? canvas.height : 480;
+                    const width = canvas.width;
+                    const height = canvas.height;
                     if (session.immersive) {
                       const aspect = width * (this.stereoEffectEnabled ? 0.5 : 1.0) / height;
                       perspective$1(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
                       perspective$1(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
                     } else {
                       const aspect = width / height;
-                      perspective$1(this.leftProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+                      perspective$1(this.inlineProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
                     }
                     fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
                     invert$2(this.viewMatrix, this.matrix);
@@ -6921,7 +6921,10 @@ to native implementations of the API.`;
                     const canvas = session.baseLayer.context.canvas;
                     const width = canvas.width;
                     const height = canvas.height;
-                    if (this.stereoEffectEnabled) {
+                    if (eye === 'none') {
+                      target.x = 0;
+                      target.width = width;
+                    } else if (this.stereoEffectEnabled) {
                       target.x = eye === 'left' ? 0 : width / 2;
                       target.width = width / 2;
                     } else {
@@ -6933,13 +6936,14 @@ to native implementations of the API.`;
                     return true;
                   }
                   getProjectionMatrix(eye) {
-                    return eye === 'left' ? this.leftProjectionMatrix : this.rightProjectionMatrix;
+                    return eye === 'none' ? this.inlineProjectionMatrix :
+                           eye === 'left' ? this.leftProjectionMatrix : this.rightProjectionMatrix;
                   }
                   getBasePoseMatrix() {
                     return this.matrix;
                   }
                   getBaseViewMatrix(eye) {
-                    if (!this.stereoEffectEnabled) { return this.viewMatrix; }
+                    if (eye === 'none' || !this.stereoEffectEnabled) { return this.viewMatrix; }
                     return eye === 'left' ? this.leftViewMatrix : this.rightViewMatrix;
                   }
                   getInputSources() {
