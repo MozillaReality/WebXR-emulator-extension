@@ -24,6 +24,7 @@ export default class EmulatedXRDevice extends XRDevice {
     this.quaternion = quat.create();
     this.scale = vec3.fromValues(1, 1, 1);
     this.matrix = mat4.create();
+    this.inlineProjectionMatrix = mat4.create();
     this.leftProjectionMatrix = mat4.create();
     this.rightProjectionMatrix = mat4.create();
     this.viewMatrix = mat4.create();
@@ -97,15 +98,14 @@ export default class EmulatedXRDevice extends XRDevice {
     this.global.cancelAnimationFrame(handle);
   }
 
-  onFrameStart(sessionId) {
+  onFrameStart(sessionId, renderState) {
     const session = this.sessions.get(sessionId);
-    const renderState = session.baseLayer._session.renderState;
-    const canvas = session.baseLayer ? session.baseLayer.context.canvas : null;
+    // guaranteed by the caller that session.baseLayer is not null
+    const canvas = session.baseLayer.context.canvas;
     const near = renderState.depthNear;
     const far = renderState.depthFar;
-    // @TODO: Proper handling in case baseLayer is null
-    const width = canvas ? canvas.width : 640;
-    const height = canvas ? canvas.height : 480;
+    const width = canvas.width;
+    const height = canvas.height;
 
     if (session.immersive) {
       // @TODO: proper FOV
@@ -113,9 +113,8 @@ export default class EmulatedXRDevice extends XRDevice {
       mat4.perspective(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
       mat4.perspective(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
     } else {
-      // For inline mode only leftProjectionMatrix is used
       const aspect = width / height;
-      mat4.perspective(this.leftProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+      mat4.perspective(this.inlineProjectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
     }
     mat4.fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
     mat4.invert(this.viewMatrix, this.matrix);
@@ -201,8 +200,10 @@ export default class EmulatedXRDevice extends XRDevice {
     const canvas = session.baseLayer.context.canvas;
     const width = canvas.width;
     const height = canvas.height;
-    // @TODO: In case eye is 'none'.
-    if (this.stereoEffectEnabled) {
+    if (eye === 'none') {
+      target.x = 0;
+      target.width = width;
+    } else if (this.stereoEffectEnabled) {
       target.x = eye === 'left' ? 0 : width / 2;
       target.width = width / 2;
     } else {
@@ -215,8 +216,8 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   getProjectionMatrix(eye) {
-    // @TODO: In case eye is 'none'.
-    return eye === 'left' ? this.leftProjectionMatrix : this.rightProjectionMatrix;
+    return eye === 'none' ? this.inlineProjectionMatrix :
+           eye === 'left' ? this.leftProjectionMatrix : this.rightProjectionMatrix;
   }
 
   getBasePoseMatrix() {
@@ -224,8 +225,7 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   getBaseViewMatrix(eye) {
-    if (!this.stereoEffectEnabled) { return this.viewMatrix; }
-    // @TODO: In case eye is 'none'.
+    if (eye === 'none' || !this.stereoEffectEnabled) { return this.viewMatrix; }
     return eye === 'left' ? this.leftViewMatrix : this.rightViewMatrix;
   }
 
