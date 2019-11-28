@@ -81,7 +81,7 @@ $ npm run build
 ## WebXR examples
 
 - [WebXR Samples](https://immersive-web.github.io/webxr-samples/)
-- [Three.js VR examples](https://threejs.org/examples/?q=WebVR#webvr_ballshooter)
+- [Three.js WebXR VR examples](https://threejs.org/examples/?q=WebXR#webxr_vr_ballshooter)
 - [Babylon.js WebXR examples](https://doc.babylonjs.com/how_to/webxr#examples)
 
 ## Kudos
