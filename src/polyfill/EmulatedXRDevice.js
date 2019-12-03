@@ -91,7 +91,7 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   requestAnimationFrame(callback) {
-    this.global.requestAnimationFrame(callback);
+    return this.global.requestAnimationFrame(callback);
   }
 
   cancelAnimationFrame(handle) {
