@@ -90,6 +90,37 @@
         }
       ]
     },
+    "Samsung Galaxy S8+ (AR)": {
+      "id": "Samsung Galaxy S8+ (AR)",
+      "name": "Samsung Galaxy S8+ (AR)",
+      "modes": [
+        "inline",
+        "immersive-ar"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        },
+        {
+          "hasPosition": true,
+          "hasRotation": true
+        }
+      ],
+      "resolution": {
+        "width": 1440,
+        "height": 2960
+      },
+      "size": {
+        "width": 0.0734,
+        "height": 0.1595,
+        "depth": 0.0081
+      }
+    },
     "Samsung Gear VR": {
       "id": "Samsung Gear VR",
       "name": "Samsung Gear VR",
