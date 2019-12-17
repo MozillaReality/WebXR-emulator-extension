@@ -76,7 +76,6 @@ $ npm run build
 ## Note
 
 - Even if native WebXR API is available the extension overrides it with WebXR polyfill
-- (09/11/2019) Currenlty it seems that the extension causes errors on [A-Frame](https://aframe.io/) and it can stop A-Frame applicaiton so that you need to uninstall the extension for it. The root issue seems A-Frame uses old WebXR API while the extension uses the new one. See [#100](https://github.com/MozillaReality/WebXR-emulator-extension/issues/100) and [#81](https://github.com/MozillaReality/WebXR-emulator-extension/issues/81) (Update on 09/18/2019) It seems A-Frame updates their WebXR API in next release [aframe/issues/4268](https://github.com/aframevr/aframe/issues/4268)
 
 ## WebXR examples
 
