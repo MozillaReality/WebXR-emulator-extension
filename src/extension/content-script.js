@@ -52,6 +52,30 @@ port.onMessage.addListener(message => {
   }
 });
 
+// Set up listeners for events coming from EmulatedXRDevice.
+// Transfer to panel via background.
+
+window.addEventListener('device-input-pose', event => {
+  port.postMessage({
+    action: 'device-input-pose',
+    objectName: event.detail.objectName,
+    position: event.detail.position,
+    quaternion: event.detail.quaternion
+  });
+}, false);
+
+window.addEventListener('device-enter-immersive', event => {
+  port.postMessage({
+    action: 'device-enter-immersive'
+  });
+}, false);
+
+window.addEventListener('device-leave-immersive', event => {
+  port.postMessage({
+    action: 'device-leave-immersive'
+  });
+}, false);
+
 // function to load script in a web page
 
 const loadScript = source => {

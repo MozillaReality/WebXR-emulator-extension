@@ -4,10 +4,32 @@ const tabId = chrome.devtools.inspectedWindow.tabId;
 // receive message from contentScript via background
 
 port.onMessage.addListener(message => {
-  // notify the poses to sync
-  // if main page is reloaded while panel is opened
-  if (message.action === 'webxr-startup') {
-    notifyPoses();
+  switch (message.action) {
+    case 'webxr-startup':
+      // notify the poses to sync
+      // if main page is reloaded while panel is opened
+      notifyPoses();
+      break;
+    case 'device-input-pose':
+      // @TODO: Make function?
+      const objectName = message.objectName;
+      const key = objectName === 'rightController' ? DEVICE.RIGHT_CONTROLLER : DEVICD.LEFT_CONTROLLER;
+      const node = assetNodes[key];
+      if (!node) {
+        return;
+      }
+      node.position.fromArray(message.position);
+      node.quaternion.fromArray(message.quaternion);
+      updateControllerPropertyComponent(key);
+      render();
+      break;
+    case 'device-enter-immersive':
+      states.inImmersive = true;
+      notifyPoses();
+      break;
+    case 'device-leave-immersive':
+      states.inImmersive = false;
+      break;
   }
 });
 
@@ -83,11 +105,19 @@ const TRANSFORM_MODE = {
   ROTATE: 1
 };
 
+const IMMERSIVE_MODE = {
+  NONE: 0,
+  VR: 1,
+  AR: 2
+};
+
 const DEVICE = {
   HEADSET: '0',
   CONTROLLER: '1', // use this in case you don't distinguish left/right
   RIGHT_CONTROLLER: '2',
-  LEFT_CONTROLLER: '3'
+  LEFT_CONTROLLER: '3',
+  POINTER: '4',
+  TABLET: '5'
 };
 
 const BUTTON = {
@@ -105,8 +135,10 @@ OBJECT_NAME[DEVICE.RIGHT_CONTROLLER] = 'rightController';
 OBJECT_NAME[DEVICE.LEFT_CONTROLLER] = 'leftController';
 
 const states = {
+  inImmersive: false,
   transformMode: TRANSFORM_MODE.ROTATE,
-  buttonPressed: {}
+  buttonPressed: {},
+  immersiveMode: IMMERSIVE_MODE.NONE
 };
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = {};
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SELECT] = false;
@@ -149,6 +181,14 @@ defaultTransforms[DEVICE.RIGHT_CONTROLLER] = {
 };
 defaultTransforms[DEVICE.LEFT_CONTROLLER] = {
   position: new THREE.Vector3(-0.5, 1.5, -1.0),
+  rotation: new THREE.Euler(0, 0, 0)
+};
+defaultTransforms[DEVICE.POINTER] = {
+  position: new THREE.Vector3(0.0, 1.6, -0.08),
+  rotation: new THREE.Euler(0, 0, 0)
+};
+defaultTransforms[DEVICE.TABLET] = {
+  position: new THREE.Vector3(0.0, 1.6, -0.1),
   rotation: new THREE.Euler(0, 0, 0)
 };
 
@@ -304,8 +344,16 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       const parent = new THREE.Object3D();
       const controller = recursivelyClone(baseController);
 
-      parent.position.copy(defaultTransforms[key].position);
-      parent.rotation.copy(defaultTransforms[key].rotation);
+      // @TODO: Simplify
+      let keyForDefaultTransform = key;
+      if (states.immersiveMode === IMMERSIVE_MODE.AR) {
+        keyForDefaultTransform = key === DEVICE.RIGHT_CONTROLLER ? DEVICE.POINTER :
+              key === DEVICE.LEFT_CONTROLLER ? DEVICE.TABLET :
+              key;
+      }
+
+      parent.position.copy(defaultTransforms[keyForDefaultTransform].position);
+      parent.rotation.copy(defaultTransforms[keyForDefaultTransform].rotation);
       parent.add(controller);
 
       scene.add(parent);
@@ -343,6 +391,13 @@ const loadControllersAsset = (loadRight, loadLeft) => {
 };
 
 const updateAssetNodes = (deviceDefinition) => {
+  // @TODO: Move more proper place to check?
+  const modes = deviceDefinition.modes;
+  // @TODO: What if the device supports both immersive-vr and immersive-ar?
+  states.immersiveMode = modes.includes('immersive-ar') ? IMMERSIVE_MODE.AR :
+                         modes.includes('immersive-vr') ? IMMERSIVE_MODE.VR :
+                         IMMERSIVE_MODE.NONE;
+
   // Workaround for a bug in Three.js r110 that
   // default material can be shared across GLTFLoader.
   // So even if we load gltf asset with a new GLTFLoader instance
@@ -662,8 +717,15 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
       continue;
     }
 
-    device.position.copy(defaultTransforms[key].position);
-    device.rotation.copy(defaultTransforms[key].rotation);
+    let defaultTransformKey = key;
+    // @TODO: Simplify
+    if (states.immersiveMode === IMMERSIVE_MODE.AR) {
+      defaultTransformKey = key === DEVICE.RIGHT_CONTROLLER ? DEVICE.POINTER :
+                            key === DEVICE.LEFT_CONTROLLER ? DEVICE.TABLET :
+                            key;
+    }
+    device.position.copy(defaultTransforms[defaultTransformKey].position);
+    device.rotation.copy(defaultTransforms[defaultTransformKey].rotation);
   }
   updateHeadsetPropertyComponent();
   updateControllerPropertyComponent(DEVICE.RIGHT_CONTROLLER);
