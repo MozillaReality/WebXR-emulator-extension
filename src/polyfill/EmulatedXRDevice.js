@@ -182,7 +182,7 @@ export default class EmulatedXRDevice extends XRDevice {
       mat4.perspective(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
     } else if (session.ar) {
       // @TODO: proper FOV
-      const aspect = this.resolution.width / this.resolution.height;
+      const aspect = this.deviceSize.width / this.deviceSize.height;
       mat4.perspective(this.projectionMatrix, Math.PI / 2, aspect, near, far);
     } else {
       const aspect = width / height;
@@ -361,15 +361,28 @@ export default class EmulatedXRDevice extends XRDevice {
         // from the relation of right controller(pointer) and left controller(tablet)
         // @TODO: Transient input
         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
+          // @TODO: Add note about this matrix
           // @TODO: Optimize if possible
           const viewMatrixInverse = mat4.invert(mat4.create(), this.viewMatrix);
           coordinateSystem._transformBasePoseMatrix(viewMatrixInverse, viewMatrixInverse);
           const viewMatrix = mat4.invert(mat4.create(), viewMatrixInverse);
           mat4.multiply(pose.transform.matrix, viewMatrix, pose.transform.matrix);
           const matrix = mat4.identity(mat4.create());
-          matrix[8] = -pose.transform.matrix[12] / (this.deviceSize.width * 0.5) * this.resolution.width / this.resolution.height;
-          matrix[9] = -(pose.transform.matrix[13]) / (this.deviceSize.height * 0.5);
+          // Assuming FOV is 90 degree @TODO: Remove this constraint
+          const near = 0.1; // @TODO: Should be from render state
+          const aspect = this.deviceSize.width / this.deviceSize.height;
+          // @TODO: Duplicate with ARScene.js. Should we import from common place?
+          const outsideFrameWidth = 0.005;
+          const dx = pose.transform.matrix[12] /
+            ((this.deviceSize.width - outsideFrameWidth) * 0.5) * aspect;
+          const dy = pose.transform.matrix[13] /
+            ((this.deviceSize.height - outsideFrameWidth) * 0.5);
+          matrix[8] = -dx;
+          matrix[9] = -dy;
           matrix[10] = 1.0;
+          matrix[12] = dx * near;
+          matrix[13] = dy * near;
+          matrix[14] = -near;
           mat4.multiply(pose.transform.matrix, viewMatrixInverse, matrix);
           mat4.invert(pose.transform.inverse.matrix, pose.transform.matrix);
         }
