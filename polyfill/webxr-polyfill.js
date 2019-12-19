@@ -33550,7 +33550,7 @@ to native implementations of the API.`;
                       perspective$1(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
                       perspective$1(this.rightProjectionMatrix, Math.PI / 2, aspect, near, far);
                     } else if (session.ar) {
-                      const aspect = this.resolution.width / this.resolution.height;
+                      const aspect = this.deviceSize.width / this.deviceSize.height;
                       perspective$1(this.projectionMatrix, Math.PI / 2, aspect, near, far);
                     } else {
                       const aspect = width / height;
@@ -33704,9 +33704,19 @@ to native implementations of the API.`;
                           const viewMatrix = invert$2(create$b(), viewMatrixInverse);
                           multiply$2(pose.transform.matrix, viewMatrix, pose.transform.matrix);
                           const matrix = identity$1(create$b());
-                          matrix[8] = -pose.transform.matrix[12] / (this.deviceSize.width * 0.5) * this.resolution.width / this.resolution.height;
-                          matrix[9] = -(pose.transform.matrix[13]) / (this.deviceSize.height * 0.5);
+                          const near = 0.1;
+                          const aspect = this.deviceSize.width / this.deviceSize.height;
+                          const outsideFrameWidth = 0.005;
+                          const dx = pose.transform.matrix[12] /
+                            ((this.deviceSize.width - outsideFrameWidth) * 0.5) * aspect;
+                          const dy = pose.transform.matrix[13] /
+                            ((this.deviceSize.height - outsideFrameWidth) * 0.5);
+                          matrix[8] = -dx;
+                          matrix[9] = -dy;
                           matrix[10] = 1.0;
+                          matrix[12] = dx * near;
+                          matrix[13] = dy * near;
+                          matrix[14] = -near;
                           multiply$2(pose.transform.matrix, viewMatrixInverse, matrix);
                           invert$2(pose.transform.inverse.matrix, pose.transform.matrix);
                         }
