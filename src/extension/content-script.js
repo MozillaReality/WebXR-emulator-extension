@@ -55,6 +55,14 @@ port.onMessage.addListener(message => {
 // Set up listeners for events coming from EmulatedXRDevice.
 // Transfer to panel via background.
 
+window.addEventListener('device-pose', event => {
+  port.postMessage({
+    action: 'device-pose',
+    position: event.detail.position,
+    quaternion: event.detail.quaternion
+  });
+}, false);
+
 window.addEventListener('device-input-pose', event => {
   port.postMessage({
     action: 'device-input-pose',
