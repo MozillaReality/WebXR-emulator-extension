@@ -10,18 +10,33 @@ port.onMessage.addListener(message => {
       // if main page is reloaded while panel is opened
       notifyPoses();
       break;
-    case 'device-input-pose':
+    case 'device-pose':
       // @TODO: Make function?
-      const objectName = message.objectName;
-      const key = objectName === 'rightController' ? DEVICE.RIGHT_CONTROLLER : DEVICD.LEFT_CONTROLLER;
-      const node = assetNodes[key];
-      if (!node) {
-        return;
+      {
+        const node = assetNodes[DEVICE.HEADSET];
+        if (!node) {
+          return;
+        }
+        node.position.fromArray(message.position);
+        node.quaternion.fromArray(message.quaternion);
+        updateHeadsetPropertyComponent();
+        render();
       }
-      node.position.fromArray(message.position);
-      node.quaternion.fromArray(message.quaternion);
-      updateControllerPropertyComponent(key);
-      render();
+      break;
+    case 'device-input-pose':
+      {
+        // @TODO: Make function?
+        const objectName = message.objectName;
+        const key = objectName === 'rightController' ? DEVICE.RIGHT_CONTROLLER : DEVICE.LEFT_CONTROLLER;
+        const node = assetNodes[key];
+        if (!node) {
+          return;
+        }
+        node.position.fromArray(message.position);
+        node.quaternion.fromArray(message.quaternion);
+        updateControllerPropertyComponent(key);
+        render();
+      }
       break;
     case 'device-enter-immersive':
       states.inImmersive = true;

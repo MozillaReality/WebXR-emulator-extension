@@ -16,6 +16,8 @@ import {
   SphereBufferGeometry,
   Vector2
 } from 'three';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
+import MyControls from './MyControls.js';
 
 // @TODO: These default values should be imported from somewhere common place
 const DEFAULT_CAMERA_POSITION = [0, 1.6, 0];
@@ -34,6 +36,8 @@ export default class ARScene {
 
     // for mouse click on the tablet screen
     this.isTouched = false;
+    this.onCameraPoseUpdate = null;
+    this.onTabletPoseUpdate = null;
     this.onTouch = null; // callback fired when mouse clicks the screen
     this.onRelease = null; // callback fired when screen touch is released
 
@@ -52,6 +56,7 @@ export default class ARScene {
     const renderer = new WebGLRenderer({canvas: canvas, context: context});
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.domElement.oncontextmenu = () => { return false; };
 
     // Using 1024 without any special reasons so far
     const renderTarget = new WebGLRenderTarget(1024, 1024);
@@ -122,14 +127,48 @@ export default class ARScene {
     pointer.position.fromArray(DEFAULT_POINTER_POSITION);
     scene.add(pointer);
 
-    // Raycasting for firing input event by clicking the tablet
+    // Controls
+
+    const cameraControls = new MyControls(camera, renderer.domElement);
+    cameraControls.addEventListener('change', () => {
+      if (this.onCameraPoseUpdate) {
+        this.onCameraPoseUpdate(camera.position.toArray(), camera.quaternion.toArray());
+      }
+    });
+
+    const transformControls = new TransformControls(camera, renderer.domElement);
+    transformControls.setMode('translate');
+    transformControls.attach(tablet);
+    transformControls.addEventListener('change', () => {
+      if (this.onTabletPoseUpdate) {
+        this.onTabletPoseUpdate(tablet.position.toArray(), tablet.quaternion.toArray());
+      }
+    });
+    transformControls.addEventListener('mouseDown', () => {
+      cameraControls.enabled = false;
+    });
+    transformControls.addEventListener('mouseUp', () => {
+      cameraControls.enabled = true;
+    });
+    scene.add(transformControls);
+
+    // Raycasting for
+    //   - switching transform operation mode by left clicking
+    //   - firing input event by right clicking the tablet
 
     const raycaster = new Raycaster();
     const mouse = new Vector2();
     const targetObjects = [screen, tablet];
 
-    // @TODO: Rename to better name?
-    const getTouchedPointWithScreen = event => {
+    let mouseDownTime = null;
+    const transformModes = {
+      disabled: 0,
+      translate: 1,
+      rotate: 2
+    };
+    let transformMode = transformModes.translate;
+
+    const raycast = event => {
       const rect = renderer.domElement.getBoundingClientRect();
       // left-top (0, 0), right-bottom (1, 1)
       const point = {
@@ -138,18 +177,83 @@ export default class ARScene {
       };
       mouse.set(point.x * 2 - 1, -(point.y * 2) + 1);
       raycaster.setFromCamera(mouse, camera);
-      const intersectedObjects = raycaster.intersectObjects(targetObjects);      
-      return (intersectedObjects.length > 0 && intersectedObjects[0].object === screen)
-        ? intersectedObjects[0] : null;
+      return raycaster.intersectObjects(targetObjects);
     };
+
+    renderer.domElement.addEventListener('mousedown', event => {
+      if (event.button === 0) {
+        // left click for translate operation mode
+        if (raycast(event).length > 0) {
+          mouseDownTime = performance.now();
+        }
+      } else if (event.button === 2) {
+        // right click for input event 
+        if (this.isTouched) {
+          return;
+        }
+        const results = raycast(event);
+        if (results.length > 0 && results[0].object === screen) {
+          this.isTouched = true;
+          cameraControls.enabled = false;
+          if (this.onTouch) {
+            this.onTouch(results[0].point.toArray());
+          }
+        }
+      }
+      event.preventDefault();
+    }, false);
+
+    renderer.domElement.addEventListener('mouseup', event => {
+      if (event.button === 0) {
+        // left click for translate operation mode
+        if (mouseDownTime === null) {
+          return;
+        }
+        const mouseUpTime = performance.now();
+        const thresholdTime = 300;
+        if (mouseUpTime - mouseDownTime > thresholdTime) {
+          return;
+        }
+        transformMode = transformMode === transformModes.disabled ? transformModes.translate :
+                        transformMode === transformModes.translate ? transformModes.rotate :
+                        transformModes.disabled;
+        switch (transformMode) {
+          case transformModes.disabled:
+            transformControls.visible = false;
+            transformControls.enabled = false;
+            break;
+          case transformModes.translate:
+            transformControls.visible = true;
+            transformControls.enabled = true;
+            transformControls.setMode('translate');
+            break;
+          case transformModes.rotate:
+            transformControls.visible = true; // just in case
+            transformControls.enabled = true; // just in case
+            transformControls.setMode('rotate');
+            break;
+        }
+      } else if (event.button === 2) {
+        // right click for input event
+        cameraControls.enabled = true;
+        if (!this.isTouched) {
+          return;
+        }
+        this.isTouched = false;
+        if (this.onRelease) {
+          this.onRelease();
+        }
+      }
+      event.preventDefault();
+    }, false);
 
     renderer.domElement.addEventListener('mousemove', event => {
       event.preventDefault();
       if (!this.isTouched) {
         return;
       }
-      const result = getTouchedPointWithScreen(event);
-      if (!result) {
+      const results = raycast(event);
+      if (results.length === 0 || results[0].object !== screen) {
         this.isTouched = false;
         if (this.onRelease) {
           this.onRelease();
@@ -157,32 +261,7 @@ export default class ARScene {
         return;
       }
       if (this.onTouch) {
-        this.onTouch(result.point.toArray());
-      }
-    }, false);
-
-    renderer.domElement.addEventListener('mousedown', event => {
-      event.preventDefault();
-      if (this.isTouched) {
-        return;
-      }
-      const result = getTouchedPointWithScreen(event);
-      if (result) {
-        this.isTouched = true;
-        if (this.onTouch) {
-          this.onTouch(result.point.toArray());
-        }
-      }
-    }, false);
-
-    renderer.domElement.addEventListener('mouseup', event => {
-      event.preventDefault();
-      if (!this.isTouched) {
-        return;
-      }
-      this.isTouched = false;
-      if (this.onRelease) {
-        this.onRelease();
+        this.onTouch(results[0].point.toArray());
       }
     }, false);
 
@@ -205,6 +284,7 @@ export default class ARScene {
       // Second pass. Rendering ARScene and screen.
       // renderTarget and WebXR app Canvas is mixed on screen.
 
+      cameraControls.update();
       // @TODO: If possible, update the canvas texture only when the canvas is updated
       screen.material.userData.map2.value.needsUpdate = true;
       screen.visible = true;

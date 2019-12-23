@@ -141,12 +141,22 @@ export default class EmulatedXRDevice extends XRDevice {
         this.arScene.onRelease = () => {
           // Make further distance 0.15 from the tablet
           const tmpVec = vec3.fromValues(0, 0, 0.015);
-          vec3.transformQuat(tmpVec, tmpVec, this.quaternion);
+          vec3.transformQuat(tmpVec, tmpVec, this.gamepads[1].pose.orientation);
           for (let i = 0; i < 3; i++) {
             this.gamepads[0].pose.position[i] += tmpVec[i];
           }
           this.arScene.updatePointerTransform(this.gamepads[0].pose.position, this.gamepads[0].pose.orientation);
           this._notifyInputPoseUpdate(0);
+        };
+        this.arScene.onCameraPoseUpdate = (positionArray, quaternionArray) => {
+          this._updatePose(positionArray, quaternionArray);
+          this.arScene.updateCameraTransform(positionArray, quaternionArray);
+          this._notifyPoseUpdate();
+        };
+        this.arScene.onTabletPoseUpdate = (positionArray, quaternionArray) => {
+          this._updateInputPose(positionArray, quaternionArray, 1);
+          this.arScene.updateTabletTransform(positionArray, quaternionArray);
+          this._notifyInputPoseUpdate(1);
         };
       }
       this.arScene.inject();
@@ -188,7 +198,11 @@ export default class EmulatedXRDevice extends XRDevice {
       const aspect = width / height;
       mat4.perspective(this.projectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
     }
-    mat4.fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
+    if (session.ar) {
+      mat4.fromRotationTranslationScale(this.matrix, this.gamepads[1].pose.orientation, this.gamepads[1].pose.position, this.scale);
+    } else {
+      mat4.fromRotationTranslationScale(this.matrix, this.quaternion, this.position, this.scale);
+    }
     mat4.invert(this.viewMatrix, this.matrix);
 
     // Move matrices left/right a bit and then calculate left/rightViewMatrix
@@ -451,6 +465,13 @@ export default class EmulatedXRDevice extends XRDevice {
 
   // Notify the update to panel
 
+  _notifyPoseUpdate() {
+    dispatchCustomEvent('device-pose', {
+      position: this.position,
+      quaternion: this.quaternion
+    });
+  }
+
   // controllerIndex: 0 => Right, 1 => Left
   _notifyInputPoseUpdate(controllerIndex) {
     const pose = this.gamepads[controllerIndex].pose;
@@ -555,6 +576,7 @@ export default class EmulatedXRDevice extends XRDevice {
       const quaternionArray = event.detail.quaternion;
       if (this.arDevice) {
         if (this.arScene) {
+          this._updatePose(positionArray, quaternionArray);
           // In AR-mode, emulated headset corresponds to camera in AR scene
           this.arScene.updateCameraTransform(positionArray, quaternionArray);
         }
@@ -578,7 +600,7 @@ export default class EmulatedXRDevice extends XRDevice {
             }
             break;
           case 'leftController':
-            this._updatePose(positionArray, quaternionArray);
+            this._updateInputPose(positionArray, quaternionArray, 1);
             if (this.arScene) {
               this.arScene.updateTabletTransform(positionArray, quaternionArray);
             }
