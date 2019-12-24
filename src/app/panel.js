@@ -115,11 +115,6 @@ const notifyExitImmersive = () => {
 
 //
 
-const TRANSFORM_MODE = {
-  TRANSLATE: 0,
-  ROTATE: 1
-};
-
 const IMMERSIVE_MODE = {
   NONE: 0,
   VR: 1,
@@ -151,7 +146,6 @@ OBJECT_NAME[DEVICE.LEFT_CONTROLLER] = 'leftController';
 
 const states = {
   inImmersive: false,
-  transformMode: TRANSFORM_MODE.ROTATE,
   buttonPressed: {},
   immersiveMode: IMMERSIVE_MODE.NONE
 };
@@ -265,10 +259,11 @@ orbitControls.update(); // seems like this line is necessary if I set non-zero a
 
 const createTransformControls = (target, onChange) => {
   const controls = new THREE.TransformControls(camera, renderer.domElement);
-  controls.setMode(states.transformMode === TRANSFORM_MODE.TRANSLATE ? 'translate' : 'rotate');
   controls.setSpace('local');
   controls.attach(target);
   controls.setSize(1.5);
+  controls.enabled = false;
+  controls.visible = false;
 
   controls.addEventListener('mouseDown', () => {
     orbitControls.enabled = false;
@@ -286,14 +281,16 @@ const createTransformControls = (target, onChange) => {
   return controls;
 };
 
-const setupTransformControlsEnability = (controls, enabled, capabilities) => {
-  controls.visible = enabled;
-  controls.enabled = enabled;
-
-  // disable if device doesn't have capability of current transform mode
+// @TODO: Rename
+const setupTransformControlsMode = (controls, capabilities) => {
+  // change the mode if the device doesn't support
   if (controls.enabled) {
-    if ((states.transformMode === TRANSFORM_MODE.TRANSLATE && !capabilities.hasPosition) ||
-        (states.transformMode === TRANSFORM_MODE.ROTATE && !capabilities.hasRotation)) {
+    // Translate -> Rotate -> Disable
+    if (controls.getMode() === 'translate' && !capabilities.hasPosition) {
+      controls.setMode('rotate');
+    }
+    if (controls.getMode() === 'rotate' && !capabilities.hasRotation) {
+      controls.visible = false;
       controls.enabled = false;
     }
   }
@@ -317,10 +314,6 @@ const loadHeadsetAsset = () => {
     };
 
     const controls = createTransformControls(parent, onChange);
-    setupTransformControlsEnability(controls,
-      document.getElementById('headsetCheckbox').checked,
-      deviceCapabilities[DEVICE.HEADSET]);
-
     scene.add(controls);
     transformControls[DEVICE.HEADSET] = controls;
     onChange();
@@ -384,10 +377,6 @@ const loadControllersAsset = (loadRight, loadLeft) => {
         'rightControllerCheckbox' : 'leftControllerCheckbox';
 
       const controls = createTransformControls(parent, onChange);
-      setupTransformControlsEnability(controls,
-        document.getElementById(checkboxId).checked,
-        deviceCapabilities[DEVICE.CONTROLLER]);
-
       scene.add(controls);
       transformControls[key] = controls;
       onChange();
@@ -459,7 +448,6 @@ const updateAssetNodes = (deviceDefinition) => {
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
-  document.getElementById('transformModeButton').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
   document.getElementById('rightSqueezeButton').style.display = 'none';
@@ -512,16 +500,6 @@ const updateAssetNodes = (deviceDefinition) => {
     document.getElementById('resetPoseButton').style.display = '';
   }
 
-  // expect if device has position capability it also has rotation capability
-  if (hasPosition) {
-    document.getElementById('transformModeButton').style.display = '';
-  }
-
-  // force to rotate mode if device doesn't have position capability
-  if (!hasPosition && states.transformMode === TRANSFORM_MODE.TRANSLATE) {
-    toggleControlMode();
-  }
-
   render();
 };
 
@@ -554,6 +532,76 @@ const updateControllerColor = (key) => {
 };
 
 render();
+
+// Raycasting for transform controls enable/disable
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let mousedownTime = null;
+let intersectKey = null;
+const thresholdTime = 300;
+
+const raycast = event => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  // left-top (0, 0), right-bottom (1, 1)
+  const point = {
+    x: (event.clientX - rect.left) / rect.width,
+    y: (event.clientY - rect.top) / rect.height
+  };
+  mouse.set(point.x * 2 - 1, -(point.y * 2) + 1);
+  raycaster.setFromCamera(mouse, camera);
+  const targetObjects = [];
+  for (const key in assetNodes) {
+    const node = assetNodes[key];
+    if (node) {
+      targetObjects.push(node);
+    }
+  }
+  return raycaster.intersectObjects(targetObjects, true);
+};
+
+const getNearestIntersectedObjectKey = event => {
+  // @TODO: Optimize
+  const intersects = raycast(event);
+  if (intersects.length === 0) {
+    return null;
+  }
+  const intersect = intersects[0];
+  let target = null;
+  const check = object => {
+    for (const key in assetNodes) {
+      const node = assetNodes[key];
+      if (!node) {
+        continue;
+      }
+      if (object === node) {
+        target = key;
+      }
+    }
+  };
+  check(intersect.object);
+  intersect.object.traverseAncestors(check);
+  return target;
+};
+
+renderer.domElement.addEventListener('mousedown', event => {
+  intersectKey = getNearestIntersectedObjectKey(event);
+  mousedownTime = performance.now();
+}, false);
+
+renderer.domElement.addEventListener('mouseup', event => {
+  if (intersectKey === null) {
+    return;
+  }
+  const currentTime = performance.now();
+  if (currentTime - mousedownTime < thresholdTime) {
+    toggleControlMode(intersectKey);
+    // We add event listener to transformControls mouseUp event to set orbitControls.enabled true.
+    // But if disabling transformControls, its mouseUp event won't be fired.
+    // Then setting orbitControls.enabled true here as workaround.
+    orbitControls.enabled = true;
+  }
+}, false);
 
 // event handlers
 
@@ -624,81 +672,26 @@ window.addEventListener('resize', event => {
   onResize();
 }, false);
 
-const onHeadsetCheckboxChange = () => {
-  if (!transformControls[DEVICE.HEADSET]) {
+const toggleControlMode = (key) => {
+  const controls = transformControls[key];
+  if (!controls) {
     return;
   }
-
-  setupTransformControlsEnability(transformControls[DEVICE.HEADSET],
-    document.getElementById('headsetCheckbox').checked,
-    deviceCapabilities[DEVICE.HEADSET]);
-  render();
-};
-
-document.getElementById('headsetCheckbox')
-  .addEventListener('change', onHeadsetCheckboxChange, false);
-
-
-const onControllerCheckboxChange = (key) => {
-  if (!transformControls[key]) {
-    return;
+  // Translate -> Rotate -> Disable -> Translate -> ...
+  if (!controls.enabled) {
+    controls.enabled = true;
+    controls.visible = true;
+    controls.setMode('translate');
+  } else if (controls.getMode() === 'translate') {
+    controls.setMode('rotate');
+  } else {
+    controls.enabled = false;
+    controls.visible = false;
   }
-
-  const checkboxId = key === DEVICE.RIGHT_CONTROLLER
-    ? 'rightControllerCheckbox' : 'leftControllerCheckbox';
-
-  setupTransformControlsEnability(transformControls[key],
-    document.getElementById(checkboxId).checked,
-    deviceCapabilities[DEVICE.CONTROLLER]);
+  setupTransformControlsMode(controls,
+    deviceCapabilities[key === DEVICE.HEADSET ? key : DEVICE.CONTROLLER]);
   render();
 };
-
-const onRightControllerCheckboxChange = () => {
-  onControllerCheckboxChange(DEVICE.RIGHT_CONTROLLER);
-};
-
-document.getElementById('rightControllerCheckbox')
-  .addEventListener('change', onRightControllerCheckboxChange, false);
-
-const onLeftControllerCheckboxChange = () => {
-  onControllerCheckboxChange(DEVICE.LEFT_CONTROLLER);
-};
-
-document.getElementById('leftControllerCheckbox')
-  .addEventListener('change', onLeftControllerCheckboxChange, false);
-
-const toggleControlMode = () => {
-  states.transformMode = states.transformMode === TRANSFORM_MODE.TRANSLATE
-    ? TRANSFORM_MODE.ROTATE : TRANSFORM_MODE.TRANSLATE;
-
-  const isTranslateMode = states.transformMode === TRANSFORM_MODE.TRANSLATE;
-
-  for (const key in transformControls) {
-    const controls = transformControls[key];
-
-    if (!controls) {
-      continue;
-    }
-
-    const checkboxId =
-      key === DEVICE.HEADSET ? 'headsetCheckbox' :
-      key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerCheckbox' :
-      'leftControllerCheckbox';
-    controls.setMode(isTranslateMode ? 'translate' : 'rotate');
-    setupTransformControlsEnability(controls,
-      document.getElementById(checkboxId).checked,
-      deviceCapabilities[key === DEVICE.HEADSET ? DEVICE.HEADSET : DEVICE.CONTROLLER]);
-  }
-
-  document.getElementById('transformModeButton').textContent =
-    isTranslateMode ? 'Translate' : 'Rotate';
-
-  render();
-};
-
-document.getElementById('transformModeButton').addEventListener('click', event => {
-  toggleControlMode();
-}, false);
 
 const toggleButtonPressed = (key, buttonKey) => {
   states.buttonPressed[key][buttonKey] = !states.buttonPressed[key][buttonKey];
