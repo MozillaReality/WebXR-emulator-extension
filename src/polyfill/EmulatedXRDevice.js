@@ -688,11 +688,7 @@ const createGamepad = (hand, hasPosition) => {
 
 // From Three.js Object3D.translateOnAxis
 const tmpVec3 = vec3.create();
-const tmpQuat = quat.create();
 const translateOnX = (matrix, distance) => {
-  vec3.set(tmpVec3, 1, 0, 0);
-  mat4.getRotation(tmpQuat, matrix);
-  vec3.transformQuat(tmpVec3, tmpVec3, tmpQuat);
-  vec3.set(tmpVec3, tmpVec3[0] * distance, tmpVec3[1] * distance, tmpVec3[2] * distance);
+  vec3.set(tmpVec3, distance, 0, 0);
   return mat4.translate(matrix, matrix, tmpVec3);
 };
