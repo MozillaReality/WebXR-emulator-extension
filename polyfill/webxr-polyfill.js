@@ -6454,65 +6454,6 @@ to native implementations of the API.`;
                   out[15] = 1;
                   return out;
                 }
-                function getScaling(out, mat) {
-                  var m11 = mat[0];
-                  var m12 = mat[1];
-                  var m13 = mat[2];
-                  var m21 = mat[4];
-                  var m22 = mat[5];
-                  var m23 = mat[6];
-                  var m31 = mat[8];
-                  var m32 = mat[9];
-                  var m33 = mat[10];
-                  out[0] = Math.hypot(m11, m12, m13);
-                  out[1] = Math.hypot(m21, m22, m23);
-                  out[2] = Math.hypot(m31, m32, m33);
-                  return out;
-                }
-                function getRotation$1(out, mat) {
-                  var scaling = new ARRAY_TYPE$2(3);
-                  getScaling(scaling, mat);
-                  var is1 = 1 / scaling[0];
-                  var is2 = 1 / scaling[1];
-                  var is3 = 1 / scaling[2];
-                  var sm11 = mat[0] * is1;
-                  var sm12 = mat[1] * is2;
-                  var sm13 = mat[2] * is3;
-                  var sm21 = mat[4] * is1;
-                  var sm22 = mat[5] * is2;
-                  var sm23 = mat[6] * is3;
-                  var sm31 = mat[8] * is1;
-                  var sm32 = mat[9] * is2;
-                  var sm33 = mat[10] * is3;
-                  var trace = sm11 + sm22 + sm33;
-                  var S = 0;
-                  if (trace > 0) {
-                    S = Math.sqrt(trace + 1.0) * 2;
-                    out[3] = 0.25 * S;
-                    out[0] = (sm23 - sm32) / S;
-                    out[1] = (sm31 - sm13) / S;
-                    out[2] = (sm12 - sm21) / S;
-                  } else if (sm11 > sm22 && sm11 > sm33) {
-                    S = Math.sqrt(1.0 + sm11 - sm22 - sm33) * 2;
-                    out[3] = (sm23 - sm32) / S;
-                    out[0] = 0.25 * S;
-                    out[1] = (sm12 + sm21) / S;
-                    out[2] = (sm31 + sm13) / S;
-                  } else if (sm22 > sm33) {
-                    S = Math.sqrt(1.0 + sm22 - sm11 - sm33) * 2;
-                    out[3] = (sm31 - sm13) / S;
-                    out[0] = (sm12 + sm21) / S;
-                    out[1] = 0.25 * S;
-                    out[2] = (sm23 + sm32) / S;
-                  } else {
-                    S = Math.sqrt(1.0 + sm33 - sm11 - sm22) * 2;
-                    out[3] = (sm12 - sm21) / S;
-                    out[0] = (sm31 + sm13) / S;
-                    out[1] = (sm23 + sm32) / S;
-                    out[2] = 0.25 * S;
-                  }
-                  return out;
-                }
                 function fromRotationTranslationScale(out, q, v, s) {
                   var x = q[0],
                       y = q[1],
@@ -35196,12 +35137,8 @@ to native implementations of the API.`;
                   };
                 };
                 const tmpVec3 = create$c();
-                const tmpQuat = create$e();
                 const translateOnX = (matrix, distance) => {
-                  set(tmpVec3, 1, 0, 0);
-                  getRotation$1(tmpQuat, matrix);
-                  transformQuat$1(tmpVec3, tmpVec3, tmpQuat);
-                  set(tmpVec3, tmpVec3[0] * distance, tmpVec3[1] * distance, tmpVec3[2] * distance);
+                  set(tmpVec3, distance, 0, 0);
                   return translate(matrix, matrix, tmpVec3);
                 };
 
