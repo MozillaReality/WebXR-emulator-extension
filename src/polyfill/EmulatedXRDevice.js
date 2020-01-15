@@ -686,7 +686,6 @@ const createGamepad = (hand, hasPosition) => {
   };
 };
 
-// From Three.js Object3D.translateOnAxis
 const tmpVec3 = vec3.create();
 const translateOnX = (matrix, distance) => {
   vec3.set(tmpVec3, distance, 0, 0);
