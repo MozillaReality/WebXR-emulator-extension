@@ -322,8 +322,8 @@ export default class EmulatedXRDevice extends XRDevice {
         target.width = 0;
         target.height = 0;
       } else {
-        target.width = this.resolution.width;
-        target.height = this.resolution.height;
+        target.width = width;
+        target.height = height;
       }
       target.x = 0;
       target.y = 0;
