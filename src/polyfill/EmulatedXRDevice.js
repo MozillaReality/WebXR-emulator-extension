@@ -391,9 +391,8 @@ export default class EmulatedXRDevice extends XRDevice {
             ((this.deviceSize.width - outsideFrameWidth) * 0.5) * aspect;
           const dy = pose.transform.matrix[13] /
             ((this.deviceSize.height - outsideFrameWidth) * 0.5);
-          matrix[8] = -dx;
-          matrix[9] = -dy;
-          matrix[10] = 1.0;
+          mat4.rotateY(matrix, matrix, -dx * Math.PI / 4);
+          mat4.rotateX(matrix, matrix, dy * Math.PI / 4);
           matrix[12] = dx * near;
           matrix[13] = dy * near;
           matrix[14] = -near;
