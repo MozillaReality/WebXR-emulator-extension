@@ -6419,6 +6419,68 @@ to native implementations of the API.`;
                   }
                   return out;
                 }
+                function rotateX(out, a, rad) {
+                  var s = Math.sin(rad);
+                  var c = Math.cos(rad);
+                  var a10 = a[4];
+                  var a11 = a[5];
+                  var a12 = a[6];
+                  var a13 = a[7];
+                  var a20 = a[8];
+                  var a21 = a[9];
+                  var a22 = a[10];
+                  var a23 = a[11];
+                  if (a !== out) {
+                    out[0] = a[0];
+                    out[1] = a[1];
+                    out[2] = a[2];
+                    out[3] = a[3];
+                    out[12] = a[12];
+                    out[13] = a[13];
+                    out[14] = a[14];
+                    out[15] = a[15];
+                  }
+                  out[4] = a10 * c + a20 * s;
+                  out[5] = a11 * c + a21 * s;
+                  out[6] = a12 * c + a22 * s;
+                  out[7] = a13 * c + a23 * s;
+                  out[8] = a20 * c - a10 * s;
+                  out[9] = a21 * c - a11 * s;
+                  out[10] = a22 * c - a12 * s;
+                  out[11] = a23 * c - a13 * s;
+                  return out;
+                }
+                function rotateY(out, a, rad) {
+                  var s = Math.sin(rad);
+                  var c = Math.cos(rad);
+                  var a00 = a[0];
+                  var a01 = a[1];
+                  var a02 = a[2];
+                  var a03 = a[3];
+                  var a20 = a[8];
+                  var a21 = a[9];
+                  var a22 = a[10];
+                  var a23 = a[11];
+                  if (a !== out) {
+                    out[4] = a[4];
+                    out[5] = a[5];
+                    out[6] = a[6];
+                    out[7] = a[7];
+                    out[12] = a[12];
+                    out[13] = a[13];
+                    out[14] = a[14];
+                    out[15] = a[15];
+                  }
+                  out[0] = a00 * c - a20 * s;
+                  out[1] = a01 * c - a21 * s;
+                  out[2] = a02 * c - a22 * s;
+                  out[3] = a03 * c - a23 * s;
+                  out[8] = a00 * s + a20 * c;
+                  out[9] = a01 * s + a21 * c;
+                  out[10] = a02 * s + a22 * c;
+                  out[11] = a03 * s + a23 * c;
+                  return out;
+                }
                 function fromRotationTranslation$1(out, q, v) {
                   var x = q[0],
                       y = q[1],
@@ -34848,8 +34910,8 @@ to native implementations of the API.`;
                         target.width = 0;
                         target.height = 0;
                       } else {
-                        target.width = this.resolution.width;
-                        target.height = this.resolution.height;
+                        target.width = width;
+                        target.height = height;
                       }
                       target.x = 0;
                       target.y = 0;
@@ -34904,9 +34966,8 @@ to native implementations of the API.`;
                             ((this.deviceSize.width - outsideFrameWidth) * 0.5) * aspect;
                           const dy = pose.transform.matrix[13] /
                             ((this.deviceSize.height - outsideFrameWidth) * 0.5);
-                          matrix[8] = -dx;
-                          matrix[9] = -dy;
-                          matrix[10] = 1.0;
+                          rotateY(matrix, matrix, -dx * Math.PI / 4);
+                          rotateX(matrix, matrix, dy * Math.PI / 4);
                           matrix[12] = dx * near;
                           matrix[13] = dy * near;
                           matrix[14] = -near;
