@@ -149,7 +149,7 @@ export default class MyControls extends EventDispatcher {
   rotateCamera() {
     // @TODO: Can be optimized?
     const vector2 = new Vector2().copy(this._rotateEnd).sub(this._rotateStart);
-    const rotation = new Vector3(vector2.y, vector2.x, 0).applyQuaternion(this.object.quaternion);
+    const rotation = new Vector3(vector2.y, vector2.x, 0);
     const quaternion = new Quaternion().setFromEuler(new Euler().setFromVector3(rotation));
     this.object.quaternion.multiply(quaternion);
     this._rotateStart.copy(this._rotateEnd);
