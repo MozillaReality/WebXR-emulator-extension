@@ -36,11 +36,19 @@
       },
       "controllers": [
         {
+          "id": "OpenVR Gamepad",
+          "buttonNum": 3,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
           "hasSqueezeButton": true
         },
         {
+          "id": "OpenVR Gamepad",
+          "buttonNum": 3,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
           "hasSqueezeButton": true
@@ -60,6 +68,9 @@
       },
       "controllers": [
         {
+          "id": "Oculus Go Controller",
+          "buttonNum": 3,
+          "primaryButtonIndex": 0,
           "hasPosition": false,
           "hasRotation": true,
           "hasSqueezeButton": false
@@ -79,11 +90,19 @@
       },
       "controllers": [
         {
+          "id": "Oculus Touch (Right)",
+          "buttonNum": 6,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
           "hasSqueezeButton": true
         },
         {
+          "id": "Oculus Touch (Left)",
+          "buttonNum": 6,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
           "hasSqueezeButton": true
@@ -103,10 +122,14 @@
       },
       "controllers": [
         {
+          "buttonNum": 1,
+          "primaryButtonIndex": 0,
           "hasPosition": true,
           "hasRotation": true
         },
         {
+          "buttonNum": 1,
+          "primaryButtonIndex": 0,
           "hasPosition": true,
           "hasRotation": true
         }
@@ -134,6 +157,9 @@
       },
       "controllers": [
         {
+          "id": "Gear VR Controller",
+          "buttonNum": 3,
+          "primaryButtonIndex": 0,
           "hasPosition": false,
           "hasRotation": true
         }

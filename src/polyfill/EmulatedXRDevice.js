@@ -531,10 +531,15 @@ export default class EmulatedXRDevice extends XRDevice {
     this.gamepads.length = 0;
     this.gamepadInputSources.length = 0;
     for (let i = 0; i < controllerNum; i++) {
-      const hasPosition = config.controllers[i].hasPosition;
-      this.gamepads.push(createGamepad(i === 0 ? 'right' : 'left', hasPosition));
+      const controller = config.controllers[i];
+      const id = controller.id || '';
+      const hasPosition = controller.hasPosition || false;
+      const buttonNum = controller.buttonNum || 0;
+      const primaryButtonIndex = controller.primaryButtonIndex !== undefined ? controller.primaryButtonIndex : 0;
+      const primarySqueezeButtonIndex = controller.primarySqueezeButtonIndex !== undefined ? controller.primarySqueezeButtonIndex : -1;
+      this.gamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', buttonNum, hasPosition));
       // @TODO: targetRayMode should be screen for right controller(pointer) in AR
-      this.gamepadInputSources.push(new GamepadXRInputSource(this, null, 0, 1));
+      this.gamepadInputSources.push(new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex));
     }
   }
 
@@ -658,27 +663,23 @@ class Session {
   }
 }
 
-const createGamepad = (hand, hasPosition) => {
+const createGamepad = (id, hand, buttonNum, hasPosition) => {
+  const buttons = [];
+  for (let i = 0; i < buttonNum; i++) {
+    buttons.push({
+      pressed: false,
+      touched: false,
+      value: 0.0
+    });
+  }
   return {
+    id: id || '',
     pose: {
       hasPosition: hasPosition,
       position: [0, 0, 0],
       orientation: [0, 0, 0, 1]
     },
-    buttons: [
-      // select
-      {
-        pressed: false,
-        touched: false,
-        value: 0.0
-      },
-      // squeeze
-      {
-        pressed: false,
-        touched: false,
-        value: 0.0
-      }
-    ],
+    buttons: buttons,
     hand: hand,
     mapping: 'xr-standard',
     axes: [0, 0]
