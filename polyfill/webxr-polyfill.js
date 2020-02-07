@@ -830,15 +830,9 @@ function WebXRPolyfillInjection() {
                     this._inverseBaseMatrix = transform || identity(new Float32Array(16));
                     this[PRIVATE$3] = {
                       type,
+                      transform,
                       originOffset : identity(new Float32Array(16)),
                     };
-                  }
-                  _onPoseUpdate(device) {
-                    switch(this[PRIVATE$3].type) {
-                      case 'viewer':
-                        this._baseMatrix = device.getBasePoseMatrix();
-                        break;
-                    }
                   }
                   _transformBasePoseMatrix(out, pose) {
                     multiply(out, this._inverseBaseMatrix, pose);
@@ -887,7 +881,7 @@ function WebXRPolyfillInjection() {
 or navigator.xr.requestSession('inline') prior to requesting an immersive
 session. This is a limitation specific to the WebXR Polyfill and does not apply
 to native implementations of the API.`;
-                class XR$1 extends EventTarget {
+                class XR extends EventTarget {
                   constructor(devicePromise) {
                     super();
                     this[PRIVATE$4] = {
@@ -1041,320 +1035,6 @@ to native implementations of the API.`;
                   }
                 }
 
-                var EPSILON$1 = 0.000001;
-                var ARRAY_TYPE$1 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
-
-                function create$5() {
-                  var out = new ARRAY_TYPE$1(9);
-                  if (ARRAY_TYPE$1 != Float32Array) {
-                    out[1] = 0;
-                    out[2] = 0;
-                    out[3] = 0;
-                    out[5] = 0;
-                    out[6] = 0;
-                    out[7] = 0;
-                  }
-                  out[0] = 1;
-                  out[4] = 1;
-                  out[8] = 1;
-                  return out;
-                }
-
-                function create$6() {
-                  var out = new ARRAY_TYPE$1(3);
-                  if (ARRAY_TYPE$1 != Float32Array) {
-                    out[0] = 0;
-                    out[1] = 0;
-                    out[2] = 0;
-                  }
-                  return out;
-                }
-                function length$1(a) {
-                  var x = a[0];
-                  var y = a[1];
-                  var z = a[2];
-                  return Math.sqrt(x * x + y * y + z * z);
-                }
-                function fromValues$3(x, y, z) {
-                  var out = new ARRAY_TYPE$1(3);
-                  out[0] = x;
-                  out[1] = y;
-                  out[2] = z;
-                  return out;
-                }
-                function normalize$3(out, a) {
-                  var x = a[0];
-                  var y = a[1];
-                  var z = a[2];
-                  var len = x * x + y * y + z * z;
-                  if (len > 0) {
-                    len = 1 / Math.sqrt(len);
-                    out[0] = a[0] * len;
-                    out[1] = a[1] * len;
-                    out[2] = a[2] * len;
-                  }
-                  return out;
-                }
-                function dot$1(a, b) {
-                  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-                }
-                function cross$1(out, a, b) {
-                  var ax = a[0],
-                      ay = a[1],
-                      az = a[2];
-                  var bx = b[0],
-                      by = b[1],
-                      bz = b[2];
-                  out[0] = ay * bz - az * by;
-                  out[1] = az * bx - ax * bz;
-                  out[2] = ax * by - ay * bx;
-                  return out;
-                }
-                var len$1 = length$1;
-                var forEach$2 = function () {
-                  var vec = create$6();
-                  return function (a, stride, offset, count, fn, arg) {
-                    var i = void 0,
-                        l = void 0;
-                    if (!stride) {
-                      stride = 3;
-                    }
-                    if (!offset) {
-                      offset = 0;
-                    }
-                    if (count) {
-                      l = Math.min(count * stride + offset, a.length);
-                    } else {
-                      l = a.length;
-                    }
-                    for (i = offset; i < l; i += stride) {
-                      vec[0] = a[i];vec[1] = a[i + 1];vec[2] = a[i + 2];
-                      fn(vec, vec, arg);
-                      a[i] = vec[0];a[i + 1] = vec[1];a[i + 2] = vec[2];
-                    }
-                    return a;
-                  };
-                }();
-
-                function create$7() {
-                  var out = new ARRAY_TYPE$1(4);
-                  if (ARRAY_TYPE$1 != Float32Array) {
-                    out[0] = 0;
-                    out[1] = 0;
-                    out[2] = 0;
-                    out[3] = 0;
-                  }
-                  return out;
-                }
-                function normalize$4(out, a) {
-                  var x = a[0];
-                  var y = a[1];
-                  var z = a[2];
-                  var w = a[3];
-                  var len = x * x + y * y + z * z + w * w;
-                  if (len > 0) {
-                    len = 1 / Math.sqrt(len);
-                    out[0] = x * len;
-                    out[1] = y * len;
-                    out[2] = z * len;
-                    out[3] = w * len;
-                  }
-                  return out;
-                }
-                var forEach$3 = function () {
-                  var vec = create$7();
-                  return function (a, stride, offset, count, fn, arg) {
-                    var i = void 0,
-                        l = void 0;
-                    if (!stride) {
-                      stride = 4;
-                    }
-                    if (!offset) {
-                      offset = 0;
-                    }
-                    if (count) {
-                      l = Math.min(count * stride + offset, a.length);
-                    } else {
-                      l = a.length;
-                    }
-                    for (i = offset; i < l; i += stride) {
-                      vec[0] = a[i];vec[1] = a[i + 1];vec[2] = a[i + 2];vec[3] = a[i + 3];
-                      fn(vec, vec, arg);
-                      a[i] = vec[0];a[i + 1] = vec[1];a[i + 2] = vec[2];a[i + 3] = vec[3];
-                    }
-                    return a;
-                  };
-                }();
-
-                function create$8() {
-                  var out = new ARRAY_TYPE$1(4);
-                  if (ARRAY_TYPE$1 != Float32Array) {
-                    out[0] = 0;
-                    out[1] = 0;
-                    out[2] = 0;
-                  }
-                  out[3] = 1;
-                  return out;
-                }
-                function setAxisAngle$1(out, axis, rad) {
-                  rad = rad * 0.5;
-                  var s = Math.sin(rad);
-                  out[0] = s * axis[0];
-                  out[1] = s * axis[1];
-                  out[2] = s * axis[2];
-                  out[3] = Math.cos(rad);
-                  return out;
-                }
-                function slerp$1(out, a, b, t) {
-                  var ax = a[0],
-                      ay = a[1],
-                      az = a[2],
-                      aw = a[3];
-                  var bx = b[0],
-                      by = b[1],
-                      bz = b[2],
-                      bw = b[3];
-                  var omega = void 0,
-                      cosom = void 0,
-                      sinom = void 0,
-                      scale0 = void 0,
-                      scale1 = void 0;
-                  cosom = ax * bx + ay * by + az * bz + aw * bw;
-                  if (cosom < 0.0) {
-                    cosom = -cosom;
-                    bx = -bx;
-                    by = -by;
-                    bz = -bz;
-                    bw = -bw;
-                  }
-                  if (1.0 - cosom > EPSILON$1) {
-                    omega = Math.acos(cosom);
-                    sinom = Math.sin(omega);
-                    scale0 = Math.sin((1.0 - t) * omega) / sinom;
-                    scale1 = Math.sin(t * omega) / sinom;
-                  } else {
-                    scale0 = 1.0 - t;
-                    scale1 = t;
-                  }
-                  out[0] = scale0 * ax + scale1 * bx;
-                  out[1] = scale0 * ay + scale1 * by;
-                  out[2] = scale0 * az + scale1 * bz;
-                  out[3] = scale0 * aw + scale1 * bw;
-                  return out;
-                }
-                function fromMat3$1(out, m) {
-                  var fTrace = m[0] + m[4] + m[8];
-                  var fRoot = void 0;
-                  if (fTrace > 0.0) {
-                    fRoot = Math.sqrt(fTrace + 1.0);
-                    out[3] = 0.5 * fRoot;
-                    fRoot = 0.5 / fRoot;
-                    out[0] = (m[5] - m[7]) * fRoot;
-                    out[1] = (m[6] - m[2]) * fRoot;
-                    out[2] = (m[1] - m[3]) * fRoot;
-                  } else {
-                    var i = 0;
-                    if (m[4] > m[0]) i = 1;
-                    if (m[8] > m[i * 3 + i]) i = 2;
-                    var j = (i + 1) % 3;
-                    var k = (i + 2) % 3;
-                    fRoot = Math.sqrt(m[i * 3 + i] - m[j * 3 + j] - m[k * 3 + k] + 1.0);
-                    out[i] = 0.5 * fRoot;
-                    fRoot = 0.5 / fRoot;
-                    out[3] = (m[j * 3 + k] - m[k * 3 + j]) * fRoot;
-                    out[j] = (m[j * 3 + i] + m[i * 3 + j]) * fRoot;
-                    out[k] = (m[k * 3 + i] + m[i * 3 + k]) * fRoot;
-                  }
-                  return out;
-                }
-                var normalize$5 = normalize$4;
-                var rotationTo$1 = function () {
-                  var tmpvec3 = create$6();
-                  var xUnitVec3 = fromValues$3(1, 0, 0);
-                  var yUnitVec3 = fromValues$3(0, 1, 0);
-                  return function (out, a, b) {
-                    var dot = dot$1(a, b);
-                    if (dot < -0.999999) {
-                      cross$1(tmpvec3, xUnitVec3, a);
-                      if (len$1(tmpvec3) < 0.000001) cross$1(tmpvec3, yUnitVec3, a);
-                      normalize$3(tmpvec3, tmpvec3);
-                      setAxisAngle$1(out, tmpvec3, Math.PI);
-                      return out;
-                    } else if (dot > 0.999999) {
-                      out[0] = 0;
-                      out[1] = 0;
-                      out[2] = 0;
-                      out[3] = 1;
-                      return out;
-                    } else {
-                      cross$1(tmpvec3, a, b);
-                      out[0] = tmpvec3[0];
-                      out[1] = tmpvec3[1];
-                      out[2] = tmpvec3[2];
-                      out[3] = 1 + dot;
-                      return normalize$5(out, out);
-                    }
-                  };
-                }();
-                var sqlerp$1 = function () {
-                  var temp1 = create$8();
-                  var temp2 = create$8();
-                  return function (out, a, b, c, d, t) {
-                    slerp$1(temp1, a, d, t);
-                    slerp$1(temp2, b, c, t);
-                    slerp$1(out, temp1, temp2, 2 * t * (1 - t));
-                    return out;
-                  };
-                }();
-                var setAxes$1 = function () {
-                  var matr = create$5();
-                  return function (out, view, right, up) {
-                    matr[0] = right[0];
-                    matr[3] = right[1];
-                    matr[6] = right[2];
-                    matr[1] = up[0];
-                    matr[4] = up[1];
-                    matr[7] = up[2];
-                    matr[2] = -view[0];
-                    matr[5] = -view[1];
-                    matr[8] = -view[2];
-                    return normalize$5(out, fromMat3$1(out, matr));
-                  };
-                }();
-
-                function create$9() {
-                  var out = new ARRAY_TYPE$1(2);
-                  if (ARRAY_TYPE$1 != Float32Array) {
-                    out[0] = 0;
-                    out[1] = 0;
-                  }
-                  return out;
-                }
-                var forEach$4 = function () {
-                  var vec = create$9();
-                  return function (a, stride, offset, count, fn, arg) {
-                    var i = void 0,
-                        l = void 0;
-                    if (!stride) {
-                      stride = 2;
-                    }
-                    if (!offset) {
-                      offset = 0;
-                    }
-                    if (count) {
-                      l = Math.min(count * stride + offset, a.length);
-                    } else {
-                      l = a.length;
-                    }
-                    for (i = offset; i < l; i += stride) {
-                      vec[0] = a[i];vec[1] = a[i + 1];
-                      fn(vec, vec, arg);
-                      a[i] = vec[0];a[i + 1] = vec[1];
-                    }
-                    return a;
-                  };
-                }();
-
                 const PRIVATE$9 = Symbol('@@webxr-polyfill/XRFrame');
                 const NON_ACTIVE_MSG = "XRFrame access outside the callback that produced it is invalid.";
                 const NON_ANIMFRAME_MSG = "getViewerPose can only be called on XRFrame objects passed to XRSession.requestAnimationFrame callbacks.";
@@ -1474,6 +1154,13 @@ to native implementations of the API.`;
                   getViewport(view) {
                     return view._getViewport(this);
                   }
+                  static getNativeFramebufferScaleFactor(session) {
+                    if (!session) {
+                      throw new TypeError('getNativeFramebufferScaleFactor must be passed a session.')
+                    }
+                    if (session[PRIVATE$f].ended) { return 0.0; }
+                    return 1.0;
+                  }
                 }
 
                 const PRIVATE$c = Symbol('@@webxr-polyfill/XRInputSourceEvent');
@@ -1484,6 +1171,7 @@ to native implementations of the API.`;
                       frame: eventInitDict.frame,
                       inputSource: eventInitDict.inputSource
                     };
+                    Object.setPrototypeOf(this, XRInputSourceEvent.prototype);
                   }
                   get frame() { return this[PRIVATE$c].frame; }
                   get inputSource() { return this[PRIVATE$c].inputSource; }
@@ -1496,6 +1184,7 @@ to native implementations of the API.`;
                     this[PRIVATE$d] = {
                       session: eventInitDict.session
                     };
+                    Object.setPrototypeOf(this, XRSessionEvent.prototype);
                   }
                   get session() { return this[PRIVATE$d].session; }
                 }
@@ -1509,6 +1198,7 @@ to native implementations of the API.`;
                       added: eventInitDict.added,
                       removed: eventInitDict.removed
                     };
+                    Object.setPrototypeOf(this, XRInputSourcesChangeEvent.prototype);
                   }
                   get session() { return this[PRIVATE$e].session; }
                   get added() { return this[PRIVATE$e].added; }
@@ -1745,7 +1435,7 @@ to native implementations of the API.`;
                     if (this[PRIVATE$f].ended) {
                       return;
                     }
-                    if (this.immersive) {
+                    if (this[PRIVATE$f].immersive) {
                       this[PRIVATE$f].ended = true;
                       this[PRIVATE$f].device.removeEventListener('@@webvr-polyfill/vr-present-start',
                                                                  this[PRIVATE$f].onPresentationStart);
@@ -1855,13 +1545,14 @@ to native implementations of the API.`;
                       referenceSpace: eventInitDict.referenceSpace,
                       transform: eventInitDict.transform || null
                     };
+                    Object.setPrototypeOf(this, XRReferenceSpaceEvent.prototype);
                   }
                   get referenceSpace() { return this[PRIVATE$h].referenceSpace; }
                   get transform() { return this[PRIVATE$h].transform; }
                 }
 
                 var API = {
-                  XR: XR$1,
+                  XR,
                   XRSession: XRSession$1,
                   XRSessionEvent,
                   XRFrame,
@@ -5108,10 +4799,20 @@ to native implementations of the API.`;
 
                 let daydream = {
                   mapping: '',
-                  profiles: ['daydream', 'generic-trigger-touchpad'],
+                  profiles: ['google-daydream', 'generic-trigger-touchpad'],
                   buttons: {
                     length: 3,
                     0: null,
+                    1: null,
+                    2: 0
+                  },
+                };
+                let viveFocus = {
+                  mapping: 'xr-standard',
+                  profiles: ['htc-vive-focus', 'generic-trigger-touchpad'],
+                  buttons: {
+                    length: 3,
+                    0: 1,
                     1: null,
                     2: 0
                   },
@@ -5132,7 +4833,7 @@ to native implementations of the API.`;
                 let oculusTouch = {
                   mapping: 'xr-standard',
                   displayProfiles: {
-                    'Oculus Quest': ['oculus-touch-s', 'oculus-touch', 'generic-trigger-squeeze-thumbstick']
+                    'Oculus Quest': ['oculus-touch-v2', 'oculus-touch', 'generic-trigger-squeeze-thumbstick']
                   },
                   profiles: ['oculus-touch', 'generic-trigger-squeeze-thumbstick'],
                   axes: {
@@ -5143,13 +4844,14 @@ to native implementations of the API.`;
                     3: 1
                   },
                   buttons: {
-                    length: 6,
+                    length: 7,
                     0: 1,
                     1: 2,
                     2: null,
                     3: 0,
                     4: 3,
-                    5: 4
+                    5: 4,
+                    6: null
                   },
                   gripTransform: {
                     position: [0, -0.02, 0.04, 1],
@@ -5158,7 +4860,7 @@ to native implementations of the API.`;
                 };
                 let openVr = {
                   mapping: 'xr-standard',
-                  profiles: ['openvr-controller', 'generic-trigger-squeeze-touchpad'],
+                  profiles: ['htc-vive', 'generic-trigger-squeeze-touchpad'],
                   displayProfiles: {
                     'HTC Vive': ['htc-vive', 'generic-trigger-squeeze-touchpad'],
                     'HTC Vive DVT': ['htc-vive', 'generic-trigger-squeeze-touchpad'],
@@ -5175,6 +4877,13 @@ to native implementations of the API.`;
                   },
                   targetRayTransform: {
                     orientation: [Math.PI * -0.08, 0, 0, 1]
+                  },
+                  userAgentOverrides: {
+                    "Firefox": {
+                      axes: {
+                        invert: [1, 3]
+                      }
+                    }
                   }
                 };
                 let samsungGearVR = {
@@ -5223,6 +4932,7 @@ to native implementations of the API.`;
                 let GamepadMappings = {
                   'Daydream Controller': daydream,
                   'Gear VR Controller': samsungGearVR,
+                  'HTC Vive Focus Controller': viveFocus,
                   'Oculus Go Controller': oculusGo,
                   'Oculus Touch (Right)': oculusTouch,
                   'Oculus Touch (Left)': oculusTouch,
@@ -5394,6 +5104,21 @@ to native implementations of the API.`;
                     if (!map) {
                       map = {};
                     }
+                    if (map.userAgentOverrides) {
+                      for (let agent in map.userAgentOverrides) {
+                        if (navigator.userAgent.includes(agent)) {
+                          let override = map.userAgentOverrides[agent];
+                          for (let key in override) {
+                            if (key in map) {
+                              Object.assign(map[key], override[key]);
+                            } else {
+                              map[key] = override[key];
+                            }
+                          }
+                          break;
+                        }
+                      }
+                    }
                     let axes = new Array(map.axes && map.axes.length ? map.axes.length : gamepad.axes.length);
                     let buttons = new Array(map.buttons && map.buttons.length ? map.buttons.length : gamepad.buttons.length);
                     let gripTransform = null;
@@ -5451,7 +5176,9 @@ to native implementations of the API.`;
                     }
                     if (map.axes && map.axes.invert) {
                       for (let axis of map.axes.invert) {
-                        axes[axis] *= -1;
+                        if (axis < axes.length) {
+                          axes[axis] *= -1;
+                        }
                       }
                     }
                     let buttons = this[PRIVATE$i].buttons;
@@ -6137,7 +5864,7 @@ to native implementations of the API.`;
                   }
                   _patchNavigatorXR() {
                     let devicePromise = requestXRDevice(this.global, this.config);
-                    this.xr = new XR(devicePromise);
+                    this.xr = new API.XR(devicePromise);
                     Object.defineProperty(this.global.navigator, 'xr', {
                       value: this.xr,
                       configurable: true,
@@ -6165,28 +5892,11 @@ to native implementations of the API.`;
                         return originalSupportsSession.call(this, mode);
                       };
                     }
-                    if (global.XRWebGLLayer) {
-                      let originalRequestSession = global.navigator.xr.requestSession;
-                      global.navigator.xr.requestSession = function(mode, options) {
-                        return originalRequestSession.call(this, mode, options).then((session) => {
-                          session._session_mode = mode;
-                          return session;
-                        });
-                      };
-                      var originalXRLayer = global.XRWebGLLayer;
-                      global.XRWebGLLayer = function(session, gl, options) {
-                        if (!options) {
-                          options = {};
-                        }
-                        options.compositionDisabled = (session._session_mode === "inline");
-                        return new originalXRLayer(session, gl, options);
-                      };
-                    }
                   }
                 }
 
-                var EPSILON$2 = 0.000001;
-                var ARRAY_TYPE$2 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
+                var EPSILON$1 = 0.000001;
+                var ARRAY_TYPE$1 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
                 if (!Math.hypot) Math.hypot = function () {
                   var y = 0,
                       i = arguments.length;
@@ -6196,9 +5906,9 @@ to native implementations of the API.`;
                   return Math.sqrt(y);
                 };
 
-                function create$a() {
-                  var out = new ARRAY_TYPE$2(9);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$5() {
+                  var out = new ARRAY_TYPE$1(9);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[1] = 0;
                     out[2] = 0;
                     out[3] = 0;
@@ -6212,9 +5922,9 @@ to native implementations of the API.`;
                   return out;
                 }
 
-                function create$b() {
-                  var out = new ARRAY_TYPE$2(16);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$6() {
+                  var out = new ARRAY_TYPE$1(16);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[1] = 0;
                     out[2] = 0;
                     out[3] = 0;
@@ -6582,23 +6292,23 @@ to native implementations of the API.`;
                   return out;
                 }
 
-                function create$c() {
-                  var out = new ARRAY_TYPE$2(3);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$7() {
+                  var out = new ARRAY_TYPE$1(3);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[0] = 0;
                     out[1] = 0;
                     out[2] = 0;
                   }
                   return out;
                 }
-                function length$2(a) {
+                function length$1(a) {
                   var x = a[0];
                   var y = a[1];
                   var z = a[2];
                   return Math.hypot(x, y, z);
                 }
-                function fromValues$4(x, y, z) {
-                  var out = new ARRAY_TYPE$2(3);
+                function fromValues$3(x, y, z) {
+                  var out = new ARRAY_TYPE$1(3);
                   out[0] = x;
                   out[1] = y;
                   out[2] = z;
@@ -6616,7 +6326,7 @@ to native implementations of the API.`;
                   out[2] = z;
                   return out;
                 }
-                function normalize$6(out, a) {
+                function normalize$3(out, a) {
                   var x = a[0];
                   var y = a[1];
                   var z = a[2];
@@ -6629,10 +6339,10 @@ to native implementations of the API.`;
                   out[2] = a[2] * len;
                   return out;
                 }
-                function dot$2(a, b) {
+                function dot$1(a, b) {
                   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
                 }
-                function cross$2(out, a, b) {
+                function cross$1(out, a, b) {
                   var ax = a[0],
                       ay = a[1],
                       az = a[2];
@@ -6670,9 +6380,9 @@ to native implementations of the API.`;
                   out[2] = z + uvz + uuvz;
                   return out;
                 }
-                var len$2 = length$2;
-                var forEach$5 = function () {
-                  var vec = create$c();
+                var len$1 = length$1;
+                var forEach$2 = function () {
+                  var vec = create$7();
                   return function (a, stride, offset, count, fn, arg) {
                     var i, l;
                     if (!stride) {
@@ -6699,9 +6409,9 @@ to native implementations of the API.`;
                   };
                 }();
 
-                function create$d() {
-                  var out = new ARRAY_TYPE$2(4);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$8() {
+                  var out = new ARRAY_TYPE$1(4);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[0] = 0;
                     out[1] = 0;
                     out[2] = 0;
@@ -6709,7 +6419,7 @@ to native implementations of the API.`;
                   }
                   return out;
                 }
-                function normalize$7(out, a) {
+                function normalize$4(out, a) {
                   var x = a[0];
                   var y = a[1];
                   var z = a[2];
@@ -6724,8 +6434,8 @@ to native implementations of the API.`;
                   out[3] = w * len;
                   return out;
                 }
-                var forEach$6 = function () {
-                  var vec = create$d();
+                var forEach$3 = function () {
+                  var vec = create$8();
                   return function (a, stride, offset, count, fn, arg) {
                     var i, l;
                     if (!stride) {
@@ -6754,9 +6464,9 @@ to native implementations of the API.`;
                   };
                 }();
 
-                function create$e() {
-                  var out = new ARRAY_TYPE$2(4);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$9() {
+                  var out = new ARRAY_TYPE$1(4);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[0] = 0;
                     out[1] = 0;
                     out[2] = 0;
@@ -6764,7 +6474,7 @@ to native implementations of the API.`;
                   out[3] = 1;
                   return out;
                 }
-                function setAxisAngle$2(out, axis, rad) {
+                function setAxisAngle$1(out, axis, rad) {
                   rad = rad * 0.5;
                   var s = Math.sin(rad);
                   out[0] = s * axis[0];
@@ -6773,7 +6483,7 @@ to native implementations of the API.`;
                   out[3] = Math.cos(rad);
                   return out;
                 }
-                function slerp$2(out, a, b, t) {
+                function slerp$1(out, a, b, t) {
                   var ax = a[0],
                       ay = a[1],
                       az = a[2],
@@ -6791,7 +6501,7 @@ to native implementations of the API.`;
                     bz = -bz;
                     bw = -bw;
                   }
-                  if (1.0 - cosom > EPSILON$2) {
+                  if (1.0 - cosom > EPSILON$1) {
                     omega = Math.acos(cosom);
                     sinom = Math.sin(omega);
                     scale0 = Math.sin((1.0 - t) * omega) / sinom;
@@ -6806,7 +6516,7 @@ to native implementations of the API.`;
                   out[3] = scale0 * aw + scale1 * bw;
                   return out;
                 }
-                function fromMat3$2(out, m) {
+                function fromMat3$1(out, m) {
                   var fTrace = m[0] + m[4] + m[8];
                   var fRoot;
                   if (fTrace > 0.0) {
@@ -6831,18 +6541,18 @@ to native implementations of the API.`;
                   }
                   return out;
                 }
-                var normalize$8 = normalize$7;
-                var rotationTo$2 = function () {
-                  var tmpvec3 = create$c();
-                  var xUnitVec3 = fromValues$4(1, 0, 0);
-                  var yUnitVec3 = fromValues$4(0, 1, 0);
+                var normalize$5 = normalize$4;
+                var rotationTo$1 = function () {
+                  var tmpvec3 = create$7();
+                  var xUnitVec3 = fromValues$3(1, 0, 0);
+                  var yUnitVec3 = fromValues$3(0, 1, 0);
                   return function (out, a, b) {
-                    var dot = dot$2(a, b);
+                    var dot = dot$1(a, b);
                     if (dot < -0.999999) {
-                      cross$2(tmpvec3, xUnitVec3, a);
-                      if (len$2(tmpvec3) < 0.000001) cross$2(tmpvec3, yUnitVec3, a);
-                      normalize$6(tmpvec3, tmpvec3);
-                      setAxisAngle$2(out, tmpvec3, Math.PI);
+                      cross$1(tmpvec3, xUnitVec3, a);
+                      if (len$1(tmpvec3) < 0.000001) cross$1(tmpvec3, yUnitVec3, a);
+                      normalize$3(tmpvec3, tmpvec3);
+                      setAxisAngle$1(out, tmpvec3, Math.PI);
                       return out;
                     } else if (dot > 0.999999) {
                       out[0] = 0;
@@ -6851,27 +6561,27 @@ to native implementations of the API.`;
                       out[3] = 1;
                       return out;
                     } else {
-                      cross$2(tmpvec3, a, b);
+                      cross$1(tmpvec3, a, b);
                       out[0] = tmpvec3[0];
                       out[1] = tmpvec3[1];
                       out[2] = tmpvec3[2];
                       out[3] = 1 + dot;
-                      return normalize$8(out, out);
+                      return normalize$5(out, out);
                     }
                   };
                 }();
-                var sqlerp$2 = function () {
-                  var temp1 = create$e();
-                  var temp2 = create$e();
+                var sqlerp$1 = function () {
+                  var temp1 = create$9();
+                  var temp2 = create$9();
                   return function (out, a, b, c, d, t) {
-                    slerp$2(temp1, a, d, t);
-                    slerp$2(temp2, b, c, t);
-                    slerp$2(out, temp1, temp2, 2 * t * (1 - t));
+                    slerp$1(temp1, a, d, t);
+                    slerp$1(temp2, b, c, t);
+                    slerp$1(out, temp1, temp2, 2 * t * (1 - t));
                     return out;
                   };
                 }();
-                var setAxes$2 = function () {
-                  var matr = create$a();
+                var setAxes$1 = function () {
+                  var matr = create$5();
                   return function (out, view, right, up) {
                     matr[0] = right[0];
                     matr[3] = right[1];
@@ -6882,20 +6592,20 @@ to native implementations of the API.`;
                     matr[2] = -view[0];
                     matr[5] = -view[1];
                     matr[8] = -view[2];
-                    return normalize$8(out, fromMat3$2(out, matr));
+                    return normalize$5(out, fromMat3$1(out, matr));
                   };
                 }();
 
-                function create$f() {
-                  var out = new ARRAY_TYPE$2(2);
-                  if (ARRAY_TYPE$2 != Float32Array) {
+                function create$a() {
+                  var out = new ARRAY_TYPE$1(2);
+                  if (ARRAY_TYPE$1 != Float32Array) {
                     out[0] = 0;
                     out[1] = 0;
                   }
                   return out;
                 }
-                var forEach$7 = function () {
-                  var vec = create$f();
+                var forEach$4 = function () {
+                  var vec = create$a();
                   return function (a, stride, offset, count, fn, arg) {
                     var i, l;
                     if (!stride) {
@@ -34674,16 +34384,16 @@ to native implementations of the API.`;
                     super(global);
                     this.sessions = new Map();
                     this.modes = config.modes || DEFAULT_MODES;
-                    this.position = copy$5(create$c(), DEFAULT_HEADSET_POSITION);
-                    this.quaternion = create$e();
-                    this.scale = fromValues$4(1, 1, 1);
-                    this.matrix = create$b();
-                    this.projectionMatrix = create$b();
-                    this.leftProjectionMatrix = create$b();
-                    this.rightProjectionMatrix = create$b();
-                    this.viewMatrix = create$b();
-                    this.leftViewMatrix = create$b();
-                    this.rightViewMatrix = create$b();
+                    this.position = copy$5(create$7(), DEFAULT_HEADSET_POSITION);
+                    this.quaternion = create$9();
+                    this.scale = fromValues$3(1, 1, 1);
+                    this.matrix = create$6();
+                    this.projectionMatrix = create$6();
+                    this.leftProjectionMatrix = create$6();
+                    this.rightProjectionMatrix = create$6();
+                    this.viewMatrix = create$6();
+                    this.leftViewMatrix = create$6();
+                    this.rightViewMatrix = create$6();
                     this.gamepads = [];
                     this.gamepadInputSources = [];
                     this._initializeControllers(config);
@@ -34756,7 +34466,7 @@ to native implementations of the API.`;
                           this._notifyInputPoseUpdate(0);
                         };
                         this.arScene.onRelease = () => {
-                          const tmpVec = fromValues$4(0, 0, 0.015);
+                          const tmpVec = fromValues$3(0, 0, 0.015);
                           transformQuat$1(tmpVec, tmpVec, this.gamepads[1].pose.orientation);
                           for (let i = 0; i < 3; i++) {
                             this.gamepads[0].pose.position[i] += tmpVec[i];
@@ -34859,7 +34569,7 @@ to native implementations of the API.`;
                   onFrameEnd(sessionId) {
                   }
                   async requestFrameOfReferenceTransform(type, options) {
-                    const matrix = create$b();
+                    const matrix = create$6();
                     switch (type) {
                       case 'viewer':
                       case 'local':
@@ -34954,11 +34664,11 @@ to native implementations of the API.`;
                       if (inputSourceImpl.inputSource === inputSource) {
                         const pose = inputSourceImpl.getXRPose(coordinateSystem, poseType);
                         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
-                          const viewMatrixInverse = invert$2(create$b(), this.viewMatrix);
+                          const viewMatrixInverse = invert$2(create$6(), this.viewMatrix);
                           coordinateSystem._transformBasePoseMatrix(viewMatrixInverse, viewMatrixInverse);
-                          const viewMatrix = invert$2(create$b(), viewMatrixInverse);
+                          const viewMatrix = invert$2(create$6(), viewMatrixInverse);
                           multiply$2(pose.transform.matrix, viewMatrix, pose.transform.matrix);
-                          const matrix = identity$1(create$b());
+                          const matrix = identity$1(create$6());
                           const near = 0.1;
                           const aspect = this.deviceSize.width / this.deviceSize.height;
                           const outsideFrameWidth = 0.005;
@@ -35005,7 +34715,7 @@ to native implementations of the API.`;
                   }
                   _isTouched() {
                     const pose = this.gamepads[0].pose;
-                    const matrix = fromRotationTranslation$1(create$b(), pose.orientation, pose.position);
+                    const matrix = fromRotationTranslation$1(create$6(), pose.orientation, pose.position);
                     multiply$2(matrix, this.viewMatrix, matrix);
                     const dx = matrix[12] / (this.deviceSize.width * 0.5);
                     const dy = matrix[13] / (this.deviceSize.height * 0.5);
@@ -35200,7 +34910,7 @@ to native implementations of the API.`;
                     axes: [0, 0]
                   };
                 };
-                const tmpVec3 = create$c();
+                const tmpVec3 = create$7();
                 const translateOnX = (matrix, distance) => {
                   set(tmpVec3, distance, 0, 0);
                   return translate(matrix, matrix, tmpVec3);
@@ -35210,8 +34920,8 @@ to native implementations of the API.`;
                   constructor() {
                     super();
                     let activeImmersiveSession = null;
-                    const originalRequestSession = XR$1.prototype.requestSession;
-                    XR$1.prototype.requestSession = function(mode, enabledFeatures) {
+                    const originalRequestSession = XR.prototype.requestSession;
+                    XR.prototype.requestSession = function(mode, enabledFeatures) {
                       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
                         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
                           activeImmersiveSession = session;
@@ -35273,7 +34983,7 @@ to native implementations of the API.`;
                   }
                   _patchNavigatorXR() {
                     const devicePromise = requestXRDevice$1(this.global);
-                    this.xr = new XR$1(devicePromise);
+                    this.xr = new XR(devicePromise);
                     Object.defineProperty(this.global.navigator, 'xr', {
                       value: this.xr,
                       configurable: true,

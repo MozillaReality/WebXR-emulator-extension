@@ -91,7 +91,7 @@
       "controllers": [
         {
           "id": "Oculus Touch (Right)",
-          "buttonNum": 6,
+          "buttonNum": 7,
           "primaryButtonIndex": 0,
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
@@ -100,7 +100,7 @@
         },
         {
           "id": "Oculus Touch (Left)",
-          "buttonNum": 6,
+          "buttonNum": 7,
           "primaryButtonIndex": 0,
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
