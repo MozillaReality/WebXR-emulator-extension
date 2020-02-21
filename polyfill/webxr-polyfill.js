@@ -5895,6 +5895,31 @@ to native implementations of the API.`;
                   }
                 }
 
+                const PRIVATE$j = Symbol('@@webxr-polyfill/XRHitTestSource');
+                class XRHitTestSource {
+                  constructor(session, options) {
+                    if (options.entityTypes && options.entityTypes.length > 0) {
+                      throw new Error('XRHitTestSource does not support entityTypes option yet.');
+                    }
+                    if (options.offsetRay) {
+                      throw new Error('XRHitTestSource does not support offsetRay option yet.');
+                    }
+                    this[PRIVATE$j] = {
+                      session,
+                      space: options.space
+                    };
+                  }
+                  cancel() {
+                    throw new Error('cancel() is not implemented yet.');
+                  }
+                  get _space() {
+                    return this[PRIVATE$j].space;
+                  }
+                  get _session() {
+                    return this[PRIVATE$j].session;
+                  }
+                }
+
                 var EPSILON$1 = 0.000001;
                 var ARRAY_TYPE$1 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
                 if (!Math.hypot) Math.hypot = function () {
@@ -6224,6 +6249,71 @@ to native implementations of the API.`;
                   out[13] = v[1];
                   out[14] = v[2];
                   out[15] = 1;
+                  return out;
+                }
+                function getTranslation$1(out, mat) {
+                  out[0] = mat[12];
+                  out[1] = mat[13];
+                  out[2] = mat[14];
+                  return out;
+                }
+                function getScaling(out, mat) {
+                  var m11 = mat[0];
+                  var m12 = mat[1];
+                  var m13 = mat[2];
+                  var m21 = mat[4];
+                  var m22 = mat[5];
+                  var m23 = mat[6];
+                  var m31 = mat[8];
+                  var m32 = mat[9];
+                  var m33 = mat[10];
+                  out[0] = Math.hypot(m11, m12, m13);
+                  out[1] = Math.hypot(m21, m22, m23);
+                  out[2] = Math.hypot(m31, m32, m33);
+                  return out;
+                }
+                function getRotation$1(out, mat) {
+                  var scaling = new ARRAY_TYPE$1(3);
+                  getScaling(scaling, mat);
+                  var is1 = 1 / scaling[0];
+                  var is2 = 1 / scaling[1];
+                  var is3 = 1 / scaling[2];
+                  var sm11 = mat[0] * is1;
+                  var sm12 = mat[1] * is2;
+                  var sm13 = mat[2] * is3;
+                  var sm21 = mat[4] * is1;
+                  var sm22 = mat[5] * is2;
+                  var sm23 = mat[6] * is3;
+                  var sm31 = mat[8] * is1;
+                  var sm32 = mat[9] * is2;
+                  var sm33 = mat[10] * is3;
+                  var trace = sm11 + sm22 + sm33;
+                  var S = 0;
+                  if (trace > 0) {
+                    S = Math.sqrt(trace + 1.0) * 2;
+                    out[3] = 0.25 * S;
+                    out[0] = (sm23 - sm32) / S;
+                    out[1] = (sm31 - sm13) / S;
+                    out[2] = (sm12 - sm21) / S;
+                  } else if (sm11 > sm22 && sm11 > sm33) {
+                    S = Math.sqrt(1.0 + sm11 - sm22 - sm33) * 2;
+                    out[3] = (sm23 - sm32) / S;
+                    out[0] = 0.25 * S;
+                    out[1] = (sm12 + sm21) / S;
+                    out[2] = (sm31 + sm13) / S;
+                  } else if (sm22 > sm33) {
+                    S = Math.sqrt(1.0 + sm22 - sm11 - sm33) * 2;
+                    out[3] = (sm31 - sm13) / S;
+                    out[0] = (sm12 + sm21) / S;
+                    out[1] = 0.25 * S;
+                    out[2] = (sm23 + sm32) / S;
+                  } else {
+                    S = Math.sqrt(1.0 + sm33 - sm11 - sm22) * 2;
+                    out[3] = (sm12 - sm21) / S;
+                    out[0] = (sm31 + sm13) / S;
+                    out[1] = (sm23 + sm32) / S;
+                    out[2] = 0.25 * S;
+                  }
                   return out;
                 }
                 function fromRotationTranslationScale(out, q, v, s) {
@@ -6629,6 +6719,58 @@ to native implementations of the API.`;
                     return a;
                   };
                 }();
+
+                const PRIVATE$k = Symbol('@@webxr-polyfill/XRHitTestResult');
+                class XRHitTestResult {
+                  constructor(frame, transform) {
+                    this[PRIVATE$k] = {
+                      frame,
+                      transform
+                    };
+                  }
+                  getPose(baseSpace) {
+                    const space = new XRSpace();
+                    space._baseMatrix = copy$4(create$6(), this[PRIVATE$k].transform.matrix);
+                    return this[PRIVATE$k].frame.getPose(space, baseSpace);
+                  }
+                }
+
+                const PRIVATE$l = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
+                class XRTransientInputHitTestResult {
+                  constructor(transform) {
+                    this[PRIVATE$l] = {
+                      transform
+                    };
+                  }
+                  getPose(baseSpace) {
+                    return new XRPose$1(this[PRIVATE$l].transform);
+                  }
+                }
+
+                const PRIVATE$m = Symbol('@@webxr-polyfill/XRTransientInputHitTestSource');
+                class XRTransientInputHitTestSource {
+                  constructor(options) {
+                    this[PRIVATE$m] = {
+                      space: options.space
+                    };
+                  }
+                  cancel() {
+                  }
+                }
+
+                class XRRay {
+                  constructor() {
+                    throw new Error('XRRay is not implemented yet.');
+                  }
+                }
+
+                var EX_API = {
+                  XRHitTestResult,
+                  XRHitTestSource,
+                  XRTransientInputHitTestResult,
+                  XRTransientInputHitTestSource,
+                  XRRay
+                };
 
                 if ( Number.EPSILON === undefined ) {
                 	Number.EPSILON = Math.pow( 2, - 52 );
@@ -34097,6 +34239,7 @@ to native implementations of the API.`;
                 const DEFAULT_TABLET_POSITION = [0, 1.6, -0.1];
                 const DEFAULT_POINTER_POSITION = [0, 1.6, -0.08];
                 const dummyCanvasTexture = new CanvasTexture(document.createElement('canvas'));
+                const raycaster = new Raycaster();
                 class ARScene {
                   constructor(deviceSize) {
                     this.renderer = null;
@@ -34130,7 +34273,14 @@ to native implementations of the API.`;
                     light.position.set(-1, 1, -1);
                     scene.add(light);
                     const gridHelper = new GridHelper(20, 20, 0xffffff, 0xdddddd);
+                    gridHelper.position.y = 0.01;
                     scene.add(gridHelper);
+                    const ground = new Mesh(
+                      new PlaneBufferGeometry(20, 20),
+                      new MeshBasicMaterial({color: 0x444444})
+                    );
+                    ground.rotation.x = -Math.PI / 2;
+                    scene.add(ground);
                     const outsideFrameWidth = 0.005;
                     const screen = new Mesh(
                       new PlaneBufferGeometry(deviceSize.width - outsideFrameWidth, deviceSize.height - outsideFrameWidth),
@@ -34190,7 +34340,6 @@ to native implementations of the API.`;
                       cameraControls.enabled = true;
                     });
                     scene.add(transformControls);
-                    const raycaster = new Raycaster();
                     const mouse = new Vector2();
                     const targetObjects = [screen, tablet];
                     let mouseDownTime = null;
@@ -34322,6 +34471,8 @@ to native implementations of the API.`;
                     this.screen = screen;
                     this.tablet = tablet;
                     this.pointer = pointer;
+                    this.tabletCamera = tabletCamera;
+                    this.ground = ground;
                   }
                   inject() {
                     const appendCanvas = () => {
@@ -34349,6 +34500,10 @@ to native implementations of the API.`;
                   }
                   releaseCanvas() {
                     this.screen.material.userData.map2.value = dummyCanvasTexture;
+                  }
+                  getHitTestResults(origin, direction) {
+                    raycaster.set(new Vector3().fromArray(origin), new Vector3().fromArray(direction));
+                    return raycaster.intersectObjects([this.ground]);
                   }
                   updateCameraTransform(positionArray, quaternionArray) {
                     this.camera.position.fromArray(positionArray);
@@ -34384,6 +34539,7 @@ to native implementations of the API.`;
                     super(global);
                     this.sessions = new Map();
                     this.modes = config.modes || DEFAULT_MODES;
+                    this.features = config.features || [];
                     this.position = copy$5(create$7(), DEFAULT_HEADSET_POSITION);
                     this.quaternion = create$9();
                     this.scale = fromValues$3(1, 1, 1);
@@ -34411,6 +34567,8 @@ to native implementations of the API.`;
                     this.arScene = null;
                     this.touched = false;
                     this.canvasParent = null;
+                    this.hitTestSources = [];
+                    this.hitTestResults = new Map();
                     this._setupEventListeners();
                   }
                   onBaseLayerSet(sessionId, layer) {
@@ -34439,6 +34597,9 @@ to native implementations of the API.`;
                     return this.modes.includes(mode);
                   }
                   isFeatureSupported(featureDescriptor) {
+                    if (this.features.includes(featureDescriptor)) {
+                      return true;
+                    }
                     switch(featureDescriptor) {
                       case 'viewer': return true;
                       case 'local': return true;
@@ -34545,6 +34706,9 @@ to native implementations of the API.`;
                         const gamepad = this.gamepads[i];
                         const inputSourceImpl = this.gamepadInputSources[i];
                         inputSourceImpl.updateFromGamepad(gamepad);
+                        if (this.arDevice && i === 0) {
+                          inputSourceImpl.targetRayMode = 'screen';
+                        }
                         if (inputSourceImpl.primaryButtonIndex !== -1) {
                           const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
                           if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
@@ -34563,6 +34727,30 @@ to native implementations of the API.`;
                           }
                           inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
                         }
+                      }
+                      this.hitTestResults.clear();
+                      for (const source of this.hitTestSources) {
+                        if (sessionId !== source._session[PRIVATE$f].id) {
+                          continue;
+                        }
+                        const space = source._space;
+                        if (!space._baseMatrix) {
+                          continue;
+                        }
+                        const baseMatrix = copy$4(create$6(), space._baseMatrix);
+                        const origin = getTranslation$1(create$7(), baseMatrix);
+                        const direction = set(create$7(), 0, 0, -1);
+                        transformQuat$1(direction, direction, getRotation$1(create$9(), baseMatrix));
+                        const hitTestResults = this.arScene.getHitTestResults(origin, direction);
+                        const results = [];
+                        for (const result of hitTestResults) {
+                          const matrix = create$6();
+                          matrix[12] = result.point.x;
+                          matrix[13] = result.point.y;
+                          matrix[14] = result.point.z;
+                          results.push(matrix);
+                        }
+                        this.hitTestResults.set(source, results);
                       }
                     }
                   }
@@ -34616,15 +34804,10 @@ to native implementations of the API.`;
                     const width = canvas.width;
                     const height = canvas.height;
                     if (session.ar) {
-                      if (eye === 'right') {
-                        target.width = 0;
-                        target.height = 0;
-                      } else {
-                        target.width = width;
-                        target.height = height;
-                      }
                       target.x = 0;
                       target.y = 0;
+                      target.width = width;
+                      target.height = height;
                     } else {
                       if (eye === 'none') {
                         target.x = 0;
@@ -34664,6 +34847,7 @@ to native implementations of the API.`;
                       if (inputSourceImpl.inputSource === inputSource) {
                         const pose = inputSourceImpl.getXRPose(coordinateSystem, poseType);
                         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
+                          if (!this.touched) { return null; }
                           const viewMatrixInverse = invert$2(create$6(), this.viewMatrix);
                           coordinateSystem._transformBasePoseMatrix(viewMatrixInverse, viewMatrixInverse);
                           const viewMatrix = invert$2(create$6(), viewMatrixInverse);
@@ -34695,11 +34879,17 @@ to native implementations of the API.`;
                   }
                   onWindowResize() {
                   }
+                  addHitTestSource(source) {
+                    this.hitTestSources.push(source);
+                  }
+                  getHitTestResults(source) {
+                    return this.hitTestResults.get(source) || [];
+                  }
                   _appendBaseLayerCanvasToBodyIfNeeded(sessionId) {
                     const session = this.sessions.get(sessionId);
                     if (!session.baseLayer || !session.immersive) { return; }
                     const canvas = session.baseLayer.context.canvas;
-                    if (canvas.parentElement) { return; }
+                    if (!(canvas instanceof HTMLCanvasElement) || canvas.parentElement) { return; }
                     canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight;
                     this.div.appendChild(canvas);
@@ -34794,6 +34984,7 @@ to native implementations of the API.`;
                     window.addEventListener('webxr-device', event => {
                       const config = event.detail.deviceDefinition;
                       this.modes = config.modes || DEFAULT_MODES;
+                      this.features = config.features || [];
                       this.arDevice = this.modes.includes('immersive-ar');
                       this.resolution = config.resolution !== undefined ? config.resolution : DEFAULT_RESOLUTION;
                       this.deviceSize = config.size !== undefined ? config.size : DEFAULT_DEVICE_SIZE;
@@ -34944,6 +35135,27 @@ to native implementations of the API.`;
                         });
                       }
                     });
+                    XRSession$1.prototype.requestHitTestSource = function (options) {
+                      const source = new XRHitTestSource(this, options);
+                      const device = this[PRIVATE$f].device;
+                      device.addHitTestSource(source);
+                      return Promise.resolve(source);
+                    };
+                    XRSession$1.prototype.requestHitTestSourceForTransientInput = function (options) {
+                      throw new Error('requestHitTestSourceForTransientInput is not implemented yet.');
+                    };
+                    XRFrame.prototype.getHitTestResults = function (hitTestSource) {
+                      const device = this.session[PRIVATE$f].device;
+                      const hitTestResults = device.getHitTestResults(hitTestSource);
+                      const results = [];
+                      for (const matrix of hitTestResults) {
+                        results.push(new XRHitTestResult(this, new XRRigidTransform$1(matrix)));
+                      }
+                      return results;
+                    };
+                    XRFrame.prototype.getHitTestResultsForTransientInput = function (hitTestSource) {
+                      throw new Error('getHitTestResultsForTransientInput is not implemented yet.');
+                    };
                     if (this.nativeWebXR) {
                       overrideAPI(this.global);
                       this.injected = true;
@@ -35010,6 +35222,9 @@ to native implementations of the API.`;
                   console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
                   for (const className in API) {
                     global[className] = API[className];
+                  }
+                  for (const className in EX_API) {
+                    global[className] = EX_API[className];
                   }
                 };
 
