@@ -1,7 +1,12 @@
 import WebXRPolyfill from 'webxr-polyfill/src/WebXRPolyfill';
 import XR from 'webxr-polyfill/src/api/XR';
-import XRSession from 'webxr-polyfill/src/api/XRSession';
+import XRSession, {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
+import XRFrame from 'webxr-polyfill/src/api/XRFrame';
+import XRRigidTransform from 'webxr-polyfill/src/api/XRRigidTransform';
+import XRHitTestSource from './api/XRHitTestSource';
+import XRHitTestResult from './api/XRHitTestResult';
 import API from 'webxr-polyfill/src/api/index';
+import EX_API from './api/index';
 import EmulatedXRDevice from './EmulatedXRDevice';
 
 export default class CustomWebXRPolyfill extends WebXRPolyfill {
@@ -41,6 +46,35 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
         });
       }
     });
+
+    // Extending XRSession and XRFrame for AR hitting test API.
+
+    XRSession.prototype.requestHitTestSource = function (options) {
+      const source = new XRHitTestSource(this, options)
+      const device = this[XRSESSION_PRIVATE].device;
+      device.addHitTestSource(source);
+      return Promise.resolve(source);
+    };
+
+    XRSession.prototype.requestHitTestSourceForTransientInput = function (options) {
+      throw new Error('requestHitTestSourceForTransientInput is not implemented yet.');
+    };
+
+    XRFrame.prototype.getHitTestResults = function (hitTestSource) {
+      const device = this.session[XRSESSION_PRIVATE].device;
+      const hitTestResults = device.getHitTestResults(hitTestSource);
+      const results = [];
+      for (const matrix of hitTestResults) {
+        results.push(new XRHitTestResult(this, new XRRigidTransform(matrix)));
+      }
+      return results;
+    };
+
+    XRFrame.prototype.getHitTestResultsForTransientInput = function (hitTestSource) {
+      throw new Error('getHitTestResultsForTransientInput is not implemented yet.');
+    };
+
+    //
 
     if (this.nativeWebXR) {
       // Note: Even if native WebXR API is available the extension overrides
@@ -124,5 +158,8 @@ const overrideAPI = global => {
   console.log('WebXR emulator extension overrides native WebXR API with polyfill.');
   for (const className in API) {
     global[className] = API[className];
+  }
+  for (const className in EX_API) {
+    global[className] = EX_API[className];
   }
 };
