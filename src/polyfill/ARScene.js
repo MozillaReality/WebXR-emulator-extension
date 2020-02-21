@@ -14,7 +14,8 @@ import {
   Raycaster,
   Scene,
   SphereBufferGeometry,
-  Vector2
+  Vector2,
+  Vector3
 } from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
 import MyControls from './MyControls.js';
@@ -25,6 +26,7 @@ const DEFAULT_TABLET_POSITION = [0, 1.6, -0.1];
 const DEFAULT_POINTER_POSITION = [0, 1.6, -0.08];
 
 const dummyCanvasTexture = new CanvasTexture(document.createElement('canvas'));
+const raycaster = new Raycaster();
 
 export default class ARScene {
   constructor(deviceSize) {
@@ -49,7 +51,7 @@ export default class ARScene {
     const height = window.innerHeight;
 
     const canvas = document.createElement('canvas');
-    // WebXR app Canvas size can't be power of two size. So using WebGL2.
+    // WebXR app Canvas size may not be power of two. So using WebGL2.
     // @TODO: Error message for non WebGL2 support browser?
     const context = canvas.getContext('webgl2', {antialias: true});
 
@@ -76,7 +78,15 @@ export default class ARScene {
     scene.add(light);
 
     const gridHelper = new GridHelper(20, 20, 0xffffff, 0xdddddd);
+    gridHelper.position.y = 0.01;
     scene.add(gridHelper);
+
+    const ground = new Mesh(
+      new PlaneBufferGeometry(20, 20),
+      new MeshBasicMaterial({color: 0x444444})
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
 
     const outsideFrameWidth = 0.005;
     const screen = new Mesh(
@@ -91,6 +101,7 @@ export default class ARScene {
     // @TODO: Is there any easier way?
     screen.material.onBeforeCompile = shader => {
       // Uniform for WebXR app Canvas.
+      // @TODO: Rename map2 to better name.
       shader.uniforms.map2 = {
         // Set dummy so far and replace with the right one latter.
         value: dummyCanvasTexture
@@ -156,7 +167,6 @@ export default class ARScene {
     //   - switching transform operation mode by left clicking
     //   - firing input event by right clicking the tablet
 
-    const raycaster = new Raycaster();
     const mouse = new Vector2();
     const targetObjects = [screen, tablet];
 
@@ -314,6 +324,8 @@ export default class ARScene {
     this.screen = screen;
     this.tablet = tablet;
     this.pointer = pointer;
+    this.tabletCamera = tabletCamera;
+    this.ground = ground;
   }
 
   inject() {
@@ -346,6 +358,12 @@ export default class ARScene {
 
   releaseCanvas() {
     this.screen.material.userData.map2.value = dummyCanvasTexture;
+  }
+
+  // Raycasting for AR hit testing API
+  getHitTestResults(origin, direction) {
+    raycaster.set(new Vector3().fromArray(origin), new Vector3().fromArray(direction));
+    return raycaster.intersectObjects([this.ground]);
   }
 
   updateCameraTransform(positionArray, quaternionArray) {

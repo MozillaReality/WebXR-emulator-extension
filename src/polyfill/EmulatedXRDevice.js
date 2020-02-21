@@ -1,5 +1,6 @@
 import XRDevice from 'webxr-polyfill/src/devices/XRDevice';
 import XRInputSource from 'webxr-polyfill/src/api/XRInputSource';
+import {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
 import GamepadXRInputSource from 'webxr-polyfill/src/devices/GamepadXRInputSource';
 import {
   vec3,
@@ -34,6 +35,7 @@ export default class EmulatedXRDevice extends XRDevice {
     this.sessions = new Map();
 
     this.modes = config.modes || DEFAULT_MODES;
+    this.features = config.features || [];
 
     // headset
     this.position = vec3.copy(vec3.create(), DEFAULT_HEADSET_POSITION);
@@ -75,6 +77,9 @@ export default class EmulatedXRDevice extends XRDevice {
     this.touched = false;
     this.canvasParent = null;
 
+    this.hitTestSources = [];
+    this.hitTestResults = new Map();
+
     //
 
     this._setupEventListeners();
@@ -111,6 +116,9 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   isFeatureSupported(featureDescriptor) {
+    if (this.features.includes(featureDescriptor)) {
+      return true;
+    }
     switch(featureDescriptor) {
       case 'viewer': return true;
       case 'local': return true;
@@ -234,6 +242,11 @@ export default class EmulatedXRDevice extends XRDevice {
         const gamepad = this.gamepads[i];
         const inputSourceImpl = this.gamepadInputSources[i];
         inputSourceImpl.updateFromGamepad(gamepad);
+        // @TODO: temporal workaround because the polyfill doesn't have a way to set 'screen'.
+        //        We should send the feedback to the polyfill.
+        if (this.arDevice && i === 0) {
+          inputSourceImpl.targetRayMode = 'screen';
+        }
         if (inputSourceImpl.primaryButtonIndex !== -1) {
           const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
           if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
@@ -252,6 +265,37 @@ export default class EmulatedXRDevice extends XRDevice {
           }
           inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
         }
+      }
+
+      // AR Hitting test
+      this.hitTestResults.clear();
+      for (const source of this.hitTestSources) {
+        if (sessionId !== source._session[XRSESSION_PRIVATE].id) {
+          continue;
+        }
+
+        const space = source._space;
+
+        if (!space._baseMatrix) {
+          continue;
+        }
+
+        const baseMatrix = mat4.copy(mat4.create(), space._baseMatrix);
+        const origin = mat4.getTranslation(vec3.create(), baseMatrix);
+        const direction = vec3.set(vec3.create(), 0, 0, -1);
+        vec3.transformQuat(direction, direction, mat4.getRotation(quat.create(), baseMatrix));
+
+        const hitTestResults = this.arScene.getHitTestResults(origin, direction);
+        const results = [];
+        for (const result of hitTestResults) {
+          const matrix = mat4.create();
+          // @TODO: Save rotation
+          matrix[12] = result.point.x;
+          matrix[13] = result.point.y;
+          matrix[14] = result.point.z;
+          results.push(matrix);
+        }
+        this.hitTestResults.set(source, results);
       }
     }
   }
@@ -315,18 +359,14 @@ export default class EmulatedXRDevice extends XRDevice {
     const width = canvas.width;
     const height = canvas.height;
     if (session.ar) {
-      // Assuming two viwes left/right. And render only left.
-      // @TODO: Send feedback to webxr-polyfill.js about one none view option.
-      // @TODO: Support AR + stereotypic rendering device
-      if (eye === 'right') {
-        target.width = 0;
-        target.height = 0;
-      } else {
-        target.width = width;
-        target.height = height;
-      }
+      // Currently the polyfill let any immersive mode has two ViewSpaces left and right.
+      // Return the same viewport for any eye type so far.
+      // @TODO: Send feedback to webxr-polyfill.js about one 'none' view option
+      //        for AR monoscopic device
       target.x = 0;
       target.y = 0;
+      target.width = width;
+      target.height = height;
     } else {
       if (eye === 'none') {
         target.x = 0;
@@ -373,8 +413,9 @@ export default class EmulatedXRDevice extends XRDevice {
 
         // In AR mode, calculate the input pose for right controller
         // from the relation of right controller(pointer) and left controller(tablet)
-        // @TODO: Transient input
         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
+          // @TODO: Implement Transient input properly
+          if (!this.touched) { return null; }
           // @TODO: Add note about this matrix
           // @TODO: Optimize if possible
           const viewMatrixInverse = mat4.invert(mat4.create(), this.viewMatrix);
@@ -415,6 +456,16 @@ export default class EmulatedXRDevice extends XRDevice {
     // @TODO: implement
   }
 
+  // AR Hitting test
+
+  addHitTestSource(source) {
+    this.hitTestSources.push(source);
+  }
+
+  getHitTestResults(source) {
+    return this.hitTestResults.get(source) || [];
+  }
+
   // Private methods
 
   // If baseLayer's canvas of immersive session isn't appended to document
@@ -427,7 +478,7 @@ export default class EmulatedXRDevice extends XRDevice {
     const session = this.sessions.get(sessionId);
     if (!session.baseLayer || !session.immersive) { return; }
     const canvas = session.baseLayer.context.canvas;
-    if (canvas.parentElement) { return; }
+    if (!(canvas instanceof HTMLCanvasElement) || canvas.parentElement) { return; }
     // window size for now
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -550,6 +601,7 @@ export default class EmulatedXRDevice extends XRDevice {
       const config = event.detail.deviceDefinition;
 
       this.modes = config.modes || DEFAULT_MODES;
+      this.features = config.features || [];
       this.arDevice = this.modes.includes('immersive-ar');
       this.resolution = config.resolution !== undefined ? config.resolution : DEFAULT_RESOLUTION;
       this.deviceSize = config.size !== undefined ? config.size : DEFAULT_DEVICE_SIZE;
