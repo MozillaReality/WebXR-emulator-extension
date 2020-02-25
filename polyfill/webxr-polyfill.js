@@ -6216,6 +6216,59 @@ to native implementations of the API.`;
                   out[11] = a03 * s + a23 * c;
                   return out;
                 }
+                function fromTranslation(out, v) {
+                  out[0] = 1;
+                  out[1] = 0;
+                  out[2] = 0;
+                  out[3] = 0;
+                  out[4] = 0;
+                  out[5] = 1;
+                  out[6] = 0;
+                  out[7] = 0;
+                  out[8] = 0;
+                  out[9] = 0;
+                  out[10] = 1;
+                  out[11] = 0;
+                  out[12] = v[0];
+                  out[13] = v[1];
+                  out[14] = v[2];
+                  out[15] = 1;
+                  return out;
+                }
+                function fromRotation(out, rad, axis) {
+                  var x = axis[0],
+                      y = axis[1],
+                      z = axis[2];
+                  var len = Math.hypot(x, y, z);
+                  var s, c, t;
+                  if (len < EPSILON$1) {
+                    return null;
+                  }
+                  len = 1 / len;
+                  x *= len;
+                  y *= len;
+                  z *= len;
+                  s = Math.sin(rad);
+                  c = Math.cos(rad);
+                  t = 1 - c;
+                  out[0] = x * x * t + c;
+                  out[1] = y * x * t + z * s;
+                  out[2] = z * x * t - y * s;
+                  out[3] = 0;
+                  out[4] = x * y * t - z * s;
+                  out[5] = y * y * t + c;
+                  out[6] = z * y * t + x * s;
+                  out[7] = 0;
+                  out[8] = x * z * t + y * s;
+                  out[9] = y * z * t - x * s;
+                  out[10] = z * z * t + c;
+                  out[11] = 0;
+                  out[12] = 0;
+                  out[13] = 0;
+                  out[14] = 0;
+                  out[15] = 1;
+                  return out;
+                }
                 function fromRotationTranslation$1(out, q, v) {
                   var x = q[0],
                       y = q[1],
@@ -6509,6 +6562,13 @@ to native implementations of the API.`;
                   }
                   return out;
                 }
+                function set$1(out, x, y, z, w) {
+                  out[0] = x;
+                  out[1] = y;
+                  out[2] = z;
+                  out[3] = w;
+                  return out;
+                }
                 function normalize$4(out, a) {
                   var x = a[0];
                   var y = a[1];
@@ -6522,6 +6582,17 @@ to native implementations of the API.`;
                   out[1] = y * len;
                   out[2] = z * len;
                   out[3] = w * len;
+                  return out;
+                }
+                function transformMat4(out, a, m) {
+                  var x = a[0],
+                      y = a[1],
+                      z = a[2],
+                      w = a[3];
+                  out[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
+                  out[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
+                  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+                  out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
                   return out;
                 }
                 var forEach$3 = function () {
@@ -6758,9 +6829,84 @@ to native implementations of the API.`;
                   }
                 }
 
+                const PRIVATE$n = Symbol('@@webxr-polyfill/XRRay');
                 class XRRay {
-                  constructor() {
-                    throw new Error('XRRay is not implemented yet.');
+                  constructor(origin, direction) {
+                    const _origin = {x: 0, y: 0, z: 0, w: 1};
+                    const _direction = {x: 0, y: 0, z: -1, w: 0};
+                    if (origin && origin instanceof XRRigidTransform$1) {
+                      const transform = origin;
+                      const matrix = transform.matrix;
+                      const originVec4 = set$1(create$8(), _origin.x, _origin.y, _origin.z, _origin.w) ;
+                      const directionVec4 = set$1(create$8(), _direction.x, _direction.y, _direction.z, _direction.w);
+                      transformMat4(originVec4, originVec4, matrix);
+                      transformMat4(directionVec4, directionVec4, matrix);
+                      _origin.x = originVec4[0];
+                      _origin.y = originVec4[1];
+                      _origin.z = originVec4[2];
+                      _origin.w = originVec4[3];
+                      _directionVec4.x = directionVec4[0];
+                      _directionVec4.y = directionVec4[1];
+                      _directionVec4.z = directionVec4[2];
+                      _directionVec4.w = directionVec4[3];
+                    } else {
+                      if (origin) {
+                        _origin.x = origin.x;
+                        _origin.y = origin.y;
+                        _origin.z = origin.z;
+                        _origin.w = origin.w;
+                      }
+                      if (direction) {
+                        _direction.x = direction.x;
+                        _direction.y = direction.y;
+                        _direction.z = direction.z;
+                        _direction.w = direction.w;
+                      }
+                    }
+                    const length = Math.sqrt(_direction.x * _direction.x +
+                      _direction.y * _direction.y + _direction.z * _direction.z) || 1;
+                    _direction.x = _direction.x / length;
+                    _direction.y = _direction.y / length;
+                    _direction.z = _direction.z / length;
+                    this[PRIVATE$n] = {
+                      origin: new DOMPointReadOnly(_origin.x, _origin.y, _origin.z, _origin.w),
+                      direction: new DOMPointReadOnly(_direction.x, _direction.y, _direction.z, _direction.w),
+                      matrix: null
+                    };
+                  }
+                  get origin() {
+                    return this[PRIVATE$n].origin;
+                  }
+                  get direction() {
+                    return this[PRIVATE$n].direction;
+                  }
+                  get matrix() {
+                    if (this[PRIVATE$n].matrix) {
+                      return this[PRIVATE$n].matrix;
+                    }
+                    const z = set(create$7(), 0, 0, -1);
+                    const origin = set(create$7(),
+                      this[PRIVATE$n].origin.x,
+                      this[PRIVATE$n].origin.y,
+                      this[PRIVATE$n].origin.z
+                    );
+                    const direction = set(create$7(),
+                      this[PRIVATE$n].direction.x,
+                      this[PRIVATE$n].direction.y,
+                      this[PRIVATE$n].direction.z
+                    );
+                    const axis = cross$1(create$7(), direction, z);
+                    const cosAngle = dot$1(direction, z);
+                    const rotation = create$6();
+                    if (cosAngle > -1 && cosAngle < 1) {
+                      fromRotation(rotation, Math.acos(cosAngle), axis);
+                    } else if (cosAngle === -1) {
+                      fromRotation(rotation, Math.acos(cosAngle), set(create$7(), 1, 0, 0));
+                    }
+                    const translation = fromTranslation(create$6(), origin);
+                    const matrix = multiply$2(create$6(), translation, rotation);
+                    this[PRIVATE$n].matrix = matrix;
+                    return matrix;
                   }
                 }
 
