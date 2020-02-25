@@ -5895,31 +5895,6 @@ to native implementations of the API.`;
                   }
                 }
 
-                const PRIVATE$j = Symbol('@@webxr-polyfill/XRHitTestSource');
-                class XRHitTestSource {
-                  constructor(session, options) {
-                    if (options.entityTypes && options.entityTypes.length > 0) {
-                      throw new Error('XRHitTestSource does not support entityTypes option yet.');
-                    }
-                    if (options.offsetRay) {
-                      throw new Error('XRHitTestSource does not support offsetRay option yet.');
-                    }
-                    this[PRIVATE$j] = {
-                      session,
-                      space: options.space
-                    };
-                  }
-                  cancel() {
-                    throw new Error('cancel() is not implemented yet.');
-                  }
-                  get _space() {
-                    return this[PRIVATE$j].space;
-                  }
-                  get _session() {
-                    return this[PRIVATE$j].session;
-                  }
-                }
-
                 var EPSILON$1 = 0.000001;
                 var ARRAY_TYPE$1 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
                 if (!Math.hypot) Math.hypot = function () {
@@ -6304,12 +6279,6 @@ to native implementations of the API.`;
                   out[15] = 1;
                   return out;
                 }
-                function getTranslation$1(out, mat) {
-                  out[0] = mat[12];
-                  out[1] = mat[13];
-                  out[2] = mat[14];
-                  return out;
-                }
                 function getScaling(out, mat) {
                   var m11 = mat[0];
                   var m12 = mat[1];
@@ -6497,6 +6466,17 @@ to native implementations of the API.`;
                   out[2] = ax * by - ay * bx;
                   return out;
                 }
+                function transformMat4(out, a, m) {
+                  var x = a[0],
+                      y = a[1],
+                      z = a[2];
+                  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
+                  w = w || 1.0;
+                  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
+                  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+                  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
+                  return out;
+                }
                 function transformQuat$1(out, a, q) {
                   var qx = q[0],
                       qy = q[1],
@@ -6584,7 +6564,7 @@ to native implementations of the API.`;
                   out[3] = w * len;
                   return out;
                 }
-                function transformMat4(out, a, m) {
+                function transformMat4$1(out, a, m) {
                   var x = a[0],
                       y = a[1],
                       z = a[2],
@@ -6791,45 +6771,7 @@ to native implementations of the API.`;
                   };
                 }();
 
-                const PRIVATE$k = Symbol('@@webxr-polyfill/XRHitTestResult');
-                class XRHitTestResult {
-                  constructor(frame, transform) {
-                    this[PRIVATE$k] = {
-                      frame,
-                      transform
-                    };
-                  }
-                  getPose(baseSpace) {
-                    const space = new XRSpace();
-                    space._baseMatrix = copy$4(create$6(), this[PRIVATE$k].transform.matrix);
-                    return this[PRIVATE$k].frame.getPose(space, baseSpace);
-                  }
-                }
-
-                const PRIVATE$l = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
-                class XRTransientInputHitTestResult {
-                  constructor(transform) {
-                    this[PRIVATE$l] = {
-                      transform
-                    };
-                  }
-                  getPose(baseSpace) {
-                    return new XRPose$1(this[PRIVATE$l].transform);
-                  }
-                }
-
-                const PRIVATE$m = Symbol('@@webxr-polyfill/XRTransientInputHitTestSource');
-                class XRTransientInputHitTestSource {
-                  constructor(options) {
-                    this[PRIVATE$m] = {
-                      space: options.space
-                    };
-                  }
-                  cancel() {
-                  }
-                }
-
-                const PRIVATE$n = Symbol('@@webxr-polyfill/XRRay');
+                const PRIVATE$j = Symbol('@@webxr-polyfill/XRRay');
                 class XRRay {
                   constructor(origin, direction) {
                     const _origin = {x: 0, y: 0, z: 0, w: 1};
@@ -6839,8 +6781,8 @@ to native implementations of the API.`;
                       const matrix = transform.matrix;
                       const originVec4 = set$1(create$8(), _origin.x, _origin.y, _origin.z, _origin.w) ;
                       const directionVec4 = set$1(create$8(), _direction.x, _direction.y, _direction.z, _direction.w);
-                      transformMat4(originVec4, originVec4, matrix);
-                      transformMat4(directionVec4, directionVec4, matrix);
+                      transformMat4$1(originVec4, originVec4, matrix);
+                      transformMat4$1(directionVec4, directionVec4, matrix);
                       _origin.x = originVec4[0];
                       _origin.y = originVec4[1];
                       _origin.z = originVec4[2];
@@ -6868,32 +6810,32 @@ to native implementations of the API.`;
                     _direction.x = _direction.x / length;
                     _direction.y = _direction.y / length;
                     _direction.z = _direction.z / length;
-                    this[PRIVATE$n] = {
+                    this[PRIVATE$j] = {
                       origin: new DOMPointReadOnly(_origin.x, _origin.y, _origin.z, _origin.w),
                       direction: new DOMPointReadOnly(_direction.x, _direction.y, _direction.z, _direction.w),
                       matrix: null
                     };
                   }
                   get origin() {
-                    return this[PRIVATE$n].origin;
+                    return this[PRIVATE$j].origin;
                   }
                   get direction() {
-                    return this[PRIVATE$n].direction;
+                    return this[PRIVATE$j].direction;
                   }
                   get matrix() {
-                    if (this[PRIVATE$n].matrix) {
-                      return this[PRIVATE$n].matrix;
+                    if (this[PRIVATE$j].matrix) {
+                      return this[PRIVATE$j].matrix;
                     }
                     const z = set(create$7(), 0, 0, -1);
                     const origin = set(create$7(),
-                      this[PRIVATE$n].origin.x,
-                      this[PRIVATE$n].origin.y,
-                      this[PRIVATE$n].origin.z
+                      this[PRIVATE$j].origin.x,
+                      this[PRIVATE$j].origin.y,
+                      this[PRIVATE$j].origin.z
                     );
                     const direction = set(create$7(),
-                      this[PRIVATE$n].direction.x,
-                      this[PRIVATE$n].direction.y,
-                      this[PRIVATE$n].direction.z
+                      this[PRIVATE$j].direction.x,
+                      this[PRIVATE$j].direction.y,
+                      this[PRIVATE$j].direction.z
                     );
                     const axis = cross$1(create$7(), direction, z);
                     const cosAngle = dot$1(direction, z);
@@ -6905,8 +6847,72 @@ to native implementations of the API.`;
                     }
                     const translation = fromTranslation(create$6(), origin);
                     const matrix = multiply$2(create$6(), translation, rotation);
-                    this[PRIVATE$n].matrix = matrix;
+                    this[PRIVATE$j].matrix = matrix;
                     return matrix;
+                  }
+                }
+
+                const PRIVATE$k = Symbol('@@webxr-polyfill/XRHitTestSource');
+                class XRHitTestSource {
+                  constructor(session, options) {
+                    if (options.entityTypes && options.entityTypes.length > 0) {
+                      throw new Error('XRHitTestSource does not support entityTypes option yet.');
+                    }
+                    this[PRIVATE$k] = {
+                      session,
+                      space: options.space,
+                      offsetRay: options.offsetRay || new XRRay()
+                    };
+                  }
+                  cancel() {
+                    throw new Error('cancel() is not implemented yet.');
+                  }
+                  get _space() {
+                    return this[PRIVATE$k].space;
+                  }
+                  get _session() {
+                    return this[PRIVATE$k].session;
+                  }
+                  get _offsetRay() {
+                    return this[PRIVATE$k].offsetRay;
+                  }
+                }
+
+                const PRIVATE$l = Symbol('@@webxr-polyfill/XRHitTestResult');
+                class XRHitTestResult {
+                  constructor(frame, transform) {
+                    this[PRIVATE$l] = {
+                      frame,
+                      transform
+                    };
+                  }
+                  getPose(baseSpace) {
+                    const space = new XRSpace();
+                    space._baseMatrix = copy$4(create$6(), this[PRIVATE$l].transform.matrix);
+                    return this[PRIVATE$l].frame.getPose(space, baseSpace);
+                  }
+                }
+
+                const PRIVATE$m = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
+                class XRTransientInputHitTestResult {
+                  constructor(transform) {
+                    this[PRIVATE$m] = {
+                      transform
+                    };
+                  }
+                  getPose(baseSpace) {
+                    return new XRPose$1(this[PRIVATE$m].transform);
+                  }
+                }
+
+                const PRIVATE$n = Symbol('@@webxr-polyfill/XRTransientInputHitTestSource');
+                class XRTransientInputHitTestSource {
+                  constructor(options) {
+                    this[PRIVATE$n] = {
+                      space: options.space
+                    };
+                  }
+                  cancel() {
                   }
                 }
 
@@ -34883,9 +34889,11 @@ to native implementations of the API.`;
                         if (!space._baseMatrix) {
                           continue;
                         }
-                        const baseMatrix = copy$4(create$6(), space._baseMatrix);
-                        const origin = getTranslation$1(create$7(), baseMatrix);
-                        const direction = set(create$7(), 0, 0, -1);
+                        const offsetRay = source._offsetRay;
+                        const baseMatrix = space._baseMatrix;
+                        const origin = set(create$7(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
+                        const direction = set(create$7(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
+                        transformMat4(origin, origin, baseMatrix);
                         transformQuat$1(direction, direction, getRotation$1(create$9(), baseMatrix));
                         const hitTestResults = this.arScene.getHitTestResults(origin, direction);
                         const results = [];
