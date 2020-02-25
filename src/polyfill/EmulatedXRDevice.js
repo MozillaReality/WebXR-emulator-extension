@@ -280,9 +280,11 @@ export default class EmulatedXRDevice extends XRDevice {
           continue;
         }
 
-        const baseMatrix = mat4.copy(mat4.create(), space._baseMatrix);
-        const origin = mat4.getTranslation(vec3.create(), baseMatrix);
-        const direction = vec3.set(vec3.create(), 0, 0, -1);
+        const offsetRay = source._offsetRay;
+        const baseMatrix = space._baseMatrix;
+        const origin = vec3.set(vec3.create(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
+        const direction = vec3.set(vec3.create(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
+        vec3.transformMat4(origin, origin, baseMatrix);
         vec3.transformQuat(direction, direction, mat4.getRotation(quat.create(), baseMatrix));
 
         const hitTestResults = this.arScene.getHitTestResults(origin, direction);
