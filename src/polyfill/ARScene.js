@@ -3,7 +3,6 @@ import {
   CanvasTexture,
   Color,
   DirectionalLight,
-  GridHelper,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -18,6 +17,7 @@ import {
   Vector3
 } from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import MyControls from './MyControls.js';
 
 // @TODO: These default values should be imported from somewhere common place
@@ -76,17 +76,6 @@ export default class ARScene {
     const light = new DirectionalLight(0xffffff, 4.0);
     light.position.set(-1, 1, -1);
     scene.add(light);
-
-    const gridHelper = new GridHelper(20, 20, 0xffffff, 0xdddddd);
-    gridHelper.position.y = 0.01;
-    scene.add(gridHelper);
-
-    const ground = new Mesh(
-      new PlaneBufferGeometry(20, 20),
-      new MeshBasicMaterial({color: 0x444444})
-    );
-    ground.rotation.x = -Math.PI / 2;
-    scene.add(ground);
 
     const outsideFrameWidth = 0.005;
     const screen = new Mesh(
@@ -320,12 +309,13 @@ export default class ARScene {
     }, false);
 
     this.renderer = renderer;
+    this.scene = scene;
     this.camera = camera;
     this.screen = screen;
     this.tablet = tablet;
     this.pointer = pointer;
     this.tabletCamera = tabletCamera;
-    this.ground = ground;
+    this.room = null;
   }
 
   inject() {
@@ -363,7 +353,20 @@ export default class ARScene {
   // Raycasting for AR hit testing API
   getHitTestResults(origin, direction) {
     raycaster.set(new Vector3().fromArray(origin), new Vector3().fromArray(direction));
-    return raycaster.intersectObjects([this.ground]);
+    const targets = [];
+    if (this.room) {
+      targets.push(this.room);
+    }
+    return raycaster.intersectObjects(targets, true);
+  }
+
+  loadVirtualRoomAsset(buffer) {
+    new GLTFLoader().parse(buffer, '', gltf => {
+      this.scene.add(gltf.scene);
+      this.room = gltf.scene;
+    }, undefined, error => {
+      console.error(error);
+    });
   }
 
   updateCameraTransform(positionArray, quaternionArray) {
