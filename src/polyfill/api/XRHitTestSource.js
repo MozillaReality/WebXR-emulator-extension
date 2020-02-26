@@ -11,13 +11,14 @@ export default class XRHitTestSource {
     this[PRIVATE] = {
       session,
       space: options.space,
-      offsetRay: options.offsetRay || new XRRay()
+      offsetRay: options.offsetRay || new XRRay(),
+      active: true
     };
   }
 
   cancel() {
-    // @TODO: Implement
-    throw new Error('cancel() is not implemented yet.');
+    // @TODO: Throw InvalidStateError if active is already false
+    this[PRIVATE].active = false;
   }
 
   get _space() {
@@ -30,5 +31,9 @@ export default class XRHitTestSource {
 
   get _offsetRay() {
     return this[PRIVATE].offsetRay;
+  }
+
+  get _active() {
+    return this[PRIVATE].active;
   }
 }
