@@ -6861,11 +6861,12 @@ to native implementations of the API.`;
                     this[PRIVATE$k] = {
                       session,
                       space: options.space,
-                      offsetRay: options.offsetRay || new XRRay()
+                      offsetRay: options.offsetRay || new XRRay(),
+                      active: true
                     };
                   }
                   cancel() {
-                    throw new Error('cancel() is not implemented yet.');
+                    this[PRIVATE$k].active = false;
                   }
                   get _space() {
                     return this[PRIVATE$k].space;
@@ -6875,6 +6876,9 @@ to native implementations of the API.`;
                   }
                   get _offsetRay() {
                     return this[PRIVATE$k].offsetRay;
+                  }
+                  get _active() {
+                    return this[PRIVATE$k].active;
                   }
                 }
 
@@ -36570,6 +36574,14 @@ to native implementations of the API.`;
                           inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
                         }
                       }
+                      let activeHitTestSourceNum = 0;
+                      for (let i = 0; i < this.hitTestSources.length; i++) {
+                        const source = this.hitTestSources[i];
+                        if (source._active) {
+                          this.hitTestSources[activeHitTestSourceNum++] = source;
+                        }
+                      }
+                      this.hitTestSources.length = activeHitTestSourceNum;
                       this.hitTestResults.clear();
                       for (const source of this.hitTestSources) {
                         if (sessionId !== source._session[PRIVATE$f].id) {
