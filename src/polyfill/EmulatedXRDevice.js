@@ -270,6 +270,14 @@ export default class EmulatedXRDevice extends XRDevice {
       }
 
       // AR Hitting test
+      let activeHitTestSourceNum = 0;
+      for (let i = 0; i < this.hitTestSources.length; i++) {
+        const source = this.hitTestSources[i];
+        if (source._active) {
+          this.hitTestSources[activeHitTestSourceNum++] = source;
+        }
+      }
+      this.hitTestSources.length = activeHitTestSourceNum;
       this.hitTestResults.clear();
       for (const source of this.hitTestSources) {
         if (sessionId !== source._session[XRSESSION_PRIVATE].id) {
