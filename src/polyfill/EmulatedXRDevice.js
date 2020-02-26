@@ -77,6 +77,7 @@ export default class EmulatedXRDevice extends XRDevice {
     this.touched = false;
     this.canvasParent = null;
 
+
     this.hitTestSources = [];
     this.hitTestResults = new Map();
 
@@ -139,6 +140,7 @@ export default class EmulatedXRDevice extends XRDevice {
     if (mode === 'immersive-ar') {
       if (!this.arScene) {
         this.arScene = new ARScene(this.deviceSize);
+        this._requestVirtualRoomAsset();
         this.arScene.onTouch = position => {
           for (let i = 0; i < 3; i++) {
             this.gamepads[0].pose.position[i] = position[i];
@@ -543,6 +545,12 @@ export default class EmulatedXRDevice extends XRDevice {
     dispatchCustomEvent('device-leave-immersive', {});
   }
 
+  // Send request to content-scripts
+
+  _requestVirtualRoomAsset() {
+    dispatchCustomEvent('webxr-virtual-room-request', {});
+  }
+
   // Device status update methods invoked from event listeners.
 
   _updateStereoEffect(enabled) {
@@ -698,6 +706,11 @@ export default class EmulatedXRDevice extends XRDevice {
 
     window.addEventListener('webxr-stereo-effect', event => {
       this._updateStereoEffect(event.detail.enabled);
+    });
+
+    window.addEventListener('webxr-virtual-room-response', event => {
+      const virtualRoomAssetBuffer = event.detail.buffer;
+      this.arScene.loadVirtualRoomAsset(virtualRoomAssetBuffer);
     });
   }
 };
