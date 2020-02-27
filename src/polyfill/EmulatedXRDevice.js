@@ -75,8 +75,8 @@ export default class EmulatedXRDevice extends XRDevice {
     this.rawCanvasSize = {width: 0, height: 0};
     this.arScene = null;
     this.touched = false;
+    this.isPointerAndTabledCloseEnough = false; // UGH... @TODO: Rename
     this.canvasParent = null;
-
 
     this.hitTestSources = [];
     this.hitTestResults = new Map();
@@ -142,6 +142,7 @@ export default class EmulatedXRDevice extends XRDevice {
         this.arScene = new ARScene(this.deviceSize);
         this._requestVirtualRoomAsset();
         this.arScene.onTouch = position => {
+          this.touched = true;
           for (let i = 0; i < 3; i++) {
             this.gamepads[0].pose.position[i] = position[i];
           }
@@ -149,14 +150,7 @@ export default class EmulatedXRDevice extends XRDevice {
           this._notifyInputPoseUpdate(0);
         };
         this.arScene.onRelease = () => {
-          // Make further distance 0.15 from the tablet
-          const tmpVec = vec3.fromValues(0, 0, 0.015);
-          vec3.transformQuat(tmpVec, tmpVec, this.gamepads[1].pose.orientation);
-          for (let i = 0; i < 3; i++) {
-            this.gamepads[0].pose.position[i] += tmpVec[i];
-          }
-          this.arScene.updatePointerTransform(this.gamepads[0].pose.position, this.gamepads[0].pose.orientation);
-          this._notifyInputPoseUpdate(0);
+          this.touched = false;
         };
         this.arScene.onCameraPoseUpdate = (positionArray, quaternionArray) => {
           this._updatePose(positionArray, quaternionArray);
@@ -225,16 +219,16 @@ export default class EmulatedXRDevice extends XRDevice {
     //        Fix this issue (if multiple immersive sessions can be created).
     if (session.immersive) {
       if (this.arDevice) {
-        if (this._isTouched()) {
-          if (!this.touched) {
+        if (this.touched && this._isPointerCloseEnoughToTablet()) {
+          if (!this.isPointerAndTabledCloseEnough) {
             this._updateInputButtonPressed(true, 0, 0);
-            this.touched = true;
+            this.isPointerAndTabledCloseEnough = true;
             this.arScene.touched();
           }
         } else {
-          if (this.touched) {
+          if (this.isPointerAndTabledCloseEnough) {
             this._updateInputButtonPressed(false, 0, 0);
-            this.touched = false;
+            this.isPointerAndTabledCloseEnough = false;
             this.arScene.released();
           }
         }
@@ -427,7 +421,7 @@ export default class EmulatedXRDevice extends XRDevice {
         // from the relation of right controller(pointer) and left controller(tablet)
         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
           // @TODO: Implement Transient input properly
-          if (!this.touched) { return null; }
+          if (!this.isPointerAndTabledCloseEnough || !this.touched) { return null; }
           // @TODO: Add note about this matrix
           // @TODO: Optimize if possible
           const viewMatrixInverse = mat4.invert(mat4.create(), this.viewMatrix);
@@ -512,7 +506,8 @@ export default class EmulatedXRDevice extends XRDevice {
 
   // For AR. Check if right controller(pointer) is touched with left controller(tablet)
 
-  _isTouched() {
+  // UGH... @TODO: Rename
+  _isPointerCloseEnoughToTablet() {
     // @TODO: Optimize if possible
     const pose = this.gamepads[0].pose;
     const matrix = mat4.fromRotationTranslation(mat4.create(), pose.orientation, pose.position);

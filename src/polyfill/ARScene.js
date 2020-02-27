@@ -40,8 +40,8 @@ export default class ARScene {
     this.isTouched = false;
     this.onCameraPoseUpdate = null;
     this.onTabletPoseUpdate = null;
-    this.onTouch = null; // callback fired when mouse clicks the screen
-    this.onRelease = null; // callback fired when screen touch is released
+    this.onTouch = null; // callback fired when mouse clicks the tablet screen
+    this.onRelease = null; // callback fired when the tablet screen touch is released
 
     this._init(deviceSize);
   }
@@ -124,6 +124,7 @@ export default class ARScene {
       new SphereBufferGeometry(0.01),
       new MeshBasicMaterial({color: 0xff8888, transparent: true, opacity: 0.6})
     );
+    pointer.visible = false;
     pointer.position.fromArray(DEFAULT_POINTER_POSITION);
     scene.add(pointer);
 
@@ -386,9 +387,11 @@ export default class ARScene {
 
   touched() {
     this.pointer.material.color.setHex(0x8888ff);
+    this.pointer.visible = true;
   }
 
   released() {
     this.pointer.material.color.setHex(0xff8888);
+    this.pointer.visible = false;
   }
 }
