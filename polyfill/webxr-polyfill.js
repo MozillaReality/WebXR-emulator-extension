@@ -36149,6 +36149,7 @@ to native implementations of the API.`;
                       new SphereBufferGeometry(0.01),
                       new MeshBasicMaterial({color: 0xff8888, transparent: true, opacity: 0.6})
                     );
+                    pointer.visible = false;
                     pointer.position.fromArray(DEFAULT_POINTER_POSITION);
                     scene.add(pointer);
                     const cameraControls = new MyControls(camera, renderer.domElement);
@@ -36364,9 +36365,11 @@ to native implementations of the API.`;
                   }
                   touched() {
                     this.pointer.material.color.setHex(0x8888ff);
+                    this.pointer.visible = true;
                   }
                   released() {
                     this.pointer.material.color.setHex(0xff8888);
+                    this.pointer.visible = false;
                   }
                 }
 
@@ -36411,6 +36414,7 @@ to native implementations of the API.`;
                     this.rawCanvasSize = {width: 0, height: 0};
                     this.arScene = null;
                     this.touched = false;
+                    this.isPointerAndTabledCloseEnough = false;
                     this.canvasParent = null;
                     this.hitTestSources = [];
                     this.hitTestResults = new Map();
@@ -36466,6 +36470,7 @@ to native implementations of the API.`;
                         this.arScene = new ARScene(this.deviceSize);
                         this._requestVirtualRoomAsset();
                         this.arScene.onTouch = position => {
+                          this.touched = true;
                           for (let i = 0; i < 3; i++) {
                             this.gamepads[0].pose.position[i] = position[i];
                           }
@@ -36473,13 +36478,7 @@ to native implementations of the API.`;
                           this._notifyInputPoseUpdate(0);
                         };
                         this.arScene.onRelease = () => {
-                          const tmpVec = fromValues$3(0, 0, 0.015);
-                          transformQuat$1(tmpVec, tmpVec, this.gamepads[1].pose.orientation);
-                          for (let i = 0; i < 3; i++) {
-                            this.gamepads[0].pose.position[i] += tmpVec[i];
-                          }
-                          this.arScene.updatePointerTransform(this.gamepads[0].pose.position, this.gamepads[0].pose.orientation);
-                          this._notifyInputPoseUpdate(0);
+                          this.touched = false;
                         };
                         this.arScene.onCameraPoseUpdate = (positionArray, quaternionArray) => {
                           this._updatePose(positionArray, quaternionArray);
@@ -36534,16 +36533,16 @@ to native implementations of the API.`;
                     invert$2(this.rightViewMatrix, translateOnX(copy$4(this.rightViewMatrix, this.matrix), 0.02));
                     if (session.immersive) {
                       if (this.arDevice) {
-                        if (this._isTouched()) {
-                          if (!this.touched) {
+                        if (this.touched && this._isPointerCloseEnoughToTablet()) {
+                          if (!this.isPointerAndTabledCloseEnough) {
                             this._updateInputButtonPressed(true, 0, 0);
-                            this.touched = true;
+                            this.isPointerAndTabledCloseEnough = true;
                             this.arScene.touched();
                           }
                         } else {
-                          if (this.touched) {
+                          if (this.isPointerAndTabledCloseEnough) {
                             this._updateInputButtonPressed(false, 0, 0);
-                            this.touched = false;
+                            this.isPointerAndTabledCloseEnough = false;
                             this.arScene.released();
                           }
                         }
@@ -36703,7 +36702,7 @@ to native implementations of the API.`;
                       if (inputSourceImpl.inputSource === inputSource) {
                         const pose = inputSourceImpl.getXRPose(coordinateSystem, poseType);
                         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
-                          if (!this.touched) { return null; }
+                          if (!this.isPointerAndTabledCloseEnough || !this.touched) { return null; }
                           const viewMatrixInverse = invert$2(create$6(), this.viewMatrix);
                           coordinateSystem._transformBasePoseMatrix(viewMatrixInverse, viewMatrixInverse);
                           const viewMatrix = invert$2(create$6(), viewMatrixInverse);
@@ -36759,7 +36758,7 @@ to native implementations of the API.`;
                     document.body.removeChild(this.div);
                     this.div.removeChild(canvas);
                   }
-                  _isTouched() {
+                  _isPointerCloseEnoughToTablet() {
                     const pose = this.gamepads[0].pose;
                     const matrix = fromRotationTranslation$1(create$6(), pose.orientation, pose.position);
                     multiply$2(matrix, this.viewMatrix, matrix);
