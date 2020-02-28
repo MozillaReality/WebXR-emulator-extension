@@ -445,11 +445,14 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.CONTROLLER].hasPosition = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = false;
+  document.getElementById('stereoEffectLabel').style.display = 'none';
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
+  document.getElementById('rightSelectButton').style.display = 'none';
+  document.getElementById('leftSelectButton').style.display = 'none';
   document.getElementById('rightSqueezeButton').style.display = 'none';
   document.getElementById('leftSqueezeButton').style.display = 'none';
   updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT, false);
@@ -459,6 +462,7 @@ const updateAssetNodes = (deviceDefinition) => {
 
   // secondly load new assets and enable necessary panel controls
 
+  const hasImmersiveVR = deviceDefinition.modes && !! deviceDefinition.modes.includes('immersive-vr');
   const hasHeadset = !! deviceDefinition.headset;
   const hasRightController = deviceDefinition.controllers && deviceDefinition.controllers.length > 0;
   const hasLeftController = deviceDefinition.controllers && deviceDefinition.controllers.length > 1;
@@ -472,6 +476,10 @@ const updateAssetNodes = (deviceDefinition) => {
   const hasPosition = deviceCapabilities[DEVICE.HEADSET].hasPosition ||
     deviceCapabilities[DEVICE.CONTROLLER].hasPosition;
 
+  if (hasImmersiveVR) {
+    document.getElementById('stereoEffectLabel').style.display = '';
+  }
+
   if (hasHeadset) {
     loadHeadsetAsset();
     document.getElementById('headsetComponent').style.display = 'flex';
@@ -484,6 +492,9 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasRightController) {
     document.getElementById('rightControllerComponent').style.display = 'flex';
+    if (hasImmersiveVR) {
+      document.getElementById('rightSelectButton').style.display = '';
+    }
     if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
       document.getElementById('rightSqueezeButton').style.display = '';
     }
@@ -491,6 +502,9 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasLeftController) {
     document.getElementById('leftControllerComponent').style.display = 'flex';
+    if (hasImmersiveVR) {
+      document.getElementById('leftSelectButton').style.display = '';
+    }
     if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
       document.getElementById('leftSqueezeButton').style.display = '';
     }
