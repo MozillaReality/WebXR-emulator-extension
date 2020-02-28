@@ -22,8 +22,8 @@ import MyControls from './MyControls.js';
 
 // @TODO: These default values should be imported from somewhere common place
 const DEFAULT_CAMERA_POSITION = [0, 1.6, 0];
-const DEFAULT_TABLET_POSITION = [0, 1.6, -0.1];
-const DEFAULT_POINTER_POSITION = [0, 1.6, -0.08];
+const DEFAULT_TABLET_POSITION = [0, 1.6, -0.2];
+const DEFAULT_POINTER_POSITION = [0, 1.6, -0.15];
 
 const dummyCanvasTexture = new CanvasTexture(document.createElement('canvas'));
 const raycaster = new Raycaster();

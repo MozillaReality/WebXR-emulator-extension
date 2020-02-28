@@ -192,12 +192,13 @@ defaultTransforms[DEVICE.LEFT_CONTROLLER] = {
   position: new THREE.Vector3(-0.5, 1.5, -1.0),
   rotation: new THREE.Euler(0, 0, 0)
 };
+// The parameters should be shared with ARScene.js
 defaultTransforms[DEVICE.POINTER] = {
-  position: new THREE.Vector3(0.0, 1.6, -0.08),
+  position: new THREE.Vector3(0.0, 1.6, -0.15),
   rotation: new THREE.Euler(0, 0, 0)
 };
 defaultTransforms[DEVICE.TABLET] = {
-  position: new THREE.Vector3(0.0, 1.6, -0.1),
+  position: new THREE.Vector3(0.0, 1.6, -0.2),
   rotation: new THREE.Euler(0, 0, 0)
 };
 
