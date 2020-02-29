@@ -10,6 +10,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 - [WebXR API polyfill](https://github.com/immersive-web/webxr-polyfill)
 - Multiple XR devices emulation
+- Both VR and AR support
 - Graphical device emulator control with [Three.js](https://threejs.org/)
 - Cross browsers support with [WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 <!-- - [Virtual controller (WIP)](./screenshots/virtual-controller.gif) -->
@@ -18,8 +19,7 @@ WebXR emulator extension is a browser extension which helps your WebXR content c
 
 - Based on [WebXR device API draft issued on 10 October 2019](https://www.w3.org/TR/webxr/)
 - No device specific emulation yet
-- Supports only trigger primary button, not other buttons
-- Supports only VR, not AR yet
+- Supports only trigger and squeeze buttons, not other buttons
 
 ## Browsers
 
@@ -29,11 +29,15 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 
 1. Go to the addon stores to install ([Firefox](https://addons.mozilla.org/firefox/addon/webxr-api-emulator), [Chrome](https://chrome.google.com/webstore/detail/webxr-api-emulator/mjddjgeghkdijejnciaefnkjmkafnnje))
 
-2. Go to WebXR application page (for example [WebXR examples](#WebXR-examples)). You will notice that the application detects that you have a XR device (emulated) and it will let you enter the immersive (VR) mode.
+2. Go to WebXR application page (for example [WebXR examples](#WebXR-examples)). You will notice that the application detects that you have a XR device (emulated) and it will let you enter the immersive (VR、AR) mode.
 
 3. Open "WebXR" tab in the browser developer tool ([Firefox](https://developer.mozilla.org/en-US/docs/Tools), [Chrome](https://developers.google.com/web/tools/chrome-devtools/)) to controll the emulated devices. You can move the headset and controllers, and trigger the controller buttons. You will see their transforms reflected in the WebXR application.
 
 ![WebXR tab](./screenshots/tab.png)
+
+## How to control the emulated devices
+
+By clicking a device in the devtool panel, you can select gizmo mode of the device. By draggin a gizmo, you can rotate or translate the device.
 
 ## Configuration
 
@@ -55,6 +59,47 @@ You can switch emulated device. The difference between devices is just degrees o
 ### Stereo Effect
 
 You can enable/disable Stereo Effect which renders two views.
+
+## AR mode
+
+WebXR emulator extension also supports AR. You can test WebXR AR application on an emulated device in a virtual room, on your desktop browser.
+
+![Screenshot AR](./screenshots/screenshot_ar.gif)
+
+### How to use
+
+1. [Download and manually intall the newest extension from dev branch](#how-to-install-the-newest-version)
+
+2. Select "Samsung Galaxy S8+ (AR)" device from the device list on the top of WebXR devtool panel
+
+3. Go to WebXR application page, for example [Three.js WebXR AR examples](https://threejs.org/examples/?q=webxr#webxr_ar_paint)
+
+4. You will notice that the application detects that you have a XR device (emulated) and it will let you enter the immersive (AR) mode
+
+5. AR application starts on the emulated device in a virtual room
+
+### How to control
+
+You can control the camera (view) and tablet in the application window.
+
+| user action | camera/tablet control |
+|----|----|
+| Left mouse button drag | Camera rotation |
+| Right mouse button drag | Camera pan |
+| Middle mouse button drag or wheel | Move camera forward/backward |
+| Mouse click the tablet | Change the tablet gizmo mode |
+| Gizmo on the tablet | Tablet rotation/translation |
+| Right mouse button click on the tablet screen | touch input |
+
+### How to control in the devtool panel
+
+You can still control the camera and tablet in the devtool panel similar to VR.
+
+| Devtool panel | AR virtual room |
+|----|----|
+| Camera | View |
+| Right controller | Finger (not shown in the application window) |
+| Left controller | Tablet |
 
 ## For development
 
