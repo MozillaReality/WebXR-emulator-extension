@@ -87,7 +87,7 @@ You can control the camera (view) and tablet in the application window.
 | Left mouse button drag | Camera rotation |
 | Right mouse button drag | Camera pan |
 | Middle mouse button drag or wheel | Move camera forward/backward |
-| Mouse click the tablet | Change the tablet gizmo mode |
+| Mouse click on the tablet | Change the tablet gizmo mode |
 | Gizmo on the tablet | Tablet rotation/translation |
 | Right mouse button click on the tablet screen | touch input |
 
