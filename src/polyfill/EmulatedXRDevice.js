@@ -183,11 +183,24 @@ export default class EmulatedXRDevice extends XRDevice {
   onFrameStart(sessionId, renderState) {
     const session = this.sessions.get(sessionId);
     // guaranteed by the caller that session.baseLayer is not null
-    const canvas = session.baseLayer.context.canvas;
+    const context = session.baseLayer.context;
+    const canvas = context.canvas;
     const near = renderState.depthNear;
     const far = renderState.depthFar;
     const width = canvas.width;
     const height = canvas.height;
+
+    // If session is not an inline session, XRWebGLLayer's composition disabled boolean
+    // should be false and then framebuffer should be marked as opaque.
+    // The buffers attached to an opaque framebuffer must be cleared prior to the
+    // processing of each XR animation frame.
+    if (session.immersive) {
+      context.clearColor(0.0, 0.0, 0.0, 0.0);
+      context.clearDepth(1,0);
+      context.clearStencil(0.0);
+      context.clear(context.DEPTH_BUFFER_BIT | context.COLOR_BUFFER_BIT | context.STENCIL_BUFFER_BIT );
+      // @TODO: Do I need to restore the clear values in case where user sets clear values to their on values?
+    }
 
     if (session.vr) {
       // @TODO: proper FOV
