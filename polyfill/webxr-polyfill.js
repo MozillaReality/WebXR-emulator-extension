@@ -36514,10 +36514,16 @@ to native implementations of the API.`;
                     const width = canvas.width;
                     const height = canvas.height;
                     if (session.immersive) {
+                      const currentClearColor = context.getParameter(context.COLOR_CLEAR_VALUE);
+                      const currentClearDepth = context.getParameter(context.DEPTH_CLEAR_VALUE);
+                      const currentClearStencil = context.getParameter(context.STENCIL_CLEAR_VALUE);
                       context.clearColor(0.0, 0.0, 0.0, 0.0);
                       context.clearDepth(1,0);
                       context.clearStencil(0.0);
                       context.clear(context.DEPTH_BUFFER_BIT | context.COLOR_BUFFER_BIT | context.STENCIL_BUFFER_BIT );
+                      context.clearColor(currentClearColor[0], currentClearColor[1], currentClearColor[2], currentClearColor[3]);
+                      context.clearDepth(currentClearDepth);
+                      context.clearStencil(currentClearStencil);
                     }
                     if (session.vr) {
                       const aspect = width * (this.stereoEffectEnabled ? 0.5 : 1.0) / height;
