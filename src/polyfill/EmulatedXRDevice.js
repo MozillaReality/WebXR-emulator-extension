@@ -195,11 +195,16 @@ export default class EmulatedXRDevice extends XRDevice {
     // The buffers attached to an opaque framebuffer must be cleared prior to the
     // processing of each XR animation frame.
     if (session.immersive) {
+      const currentClearColor = context.getParameter(context.COLOR_CLEAR_VALUE);
+      const currentClearDepth = context.getParameter(context.DEPTH_CLEAR_VALUE);
+      const currentClearStencil = context.getParameter(context.STENCIL_CLEAR_VALUE);
       context.clearColor(0.0, 0.0, 0.0, 0.0);
       context.clearDepth(1,0);
       context.clearStencil(0.0);
       context.clear(context.DEPTH_BUFFER_BIT | context.COLOR_BUFFER_BIT | context.STENCIL_BUFFER_BIT );
-      // @TODO: Do I need to restore the clear values in case where user sets clear values to their on values?
+      context.clearColor(currentClearColor[0], currentClearColor[1], currentClearColor[2], currentClearColor[3]);
+      context.clearDepth(currentClearDepth);
+      context.clearStencil(currentClearStencil);
     }
 
     if (session.vr) {
