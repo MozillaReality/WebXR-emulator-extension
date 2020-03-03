@@ -36507,11 +36507,18 @@ to native implementations of the API.`;
                   }
                   onFrameStart(sessionId, renderState) {
                     const session = this.sessions.get(sessionId);
-                    const canvas = session.baseLayer.context.canvas;
+                    const context = session.baseLayer.context;
+                    const canvas = context.canvas;
                     const near = renderState.depthNear;
                     const far = renderState.depthFar;
                     const width = canvas.width;
                     const height = canvas.height;
+                    if (session.immersive) {
+                      context.clearColor(0.0, 0.0, 0.0, 0.0);
+                      context.clearDepth(1,0);
+                      context.clearStencil(0.0);
+                      context.clear(context.DEPTH_BUFFER_BIT | context.COLOR_BUFFER_BIT | context.STENCIL_BUFFER_BIT );
+                    }
                     if (session.vr) {
                       const aspect = width * (this.stereoEffectEnabled ? 0.5 : 1.0) / height;
                       perspective$1(this.leftProjectionMatrix, Math.PI / 2, aspect, near, far);
