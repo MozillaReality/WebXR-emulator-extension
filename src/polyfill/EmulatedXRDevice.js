@@ -52,7 +52,6 @@ export default class EmulatedXRDevice extends XRDevice {
     // controllers
     this.gamepads = [];
     this.gamepadInputSources = [];
-    this._initializeControllers(config);
 
     // other configurations
     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
@@ -82,7 +81,7 @@ export default class EmulatedXRDevice extends XRDevice {
     this.hitTestResults = new Map();
 
     //
-
+    this._initializeControllers(config);
     this._setupEventListeners();
   }
 
@@ -264,11 +263,20 @@ export default class EmulatedXRDevice extends XRDevice {
         if (inputSourceImpl.primaryButtonIndex !== -1) {
           const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
           if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
-            this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+            // Fire primary action select start event in onEndFrame() for AR device.
+            // See the comment in onEndFrame() for the detail.
+            if (this.arDevice) {
+              inputSourceImpl.active = true;
+            } else {
+              this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+            }
           } else if (!primaryActionPressed && inputSourceImpl.primaryActionPressed) {
+            if (this.arDevice) {
+              inputSourceImpl.active = false;
+            }
             this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
           }
-          inputSourceImpl.primaryActionPressed = primaryActionPressed; 
+          // imputSourceImpl.primaryActionPressed is updated in onFrameEnd().
         }
         if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
           const primarySqueezeActionPressed = gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed;
@@ -325,7 +333,31 @@ export default class EmulatedXRDevice extends XRDevice {
   }
 
   onFrameEnd(sessionId) {
-    // Nothing to do?
+    // We handle touch event on AR device as transient input for now.
+    // If primary action happens on transient input
+    // 1. First fire intputsourceschange event
+    // 2. And then fire select start event
+    // But in webxr-polyfill.js, inputsourceschange event is fired
+    // after onFrameStart() by making an input source active.
+    // So I need to postpone input select event until onFrameEnd() here.
+    // Regarding select and select end events, they should be fired
+    // before inputsourceschange event, so ok to be in onFrameStart().
+    const session = this.sessions.get(sessionId);
+    if (session.immersive) {
+      for (let i = 0; i < this.gamepads.length; ++i) {
+        const gamepad = this.gamepads[i];
+        const inputSourceImpl = this.gamepadInputSources[i];
+        if (inputSourceImpl.primaryButtonIndex !== -1) {
+          const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
+          if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
+            if (this.arDevice) {
+              this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+            }
+          }
+          inputSourceImpl.primaryActionPressed = primaryActionPressed; 
+        }
+      }
+    }
   }
 
   async requestFrameOfReferenceTransform(type, options) {
@@ -425,7 +457,9 @@ export default class EmulatedXRDevice extends XRDevice {
   getInputSources() {
     const inputSources = [];
     for (const inputSourceImpl of this.gamepadInputSources) {
-      inputSources.push(inputSourceImpl.inputSource);
+      if (inputSourceImpl.active) {
+        inputSources.push(inputSourceImpl.inputSource);
+      }
     }
     return inputSources;
   }
@@ -438,8 +472,7 @@ export default class EmulatedXRDevice extends XRDevice {
         // In AR mode, calculate the input pose for right controller
         // from the relation of right controller(pointer) and left controller(tablet)
         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
-          // @TODO: Implement Transient input properly
-          if (!this.isPointerAndTabledCloseEnough || !this.touched) { return null; }
+          if (!inputSourceImpl.active) { return null; }
           // @TODO: Add note about this matrix
           // @TODO: Optimize if possible
           const viewMatrixInverse = mat4.invert(mat4.create(), this.viewMatrix);
@@ -621,7 +654,9 @@ export default class EmulatedXRDevice extends XRDevice {
       const primarySqueezeButtonIndex = controller.primarySqueezeButtonIndex !== undefined ? controller.primarySqueezeButtonIndex : -1;
       this.gamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', buttonNum, hasPosition));
       // @TODO: targetRayMode should be screen for right controller(pointer) in AR
-      this.gamepadInputSources.push(new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex));
+      const imputSourceImpl = new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex);
+      imputSourceImpl.active = !this.arDevice; // Override property for transient imput
+      this.gamepadInputSources.push(imputSourceImpl);
     }
   }
 
@@ -643,6 +678,7 @@ export default class EmulatedXRDevice extends XRDevice {
       for (let i = 0; i < this.gamepads.length; ++i) {
         const gamepad = this.gamepads[i];
         const inputSourceImpl = this.gamepadInputSources[i];
+        inputSourceImpl.active = !this.arDevice;
         if (inputSourceImpl.primaryButtonIndex !== -1) {
           gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed = false;
         }
