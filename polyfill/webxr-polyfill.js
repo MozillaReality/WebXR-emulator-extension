@@ -36400,7 +36400,6 @@ to native implementations of the API.`;
                     this.rightViewMatrix = create$6();
                     this.gamepads = [];
                     this.gamepadInputSources = [];
-                    this._initializeControllers(config);
                     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
                     this.div = document.createElement('div');
                     this.div.style.position = 'absolute';
@@ -36418,6 +36417,7 @@ to native implementations of the API.`;
                     this.canvasParent = null;
                     this.hitTestSources = [];
                     this.hitTestResults = new Map();
+                    this._initializeControllers(config);
                     this._setupEventListeners();
                   }
                   onBaseLayerSet(sessionId, layer) {
@@ -36570,11 +36570,17 @@ to native implementations of the API.`;
                         if (inputSourceImpl.primaryButtonIndex !== -1) {
                           const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
                           if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
-                            this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                            if (this.arDevice) {
+                              inputSourceImpl.active = true;
+                            } else {
+                              this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                            }
                           } else if (!primaryActionPressed && inputSourceImpl.primaryActionPressed) {
+                            if (this.arDevice) {
+                              inputSourceImpl.active = false;
+                            }
                             this.dispatchEvent('@@webxr-polyfill/input-select-end', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
                           }
-                          inputSourceImpl.primaryActionPressed = primaryActionPressed;
                         }
                         if (inputSourceImpl.primarySqueezeButtonIndex !== -1) {
                           const primarySqueezeActionPressed = gamepad.buttons[inputSourceImpl.primarySqueezeButtonIndex].pressed;
@@ -36623,6 +36629,22 @@ to native implementations of the API.`;
                     }
                   }
                   onFrameEnd(sessionId) {
+                    const session = this.sessions.get(sessionId);
+                    if (session.immersive) {
+                      for (let i = 0; i < this.gamepads.length; ++i) {
+                        const gamepad = this.gamepads[i];
+                        const inputSourceImpl = this.gamepadInputSources[i];
+                        if (inputSourceImpl.primaryButtonIndex !== -1) {
+                          const primaryActionPressed = gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed;
+                          if (primaryActionPressed && !inputSourceImpl.primaryActionPressed) {
+                            if (this.arDevice) {
+                              this.dispatchEvent('@@webxr-polyfill/input-select-start', { sessionId: session.id, inputSource: inputSourceImpl.inputSource });
+                            }
+                          }
+                          inputSourceImpl.primaryActionPressed = primaryActionPressed;
+                        }
+                      }
+                    }
                   }
                   async requestFrameOfReferenceTransform(type, options) {
                     const matrix = create$6();
@@ -36706,7 +36728,9 @@ to native implementations of the API.`;
                   getInputSources() {
                     const inputSources = [];
                     for (const inputSourceImpl of this.gamepadInputSources) {
-                      inputSources.push(inputSourceImpl.inputSource);
+                      if (inputSourceImpl.active) {
+                        inputSources.push(inputSourceImpl.inputSource);
+                      }
                     }
                     return inputSources;
                   }
@@ -36715,7 +36739,7 @@ to native implementations of the API.`;
                       if (inputSourceImpl.inputSource === inputSource) {
                         const pose = inputSourceImpl.getXRPose(coordinateSystem, poseType);
                         if (this.arDevice && inputSourceImpl === this.gamepadInputSources[0]) {
-                          if (!this.isPointerAndTabledCloseEnough || !this.touched) { return null; }
+                          if (!inputSourceImpl.active) { return null; }
                           const viewMatrixInverse = invert$2(create$6(), this.viewMatrix);
                           coordinateSystem._transformBasePoseMatrix(viewMatrixInverse, viewMatrixInverse);
                           const viewMatrix = invert$2(create$6(), viewMatrixInverse);
@@ -36848,7 +36872,9 @@ to native implementations of the API.`;
                       const primaryButtonIndex = controller.primaryButtonIndex !== undefined ? controller.primaryButtonIndex : 0;
                       const primarySqueezeButtonIndex = controller.primarySqueezeButtonIndex !== undefined ? controller.primarySqueezeButtonIndex : -1;
                       this.gamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', buttonNum, hasPosition));
-                      this.gamepadInputSources.push(new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex));
+                      const imputSourceImpl = new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex);
+                      imputSourceImpl.active = !this.arDevice;
+                      this.gamepadInputSources.push(imputSourceImpl);
                     }
                   }
                   _setupEventListeners() {
@@ -36862,6 +36888,7 @@ to native implementations of the API.`;
                       for (let i = 0; i < this.gamepads.length; ++i) {
                         const gamepad = this.gamepads[i];
                         const inputSourceImpl = this.gamepadInputSources[i];
+                        inputSourceImpl.active = !this.arDevice;
                         if (inputSourceImpl.primaryButtonIndex !== -1) {
                           gamepad.buttons[inputSourceImpl.primaryButtonIndex].pressed = false;
                         }
