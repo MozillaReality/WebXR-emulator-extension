@@ -881,7 +881,7 @@ function WebXRPolyfillInjection() {
 or navigator.xr.requestSession('inline') prior to requesting an immersive
 session. This is a limitation specific to the WebXR Polyfill and does not apply
 to native implementations of the API.`;
-                class XR extends EventTarget {
+                class XRSystem extends EventTarget {
                   constructor(devicePromise) {
                     super();
                     this[PRIVATE$4] = {
@@ -1552,7 +1552,7 @@ to native implementations of the API.`;
                 }
 
                 var API = {
-                  XR,
+                  XRSystem,
                   XRSession: XRSession$1,
                   XRSessionEvent,
                   XRFrame,
@@ -5864,7 +5864,7 @@ to native implementations of the API.`;
                   }
                   _patchNavigatorXR() {
                     let devicePromise = requestXRDevice(this.global, this.config);
-                    this.xr = new API.XR(devicePromise);
+                    this.xr = new API.XRSystem(devicePromise);
                     Object.defineProperty(this.global.navigator, 'xr', {
                       value: this.xr,
                       configurable: true,
@@ -37013,8 +37013,8 @@ to native implementations of the API.`;
                   constructor() {
                     super();
                     let activeImmersiveSession = null;
-                    const originalRequestSession = XR.prototype.requestSession;
-                    XR.prototype.requestSession = function(mode, enabledFeatures) {
+                    const originalRequestSession = XRSystem.prototype.requestSession;
+                    XRSystem.prototype.requestSession = function(mode, enabledFeatures) {
                       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
                         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
                           activeImmersiveSession = session;
@@ -37066,7 +37066,7 @@ to native implementations of the API.`;
                       let overridden = false;
                       const overrideIfNeeded = () => {
                         if (overridden) { return false; }
-                        if (isNativeFunction(this.global.XR)) {
+                        if (isNativeFunction(this.global.XRSystem)) {
                           overrideAPI(this.global);
                           overridden = true;
                           return true;
@@ -37097,7 +37097,7 @@ to native implementations of the API.`;
                   }
                   _patchNavigatorXR() {
                     const devicePromise = requestXRDevice$1(this.global);
-                    this.xr = new XR(devicePromise);
+                    this.xr = new XRSystem(devicePromise);
                     Object.defineProperty(this.global.navigator, 'xr', {
                       value: this.xr,
                       configurable: true,
