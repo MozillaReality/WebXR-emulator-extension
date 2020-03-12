@@ -1,5 +1,5 @@
 import WebXRPolyfill from 'webxr-polyfill/src/WebXRPolyfill';
-import XR from 'webxr-polyfill/src/api/XR';
+import XRSystem from 'webxr-polyfill/src/api/XRSystem';
 import XRSession, {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
 import XRFrame from 'webxr-polyfill/src/api/XRFrame';
 import XRRigidTransform from 'webxr-polyfill/src/api/XRRigidTransform';
@@ -20,8 +20,8 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     //       so there might be a chance that we remove this feature at some point.
 
     let activeImmersiveSession = null;
-    const originalRequestSession = XR.prototype.requestSession;
-    XR.prototype.requestSession = function(mode, enabledFeatures) {
+    const originalRequestSession = XRSystem.prototype.requestSession;
+    XRSystem.prototype.requestSession = function(mode, enabledFeatures) {
       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
           activeImmersiveSession = session;
@@ -94,7 +94,7 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
       let overridden = false;
       const overrideIfNeeded = () => {
         if (overridden) { return false; }
-        if (isNativeFunction(this.global.XR)) {
+        if (isNativeFunction(this.global.XRSystem)) {
           overrideAPI(this.global);
           overridden = true;
           return true;
@@ -126,7 +126,7 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
 
   _patchNavigatorXR() {
     const devicePromise = requestXRDevice(this.global);
-    this.xr = new XR(devicePromise);
+    this.xr = new XRSystem(devicePromise);
     Object.defineProperty(this.global.navigator, 'xr', {
       value: this.xr,
       configurable: true,
