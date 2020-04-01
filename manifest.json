@@ -1,10 +1,12 @@
 {
   "name": "WebXR API Emulator",
   "short_name": "WebXR Emu",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minimum_chrome_version": "10.0",
   "devtools_page": "src/extension/devtools.html",
   "description": "WebXR API Emulator",
+  "homepage_url": "https://github.com/MozillaReality/WebXR-emulator-extension",
+  "author": "Takahiro Aoyagi",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -14,11 +16,17 @@
     "scripts": ["src/extension/background.js"]
   },
   "permissions": [
-    "<all_urls>",
+    "file://*/*",
+    "http://*/*",
+    "https://*/*",
     "storage"
   ],
   "content_scripts": [{
-    "matches": ["<all_urls>"],
+    "matches": [
+      "file://*/*",
+      "http://*/*",
+      "https://*/*"
+    ],
     "js": [
       "polyfill/webxr-polyfill.js",
       "src/ConfigurationManager.js",
