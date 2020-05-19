@@ -64,6 +64,12 @@ export default class EmulatedXRDevice extends XRDevice {
     this.div.style.height = '100%';
     this.div.style.top = '0';
     this.div.style.left = '0';
+    this.div.style.zIndex = '9999'; // To override window overall
+    this.originalCanvasParams = {
+      parentElement: null,
+      width: 0,
+      height: 0
+    };
 
     // For AR
 
@@ -71,11 +77,9 @@ export default class EmulatedXRDevice extends XRDevice {
     this.arDevice = this.modes.includes('immersive-ar');
     this.resolution = config.resolution !== undefined ? config.resolution : DEFAULT_RESOLUTION;
     this.deviceSize = config.size !== undefined ? config.size : DEFAULT_DEVICE_SIZE;
-    this.rawCanvasSize = {width: 0, height: 0};
     this.arScene = null;
     this.touched = false;
     this.isPointerAndTabledCloseEnough = false; // UGH... @TODO: Rename
-    this.canvasParent = null;
 
     this.hitTestSources = [];
     this.hitTestResults = new Map();
@@ -87,26 +91,26 @@ export default class EmulatedXRDevice extends XRDevice {
 
   onBaseLayerSet(sessionId, layer) {
     const session = this.sessions.get(sessionId);
-    if (session.immersive) {
-      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+
+    // Remove old canvas first
+    if (session.immersive && session.baseLayer) {
+      this._removeBaseLayerCanvasFromDiv(sessionId);
     }
+
     session.baseLayer = layer;
-    if (session.immersive) {
-      this._appendBaseLayerCanvasToBodyIfNeeded(sessionId);
-    }
-    if (session.ar) {
-      const canvas = session.baseLayer.context.canvas;
-      this.rawCanvasSize.width = canvas.width;
-      this.rawCanvasSize.height = canvas.height;
-      canvas.width = this.resolution.width;
-      canvas.height = this.resolution.height;
-      this.arScene.setCanvas(canvas);
-      if (canvas.parentElement) {
-        this.canvasParent = canvas.parentElement;
-        // Not sure why but this is necessary for Firefox.
-        // Otherwise, the canvas won't be rendered in AR scene.
-        // @TODO: Figure out the root issue and resolve.
-        this.canvasParent.removeChild(canvas);
+    if (session.immersive && session.baseLayer) {
+      this._appendBaseLayerCanvasToDiv(sessionId);
+      if (session.ar) {
+        const canvas = session.baseLayer.context.canvas;
+        canvas.width = this.resolution.width;
+        canvas.height = this.resolution.height;
+        this.arScene.setCanvas(canvas);
+        if (canvas.parentElement) {
+          // Not sure why but this is necessary for Firefox.
+          // Otherwise, the canvas won't be rendered in AR scene.
+          // @TODO: Figure out the root issue and resolve.
+          canvas.parentElement.removeChild(canvas);
+        }
       }
     }
   }
@@ -382,18 +386,11 @@ export default class EmulatedXRDevice extends XRDevice {
 
   endSession(sessionId) {
     const session = this.sessions.get(sessionId);
-    if (session.immersive) {
-      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+    if (session.immersive && session.baseLayer) {
+      this._removeBaseLayerCanvasFromDiv(sessionId);
       if (session.ar) {
         this.arScene.eject();
         this.arScene.releaseCanvas();
-        const canvas = session.baseLayer.context.canvas;
-        if (this.canvasParent) {
-          this.canvasParent.appendChild(canvas);
-          this.canvasParent = null;
-        }
-        canvas.width = this.rawCanvasSize.width;
-        canvas.height = this.rawCanvasSize.height;
       }
       this.dispatchEvent('@@webxr-polyfill/vr-present-end', sessionId);
       this._notifyLeaveImmersive();
@@ -525,34 +522,52 @@ export default class EmulatedXRDevice extends XRDevice {
 
   // Private methods
 
-  // If baseLayer's canvas of immersive session isn't appended to document
-  // nothing will be rendered in immersive mode.
-  // So append the canvas to the document when entering immersive mode and
-  // removing it when exiting.
+  // If session is immersive mode, resize the canvas size to full window size.
+  // To do that, changing canvas size and moving the canvas to
+  // the special div. They are restored when exiting immersive mode.
   // @TODO: Simplify the method names
 
-  _appendBaseLayerCanvasToBodyIfNeeded(sessionId) {
+  _appendBaseLayerCanvasToDiv(sessionId) {
     const session = this.sessions.get(sessionId);
-    if (!session.baseLayer || !session.immersive) { return; }
     const canvas = session.baseLayer.context.canvas;
-    if (!(canvas instanceof HTMLCanvasElement) || canvas.parentElement) { return; }
-    // window size for now
+
+    this.originalCanvasParams.width = canvas.width;
+    this.originalCanvasParams.height = canvas.height;
+
+    // If canvas is OffscreenCanvas we don't further touch so far.
+    if (!(canvas instanceof HTMLCanvasElement)) { return; }
+
+    this.originalCanvasParams.parentElement = canvas.parentElement;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     this.div.appendChild(canvas);
     document.body.appendChild(this.div);
   }
 
-  _removeBaseLayerCanvasFromBodyIfNeeded(sessionId) {
+  _removeBaseLayerCanvasFromDiv(sessionId) {
     const session = this.sessions.get(sessionId);
-    if (!session.baseLayer || !session.immersive) { return; }
     const canvas = session.baseLayer.context.canvas;
-    // Not equal may mean an application may have moved the canvas
-    // somewhere else so we don't touch in that case.
-    if (canvas.parentElement !== this.div) { return; }
-    document.body.removeChild(this.div);
-    this.div.removeChild(canvas);
-    // @TODO: Restore canvas width/height
+
+    canvas.width = this.originalCanvasParams.width;
+    canvas.height = this.originalCanvasParams.height;
+
+    // If canvas is OffscreenCanvas we don't touch so far.
+    if (!(canvas instanceof HTMLCanvasElement)) { return; }
+
+    // There may be a case where an application operates DOM elements
+    // in immersive mode. In such case, we don't restore DOM elements
+    // hierarchies so far.
+    if (canvas.parentElement === this.div) {
+      this.div.removeChild(canvas);
+    }
+    if (this.div.parentElement === document.body) {
+      document.body.removeChild(this.div);
+    }
+
+    if (this.originalCanvasParams.parentElement) {
+      this.originalCanvasParams.parentElement.appendChild(canvas);
+    }
+    this.originalCanvasParams.parentElement = null;
   }
 
   // For AR. Check if right controller(pointer) is touched with left controller(tablet)
