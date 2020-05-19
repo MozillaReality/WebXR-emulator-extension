@@ -36316,7 +36316,7 @@ to native implementations of the API.`;
                       element.style.left = '0';
                       element.style.width = '100%';
                       element.style.height = '100%';
-                      element.style.zIndex = '9999';
+                      element.style.zIndex = '10000';
                       document.body.appendChild(element);
                     };
                     if (document.body) {
@@ -36407,14 +36407,18 @@ to native implementations of the API.`;
                     this.div.style.height = '100%';
                     this.div.style.top = '0';
                     this.div.style.left = '0';
+                    this.div.style.zIndex = '9999';
+                    this.originalCanvasParams = {
+                      parentElement: null,
+                      width: 0,
+                      height: 0
+                    };
                     this.arDevice = this.modes.includes('immersive-ar');
                     this.resolution = config.resolution !== undefined ? config.resolution : DEFAULT_RESOLUTION;
                     this.deviceSize = config.size !== undefined ? config.size : DEFAULT_DEVICE_SIZE;
-                    this.rawCanvasSize = {width: 0, height: 0};
                     this.arScene = null;
                     this.touched = false;
                     this.isPointerAndTabledCloseEnough = false;
-                    this.canvasParent = null;
                     this.hitTestSources = [];
                     this.hitTestResults = new Map();
                     this._initializeControllers(config);
@@ -36422,23 +36426,20 @@ to native implementations of the API.`;
                   }
                   onBaseLayerSet(sessionId, layer) {
                     const session = this.sessions.get(sessionId);
-                    if (session.immersive) {
-                      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+                    if (session.immersive && session.baseLayer) {
+                      this._removeBaseLayerCanvasFromDiv(sessionId);
                     }
                     session.baseLayer = layer;
-                    if (session.immersive) {
-                      this._appendBaseLayerCanvasToBodyIfNeeded(sessionId);
-                    }
-                    if (session.ar) {
-                      const canvas = session.baseLayer.context.canvas;
-                      this.rawCanvasSize.width = canvas.width;
-                      this.rawCanvasSize.height = canvas.height;
-                      canvas.width = this.resolution.width;
-                      canvas.height = this.resolution.height;
-                      this.arScene.setCanvas(canvas);
-                      if (canvas.parentElement) {
-                        this.canvasParent = canvas.parentElement;
-                        this.canvasParent.removeChild(canvas);
+                    if (session.immersive && session.baseLayer) {
+                      this._appendBaseLayerCanvasToDiv(sessionId);
+                      if (session.ar) {
+                        const canvas = session.baseLayer.context.canvas;
+                        canvas.width = this.resolution.width;
+                        canvas.height = this.resolution.height;
+                        this.arScene.setCanvas(canvas);
+                        if (canvas.parentElement) {
+                          canvas.parentElement.removeChild(canvas);
+                        }
                       }
                     }
                   }
@@ -36534,7 +36535,7 @@ to native implementations of the API.`;
                       perspective$1(this.projectionMatrix, Math.PI / 2, aspect, near, far);
                     } else {
                       const aspect = width / height;
-                      perspective$1(this.projectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+                      perspective$1(this.projectionMatrix, renderState.inlineVerticalFieldOfView, aspect, near, far);
                     }
                     if (session.ar) {
                       fromRotationTranslationScale(this.matrix, this.gamepads[1].pose.orientation, this.gamepads[1].pose.position, this.scale);
@@ -36663,18 +36664,11 @@ to native implementations of the API.`;
                   }
                   endSession(sessionId) {
                     const session = this.sessions.get(sessionId);
-                    if (session.immersive) {
-                      this._removeBaseLayerCanvasFromBodyIfNeeded(sessionId);
+                    if (session.immersive && session.baseLayer) {
+                      this._removeBaseLayerCanvasFromDiv(sessionId);
                       if (session.ar) {
                         this.arScene.eject();
                         this.arScene.releaseCanvas();
-                        const canvas = session.baseLayer.context.canvas;
-                        if (this.canvasParent) {
-                          this.canvasParent.appendChild(canvas);
-                          this.canvasParent = null;
-                        }
-                        canvas.width = this.rawCanvasSize.width;
-                        canvas.height = this.rawCanvasSize.height;
                       }
                       this.dispatchEvent('@@webxr-polyfill/vr-present-end', sessionId);
                       this._notifyLeaveImmersive();
@@ -36765,10 +36759,6 @@ to native implementations of the API.`;
                     }
                     return null;
                   }
-                  onInlineVerticalFieldOfViewSet(sessionId, value) {
-                    const session = this.sessions.get(sessionId);
-                    session.inlineVerticalFieldOfView = value;
-                  }
                   onWindowResize() {
                   }
                   addHitTestSource(source) {
@@ -36777,23 +36767,34 @@ to native implementations of the API.`;
                   getHitTestResults(source) {
                     return this.hitTestResults.get(source) || [];
                   }
-                  _appendBaseLayerCanvasToBodyIfNeeded(sessionId) {
+                  _appendBaseLayerCanvasToDiv(sessionId) {
                     const session = this.sessions.get(sessionId);
-                    if (!session.baseLayer || !session.immersive) { return; }
                     const canvas = session.baseLayer.context.canvas;
-                    if (!(canvas instanceof HTMLCanvasElement) || canvas.parentElement) { return; }
+                    this.originalCanvasParams.width = canvas.width;
+                    this.originalCanvasParams.height = canvas.height;
+                    if (!(canvas instanceof HTMLCanvasElement)) { return; }
+                    this.originalCanvasParams.parentElement = canvas.parentElement;
                     canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight;
                     this.div.appendChild(canvas);
                     document.body.appendChild(this.div);
                   }
-                  _removeBaseLayerCanvasFromBodyIfNeeded(sessionId) {
+                  _removeBaseLayerCanvasFromDiv(sessionId) {
                     const session = this.sessions.get(sessionId);
-                    if (!session.baseLayer || !session.immersive) { return; }
                     const canvas = session.baseLayer.context.canvas;
-                    if (canvas.parentElement !== this.div) { return; }
-                    document.body.removeChild(this.div);
-                    this.div.removeChild(canvas);
+                    canvas.width = this.originalCanvasParams.width;
+                    canvas.height = this.originalCanvasParams.height;
+                    if (!(canvas instanceof HTMLCanvasElement)) { return; }
+                    if (canvas.parentElement === this.div) {
+                      this.div.removeChild(canvas);
+                    }
+                    if (this.div.parentElement === document.body) {
+                      document.body.removeChild(this.div);
+                    }
+                    if (this.originalCanvasParams.parentElement) {
+                      this.originalCanvasParams.parentElement.appendChild(canvas);
+                    }
+                    this.originalCanvasParams.parentElement = null;
                   }
                   _isPointerCloseEnoughToTablet() {
                     const pose = this.gamepads[0].pose;
