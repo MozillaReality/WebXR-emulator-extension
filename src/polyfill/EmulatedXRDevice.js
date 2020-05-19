@@ -530,10 +530,13 @@ export default class EmulatedXRDevice extends XRDevice {
   _appendBaseLayerCanvasToDiv(sessionId) {
     const session = this.sessions.get(sessionId);
     const canvas = session.baseLayer.context.canvas;
+
     this.originalCanvasParams.width = canvas.width;
     this.originalCanvasParams.height = canvas.height;
-    // If canvas is OffscreenCanvas we don't touch so far.
+
+    // If canvas is OffscreenCanvas we don't further touch so far.
     if (!(canvas instanceof HTMLCanvasElement)) { return; }
+
     this.originalCanvasParams.parentElement = canvas.parentElement;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -544,6 +547,12 @@ export default class EmulatedXRDevice extends XRDevice {
   _removeBaseLayerCanvasFromDiv(sessionId) {
     const session = this.sessions.get(sessionId);
     const canvas = session.baseLayer.context.canvas;
+
+    canvas.width = this.originalCanvasParams.width;
+    canvas.height = this.originalCanvasParams.height;
+
+    // If canvas is OffscreenCanvas we don't touch so far.
+    if (!(canvas instanceof HTMLCanvasElement)) { return; }
 
     // There may be a case where an application operates DOM elements
     // in immersive mode. In such case, we don't restore DOM elements
@@ -559,8 +568,6 @@ export default class EmulatedXRDevice extends XRDevice {
       this.originalCanvasParams.parentElement.appendChild(canvas);
     }
     this.originalCanvasParams.parentElement = null;
-    canvas.width = this.originalCanvasParams.width;
-    canvas.height = this.originalCanvasParams.height;
   }
 
   // For AR. Check if right controller(pointer) is touched with left controller(tablet)
