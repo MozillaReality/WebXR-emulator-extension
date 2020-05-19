@@ -221,7 +221,7 @@ export default class EmulatedXRDevice extends XRDevice {
       mat4.perspective(this.projectionMatrix, Math.PI / 2, aspect, near, far);
     } else {
       const aspect = width / height;
-      mat4.perspective(this.projectionMatrix, session.inlineVerticalFieldOfView, aspect, near, far);
+      mat4.perspective(this.projectionMatrix, renderState.inlineVerticalFieldOfView, aspect, near, far);
     }
     if (session.ar) {
       mat4.fromRotationTranslationScale(this.matrix, this.gamepads[1].pose.orientation, this.gamepads[1].pose.position, this.scale);
@@ -499,11 +499,6 @@ export default class EmulatedXRDevice extends XRDevice {
       }
     }
     return null;
-  }
-
-  onInlineVerticalFieldOfViewSet(sessionId, value) {
-    const session = this.sessions.get(sessionId);
-    session.inlineVerticalFieldOfView = value;
   }
 
   onWindowResize() {
