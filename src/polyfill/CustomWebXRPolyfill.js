@@ -25,6 +25,16 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
           activeImmersiveSession = session;
+
+          // DOM-Overlay API
+          const optionalFeatures = enabledFeatures.optionalFeatures;
+          const domOverlay = enabledFeatures.domOverlay;
+          if (optionalFeatures && optionalFeatures.includes('dom-overlay') &&
+            domOverlay && domOverlay.root) {
+            const device = session[XRSESSION_PRIVATE].device;
+            device.setDomOverlayRoot(domOverlay.root);
+            session.domOverlayState = { type: 'screen' };
+          }
         }
         return session;
       });
