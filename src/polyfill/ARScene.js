@@ -327,7 +327,7 @@ export default class ARScene {
       element.style.left = '0';
       element.style.width = '100%';
       element.style.height = '100%';
-      element.style.zIndex = '9999'; // To override window overall
+      element.style.zIndex = '10000'; // To override window overall
       document.body.appendChild(element);
     };
 
