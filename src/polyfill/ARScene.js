@@ -319,16 +319,9 @@ export default class ARScene {
     this.room = null;
   }
 
-  inject() {
+  inject(div) {
     const appendCanvas = () => {
-      const element = this.renderer.domElement;
-      element.style.position = 'absolute';
-      element.style.top = '0';
-      element.style.left = '0';
-      element.style.width = '100%';
-      element.style.height = '100%';
-      element.style.zIndex = '10000'; // To override window overall
-      document.body.appendChild(element);
+      div.appendChild(this.renderer.domElement);
     };
 
     if (document.body) {
