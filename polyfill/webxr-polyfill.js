@@ -36308,16 +36308,9 @@ to native implementations of the API.`;
                     this.tabletCamera = tabletCamera;
                     this.room = null;
                   }
-                  inject() {
+                  inject(div) {
                     const appendCanvas = () => {
-                      const element = this.renderer.domElement;
-                      element.style.position = 'absolute';
-                      element.style.top = '0';
-                      element.style.left = '0';
-                      element.style.width = '100%';
-                      element.style.height = '100%';
-                      element.style.zIndex = '10000';
-                      document.body.appendChild(element);
+                      div.appendChild(this.renderer.domElement);
                     };
                     if (document.body) {
                       appendCanvas();
@@ -36375,6 +36368,8 @@ to native implementations of the API.`;
 
                 const DEFAULT_MODES = ['inline'];
                 const DEFAULT_HEADSET_POSITION = [0, 1.6, 0];
+                const DIV_Z_INDEX = '9999';
+                const DOM_OVERLAY_Z_INDEX = '10001';
                 const DEFAULT_RESOLUTION = {width: 1024, height: 2048};
                 const DEFAULT_DEVICE_SIZE = {width: 0.05, height: 0.1, depth: 0.005};
                 const dispatchCustomEvent = (type, detail) => {
@@ -36407,12 +36402,13 @@ to native implementations of the API.`;
                     this.div.style.height = '100%';
                     this.div.style.top = '0';
                     this.div.style.left = '0';
-                    this.div.style.zIndex = '9999';
+                    this.div.style.zIndex = DIV_Z_INDEX;
                     this.originalCanvasParams = {
                       parentElement: null,
                       width: 0,
                       height: 0
                     };
+                    this.domOverlayRoot = null;
                     this.arDevice = this.modes.includes('immersive-ar');
                     this.resolution = config.resolution !== undefined ? config.resolution : DEFAULT_RESOLUTION;
                     this.deviceSize = config.size !== undefined ? config.size : DEFAULT_DEVICE_SIZE;
@@ -36456,6 +36452,7 @@ to native implementations of the API.`;
                       case 'local-floor': return true;
                       case 'bounded-floor': return false;
                       case 'unbounded': return false;
+                      case 'dom-overlay': return true;
                       default: return false;
                     }
                   }
@@ -36492,7 +36489,7 @@ to native implementations of the API.`;
                           this._notifyInputPoseUpdate(1);
                         };
                       }
-                      this.arScene.inject();
+                      this.arScene.inject(this.div);
                     }
                     if (immersive) {
                       this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
@@ -36666,6 +36663,7 @@ to native implementations of the API.`;
                     const session = this.sessions.get(sessionId);
                     if (session.immersive && session.baseLayer) {
                       this._removeBaseLayerCanvasFromDiv(sessionId);
+                      this.domOverlayRoot = null;
                       if (session.ar) {
                         this.arScene.eject();
                         this.arScene.releaseCanvas();
@@ -36761,6 +36759,9 @@ to native implementations of the API.`;
                   }
                   onWindowResize() {
                   }
+                  setDomOverlayRoot(root) {
+                    this.domOverlayRoot = root;
+                  }
                   addHitTestSource(source) {
                     this.hitTestSources.push(source);
                   }
@@ -36778,6 +36779,15 @@ to native implementations of the API.`;
                     canvas.height = window.innerHeight;
                     this.div.appendChild(canvas);
                     document.body.appendChild(this.div);
+                    if (this.domOverlayRoot) {
+                      const el = this.domOverlayRoot;
+                      el.style._zIndex = el.style.zIndex;
+                      if (this.domOverlayRoot.contains(this.div)) {
+                        this.div.style.zIndex = '';
+                      } else {
+                        el.style.zIndex = DOM_OVERLAY_Z_INDEX;
+                      }
+                    }
                   }
                   _removeBaseLayerCanvasFromDiv(sessionId) {
                     const session = this.sessions.get(sessionId);
@@ -36795,6 +36805,12 @@ to native implementations of the API.`;
                       this.originalCanvasParams.parentElement.appendChild(canvas);
                     }
                     this.originalCanvasParams.parentElement = null;
+                    if (this.domOverlayRoot) {
+                      const el = this.domOverlayRoot;
+                      el.style.zIndex = el.style._zIndex;
+                      delete el.style._zIndex;
+                      this.div.style.zIndex = DIV_Z_INDEX;
+                    }
                   }
                   _isPointerCloseEnoughToTablet() {
                     const pose = this.gamepads[0].pose;
@@ -37019,6 +37035,14 @@ to native implementations of the API.`;
                       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
                         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
                           activeImmersiveSession = session;
+                          const optionalFeatures = enabledFeatures.optionalFeatures;
+                          const domOverlay = enabledFeatures.domOverlay;
+                          if (optionalFeatures && optionalFeatures.includes('dom-overlay') &&
+                            domOverlay && domOverlay.root) {
+                            const device = session[PRIVATE$f].device;
+                            device.setDomOverlayRoot(domOverlay.root);
+                            session.domOverlayState = { type: 'screen' };
+                          }
                         }
                         return session;
                       });
