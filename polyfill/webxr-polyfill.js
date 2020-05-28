@@ -6772,7 +6772,7 @@ to native implementations of the API.`;
                 }();
 
                 const PRIVATE$j = Symbol('@@webxr-polyfill/XRRay');
-                class XRRay {
+                class XRRay$1 {
                   constructor(origin, direction) {
                     const _origin = {x: 0, y: 0, z: 0, w: 1};
                     const _direction = {x: 0, y: 0, z: -1, w: 0};
@@ -6861,7 +6861,7 @@ to native implementations of the API.`;
                     this[PRIVATE$k] = {
                       session,
                       space: options.space,
-                      offsetRay: options.offsetRay || new XRRay(),
+                      offsetRay: options.offsetRay || new XRRay$1(),
                       active: true
                     };
                   }
@@ -6897,26 +6897,50 @@ to native implementations of the API.`;
                   }
                 }
 
-                const PRIVATE$m = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
-                class XRTransientInputHitTestResult {
-                  constructor(transform) {
-                    this[PRIVATE$m] = {
-                      transform
-                    };
-                  }
-                  getPose(baseSpace) {
-                    return new XRPose$1(this[PRIVATE$m].transform);
-                  }
-                }
-
-                const PRIVATE$n = Symbol('@@webxr-polyfill/XRTransientInputHitTestSource');
+                const PRIVATE$m = Symbol('@@webxr-polyfill/XRTransientInputHitTestSource');
                 class XRTransientInputHitTestSource {
-                  constructor(options) {
-                    this[PRIVATE$n] = {
-                      space: options.space
+                  constructor(session, options) {
+                    if (options.entityTypes && options.entityTypes.length > 0) {
+                      throw new Error('XRHitTestSource does not support entityTypes option yet.');
+                    }
+                    this[PRIVATE$m] = {
+                      session,
+                      profile: options.profile,
+                      offsetRay: options.offsetRay || new XRRay(),
+                      active: true
                     };
                   }
                   cancel() {
+                    this[PRIVATE$m].active = false;
+                  }
+                  get _profile() {
+                    return this[PRIVATE$m].profile;
+                  }
+                  get _session() {
+                    return this[PRIVATE$m].session;
+                  }
+                  get _offsetRay() {
+                    return this[PRIVATE$m].offsetRay;
+                  }
+                  get _active() {
+                    return this[PRIVATE$m].active;
+                  }
+                }
+
+                const PRIVATE$n = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
+                class XRTransientInputHitTestResult {
+                  constructor(frame, results, inputSource) {
+                    this[PRIVATE$n] = {
+                      frame,
+                      inputSource,
+                      results
+                    };
+                  }
+                  get inputSource() {
+                    return this[PRIVATE$n].inputSource;
+                  }
+                  get results() {
+                    return this[PRIVATE$n].results;
                   }
                 }
 
@@ -6925,7 +6949,7 @@ to native implementations of the API.`;
                   XRHitTestSource,
                   XRTransientInputHitTestResult,
                   XRTransientInputHitTestSource,
-                  XRRay
+                  XRRay: XRRay$1
                 };
 
                 if ( Number.EPSILON === undefined ) {
@@ -36417,6 +36441,8 @@ to native implementations of the API.`;
                     this.isPointerAndTabledCloseEnough = false;
                     this.hitTestSources = [];
                     this.hitTestResults = new Map();
+                    this.hitTestSourcesForTransientInput = [];
+                    this.hitTestResultsForTransientInput = new Map();
                     this._initializeControllers(config);
                     this._setupEventListeners();
                   }
@@ -36550,12 +36576,15 @@ to native implementations of the API.`;
                             this.isPointerAndTabledCloseEnough = true;
                             this.arScene.touched();
                           }
+                          const coordinates = this._getTouchCoordinates();
+                          this._updateInputAxes(0, coordinates[0], -coordinates[1]);
                         } else {
                           if (this.isPointerAndTabledCloseEnough) {
                             this._updateInputButtonPressed(false, 0, 0);
                             this.isPointerAndTabledCloseEnough = false;
                             this.arScene.released();
                           }
+                          this._updateInputAxes(0, 0, 0);
                         }
                       }
                       for (let i = 0; i < this.gamepads.length; ++i) {
@@ -36590,40 +36619,8 @@ to native implementations of the API.`;
                           inputSourceImpl.primarySqueezeActionPressed = primarySqueezeActionPressed;
                         }
                       }
-                      let activeHitTestSourceNum = 0;
-                      for (let i = 0; i < this.hitTestSources.length; i++) {
-                        const source = this.hitTestSources[i];
-                        if (source._active) {
-                          this.hitTestSources[activeHitTestSourceNum++] = source;
-                        }
-                      }
-                      this.hitTestSources.length = activeHitTestSourceNum;
-                      this.hitTestResults.clear();
-                      for (const source of this.hitTestSources) {
-                        if (sessionId !== source._session[PRIVATE$f].id) {
-                          continue;
-                        }
-                        const space = source._space;
-                        if (!space._baseMatrix) {
-                          continue;
-                        }
-                        const offsetRay = source._offsetRay;
-                        const baseMatrix = space._baseMatrix;
-                        const origin = set(create$7(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
-                        const direction = set(create$7(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
-                        transformMat4(origin, origin, baseMatrix);
-                        transformQuat$1(direction, direction, getRotation$1(create$9(), baseMatrix));
-                        const hitTestResults = this.arScene.getHitTestResults(origin, direction);
-                        const results = [];
-                        for (const result of hitTestResults) {
-                          const matrix = create$6();
-                          matrix[12] = result.point.x;
-                          matrix[13] = result.point.y;
-                          matrix[14] = result.point.z;
-                          results.push(matrix);
-                        }
-                        this.hitTestResults.set(source, results);
-                      }
+                      this._hitTest(sessionId, this.hitTestSources, this.hitTestResults);
+                      this._hitTest(sessionId, this.hitTestSourcesForTransientInput, this.hitTestResultsForTransientInput);
                     }
                   }
                   onFrameEnd(sessionId) {
@@ -36768,17 +36765,23 @@ to native implementations of the API.`;
                   getHitTestResults(source) {
                     return this.hitTestResults.get(source) || [];
                   }
+                  addHitTestSourceForTransientInput(source) {
+                    this.hitTestSourcesForTransientInput.push(source);
+                  }
+                  getHitTestResultsForTransientInput(source) {
+                    return this.hitTestResultsForTransientInput.get(source) || [];
+                  }
                   _appendBaseLayerCanvasToDiv(sessionId) {
                     const session = this.sessions.get(sessionId);
                     const canvas = session.baseLayer.context.canvas;
                     this.originalCanvasParams.width = canvas.width;
                     this.originalCanvasParams.height = canvas.height;
+                    document.body.appendChild(this.div);
                     if (!(canvas instanceof HTMLCanvasElement)) { return; }
                     this.originalCanvasParams.parentElement = canvas.parentElement;
                     canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight;
                     this.div.appendChild(canvas);
-                    document.body.appendChild(this.div);
                     if (this.domOverlayRoot) {
                       const el = this.domOverlayRoot;
                       el.style._zIndex = el.style.zIndex;
@@ -36794,13 +36797,13 @@ to native implementations of the API.`;
                     const canvas = session.baseLayer.context.canvas;
                     canvas.width = this.originalCanvasParams.width;
                     canvas.height = this.originalCanvasParams.height;
-                    if (!(canvas instanceof HTMLCanvasElement)) { return; }
-                    if (canvas.parentElement === this.div) {
-                      this.div.removeChild(canvas);
-                    }
                     if (this.div.parentElement === document.body) {
                       document.body.removeChild(this.div);
                     }
+                    if (canvas.parentElement === this.div) {
+                      this.div.removeChild(canvas);
+                    }
+                    if (!(canvas instanceof HTMLCanvasElement)) { return; }
                     if (this.originalCanvasParams.parentElement) {
                       this.originalCanvasParams.parentElement.appendChild(canvas);
                     }
@@ -36822,6 +36825,64 @@ to native implementations of the API.`;
                     return dx <= 1.0 && dx >= -1.0 &&
                            dy <= 1.0 && dy >= -1.0 &&
                            dz <= 0.01 && dz >= 0.0;
+                  }
+                  _getTouchCoordinates() {
+                    const pose = this.gamepads[0].pose;
+                    const matrix = fromRotationTranslation$1(create$6(), pose.orientation, pose.position);
+                    multiply$2(matrix, this.viewMatrix, matrix);
+                    const dx = matrix[12] / (this.deviceSize.width * 0.5);
+                    const dy = matrix[13] / (this.deviceSize.height * 0.5);
+                    return [dx, dy];
+                  }
+                  _hitTest(sessionId, hitTestSources, hitTestResults) {
+                    let activeHitTestSourceNum = 0;
+                    for (let i = 0; i < hitTestSources.length; i++) {
+                      const source = hitTestSources[i];
+                      if (source._active) {
+                        hitTestSources[activeHitTestSourceNum++] = source;
+                      }
+                    }
+                    hitTestSources.length = activeHitTestSourceNum;
+                    hitTestResults.clear();
+                    for (const source of hitTestSources) {
+                      if (sessionId !== source._session[PRIVATE$f].id) {
+                        continue;
+                      }
+                      let baseMatrix;
+                      if (source instanceof XRTransientInputHitTestSource) {
+                        if (!this.gamepadInputSources[0].active) {
+                          continue;
+                        }
+                        if (!source._profile.includes('touch')) {
+                          continue;
+                        }
+                        const gamepad = this.gamepads[0];
+                        const matrix = identity$1(create$6());
+                        matrix[12] = gamepad.axes[0];
+                        matrix[13] = -gamepad.axes[1];
+                        baseMatrix = multiply$2(matrix, this.matrix, matrix);
+                      } else {
+                        baseMatrix = source._space._baseMatrix;
+                        if (!baseMatrix) {
+                          continue;
+                        }
+                      }
+                      const offsetRay = source._offsetRay;
+                      const origin = set(create$7(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
+                      const direction = set(create$7(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
+                      transformMat4(origin, origin, baseMatrix);
+                      transformQuat$1(direction, direction, getRotation$1(create$9(), baseMatrix));
+                      const arHitTestResults = this.arScene.getHitTestResults(origin, direction);
+                      const results = [];
+                      for (const result of arHitTestResults) {
+                        const matrix = create$6();
+                        matrix[12] = result.point.x;
+                        matrix[13] = result.point.y;
+                        matrix[14] = result.point.z;
+                        results.push(matrix);
+                      }
+                      hitTestResults.set(source, results);
+                    }
                   }
                   _notifyPoseUpdate() {
                     dispatchCustomEvent('device-pose', {
@@ -36875,6 +36936,12 @@ to native implementations of the API.`;
                     if (buttonIndex >= gamepad.buttons.length) { return; }
                     gamepad.buttons[buttonIndex].pressed = pressed;
                     gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
+                  }
+                  _updateInputAxes(controllerIndex, x, y) {
+                    if (controllerIndex >= this.gamepads.length) { return; }
+                    const gamepad = this.gamepads[controllerIndex];
+                    gamepad.axes[0] = x;
+                    gamepad.axes[1] = y;
                   }
                   _initializeControllers(config) {
                     const hasController = config.controllers !== undefined;
@@ -37069,7 +37136,10 @@ to native implementations of the API.`;
                       return Promise.resolve(source);
                     };
                     XRSession$1.prototype.requestHitTestSourceForTransientInput = function (options) {
-                      throw new Error('requestHitTestSourceForTransientInput is not implemented yet.');
+                      const source = new XRTransientInputHitTestSource(this, options);
+                      const device = this[PRIVATE$f].device;
+                      device.addHitTestSourceForTransientInput(source);
+                      return Promise.resolve(source);
                     };
                     XRFrame.prototype.getHitTestResults = function (hitTestSource) {
                       const device = this.session[PRIVATE$f].device;
@@ -37081,7 +37151,17 @@ to native implementations of the API.`;
                       return results;
                     };
                     XRFrame.prototype.getHitTestResultsForTransientInput = function (hitTestSource) {
-                      throw new Error('getHitTestResultsForTransientInput is not implemented yet.');
+                      const device = this.session[PRIVATE$f].device;
+                      const hitTestResults = device.getHitTestResultsForTransientInput(hitTestSource);
+                      const results = [];
+                      for (const matrix of hitTestResults) {
+                        results.push(new XRHitTestResult(this, new XRRigidTransform$1(matrix)));
+                      }
+                      if (results.length === 0) {
+                        return [];
+                      }
+                      const inputSource = device.getInputSources()[0];
+                      return [new XRTransientInputHitTestResult(this, results, inputSource)];
                     };
                     if (this.nativeWebXR) {
                       overrideAPI(this.global);
