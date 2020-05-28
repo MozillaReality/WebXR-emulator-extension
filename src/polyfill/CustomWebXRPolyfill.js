@@ -5,6 +5,8 @@ import XRFrame from 'webxr-polyfill/src/api/XRFrame';
 import XRRigidTransform from 'webxr-polyfill/src/api/XRRigidTransform';
 import XRHitTestSource from './api/XRHitTestSource';
 import XRHitTestResult from './api/XRHitTestResult';
+import XRTransientInputHitTestSource from './api/XRTransientInputHitTestSource';
+import XRTransientInputHitTestResult from './api/XRTransientInputHitTestResult';
 import API from 'webxr-polyfill/src/api/index';
 import EX_API from './api/index';
 import EmulatedXRDevice from './EmulatedXRDevice';
@@ -60,14 +62,17 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     // Extending XRSession and XRFrame for AR hitting test API.
 
     XRSession.prototype.requestHitTestSource = function (options) {
-      const source = new XRHitTestSource(this, options)
+      const source = new XRHitTestSource(this, options);
       const device = this[XRSESSION_PRIVATE].device;
       device.addHitTestSource(source);
       return Promise.resolve(source);
     };
 
     XRSession.prototype.requestHitTestSourceForTransientInput = function (options) {
-      throw new Error('requestHitTestSourceForTransientInput is not implemented yet.');
+      const source = new XRTransientInputHitTestSource(this, options);
+      const device = this[XRSESSION_PRIVATE].device;
+      device.addHitTestSourceForTransientInput(source);
+      return Promise.resolve(source);
     };
 
     XRFrame.prototype.getHitTestResults = function (hitTestSource) {
@@ -81,7 +86,17 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     };
 
     XRFrame.prototype.getHitTestResultsForTransientInput = function (hitTestSource) {
-      throw new Error('getHitTestResultsForTransientInput is not implemented yet.');
+      const device = this.session[XRSESSION_PRIVATE].device;
+      const hitTestResults = device.getHitTestResultsForTransientInput(hitTestSource);
+      const results = [];
+      for (const matrix of hitTestResults) {
+        results.push(new XRHitTestResult(this, new XRRigidTransform(matrix)));
+      }
+      if (results.length === 0) {
+        return [];
+      }
+      const inputSource = device.getInputSources()[0];
+      return [new XRTransientInputHitTestResult(this, results, inputSource)];
     };
 
     //

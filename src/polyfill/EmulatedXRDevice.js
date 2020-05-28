@@ -1,5 +1,6 @@
 import XRDevice from 'webxr-polyfill/src/devices/XRDevice';
 import XRInputSource from 'webxr-polyfill/src/api/XRInputSource';
+import XRTransientInputHitTestSource from './api/XRTransientInputHitTestSource';
 import {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
 import GamepadXRInputSource from 'webxr-polyfill/src/devices/GamepadXRInputSource';
 import {
@@ -92,6 +93,9 @@ export default class EmulatedXRDevice extends XRDevice {
 
     this.hitTestSources = [];
     this.hitTestResults = new Map();
+
+    this.hitTestSourcesForTransientInput = [];
+    this.hitTestResultsForTransientInput = new Map();
 
     //
     this._initializeControllers(config);
@@ -256,12 +260,15 @@ export default class EmulatedXRDevice extends XRDevice {
             this.isPointerAndTabledCloseEnough = true;
             this.arScene.touched();
           }
+          const coordinates = this._getTouchCoordinates();
+          this._updateInputAxes(0, coordinates[0], -coordinates[1]);
         } else {
           if (this.isPointerAndTabledCloseEnough) {
             this._updateInputButtonPressed(false, 0, 0);
             this.isPointerAndTabledCloseEnough = false;
             this.arScene.released();
           }
+          this._updateInputAxes(0, 0, 0);
         }
       }
 
@@ -303,46 +310,8 @@ export default class EmulatedXRDevice extends XRDevice {
         }
       }
 
-      // AR Hitting test
-      let activeHitTestSourceNum = 0;
-      for (let i = 0; i < this.hitTestSources.length; i++) {
-        const source = this.hitTestSources[i];
-        if (source._active) {
-          this.hitTestSources[activeHitTestSourceNum++] = source;
-        }
-      }
-      this.hitTestSources.length = activeHitTestSourceNum;
-      this.hitTestResults.clear();
-      for (const source of this.hitTestSources) {
-        if (sessionId !== source._session[XRSESSION_PRIVATE].id) {
-          continue;
-        }
-
-        const space = source._space;
-
-        if (!space._baseMatrix) {
-          continue;
-        }
-
-        const offsetRay = source._offsetRay;
-        const baseMatrix = space._baseMatrix;
-        const origin = vec3.set(vec3.create(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
-        const direction = vec3.set(vec3.create(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
-        vec3.transformMat4(origin, origin, baseMatrix);
-        vec3.transformQuat(direction, direction, mat4.getRotation(quat.create(), baseMatrix));
-
-        const hitTestResults = this.arScene.getHitTestResults(origin, direction);
-        const results = [];
-        for (const result of hitTestResults) {
-          const matrix = mat4.create();
-          // @TODO: Save rotation
-          matrix[12] = result.point.x;
-          matrix[13] = result.point.y;
-          matrix[14] = result.point.z;
-          results.push(matrix);
-        }
-        this.hitTestResults.set(source, results);
-      }
+      this._hitTest(sessionId, this.hitTestSources, this.hitTestResults);
+      this._hitTest(sessionId, this.hitTestSourcesForTransientInput, this.hitTestResultsForTransientInput);
     }
   }
 
@@ -532,6 +501,14 @@ export default class EmulatedXRDevice extends XRDevice {
     return this.hitTestResults.get(source) || [];
   }
 
+  addHitTestSourceForTransientInput(source) {
+    this.hitTestSourcesForTransientInput.push(source);
+  }
+
+  getHitTestResultsForTransientInput(source) {
+    return this.hitTestResultsForTransientInput.get(source) || [];
+  }
+
   // Private methods
 
   // If session is immersive mode, resize the canvas size to full window size.
@@ -546,6 +523,8 @@ export default class EmulatedXRDevice extends XRDevice {
     this.originalCanvasParams.width = canvas.width;
     this.originalCanvasParams.height = canvas.height;
 
+    document.body.appendChild(this.div);
+
     // If canvas is OffscreenCanvas we don't further touch so far.
     if (!(canvas instanceof HTMLCanvasElement)) { return; }
 
@@ -553,7 +532,6 @@ export default class EmulatedXRDevice extends XRDevice {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     this.div.appendChild(canvas);
-    document.body.appendChild(this.div);
 
     // DOM overlay API
     // @TODO: Is this the best place to handle?
@@ -577,18 +555,18 @@ export default class EmulatedXRDevice extends XRDevice {
     canvas.width = this.originalCanvasParams.width;
     canvas.height = this.originalCanvasParams.height;
 
-    // If canvas is OffscreenCanvas we don't touch so far.
-    if (!(canvas instanceof HTMLCanvasElement)) { return; }
-
     // There may be a case where an application operates DOM elements
     // in immersive mode. In such case, we don't restore DOM elements
     // hierarchies so far.
-    if (canvas.parentElement === this.div) {
-      this.div.removeChild(canvas);
-    }
     if (this.div.parentElement === document.body) {
       document.body.removeChild(this.div);
     }
+    if (canvas.parentElement === this.div) {
+      this.div.removeChild(canvas);
+    }
+
+    // If canvas is OffscreenCanvas we don't touch so far.
+    if (!(canvas instanceof HTMLCanvasElement)) { return; }
 
     if (this.originalCanvasParams.parentElement) {
       this.originalCanvasParams.parentElement.appendChild(canvas);
@@ -619,6 +597,79 @@ export default class EmulatedXRDevice extends XRDevice {
     return dx <= 1.0 && dx >= -1.0 &&
            dy <= 1.0 && dy >= -1.0 &&
            dz <= 0.01 && dz >= 0.0;
+  }
+
+  _getTouchCoordinates() {
+    // @TODO: Optimize if possible
+    const pose = this.gamepads[0].pose;
+    const matrix = mat4.fromRotationTranslation(mat4.create(), pose.orientation, pose.position);
+    mat4.multiply(matrix, this.viewMatrix, matrix);
+    const dx = matrix[12] / (this.deviceSize.width * 0.5);
+    const dy = matrix[13] / (this.deviceSize.height * 0.5);
+    return [dx, dy];
+  }
+
+  // Hit Test
+
+  _hitTest(sessionId, hitTestSources, hitTestResults) {
+    // Remove inactive sources first
+    let activeHitTestSourceNum = 0;
+    for (let i = 0; i < hitTestSources.length; i++) {
+      const source = hitTestSources[i];
+      if (source._active) {
+        hitTestSources[activeHitTestSourceNum++] = source;
+      }
+    }
+    hitTestSources.length = activeHitTestSourceNum;
+
+    // Do hit test next
+    hitTestResults.clear();
+    for (const source of hitTestSources) {
+      if (sessionId !== source._session[XRSESSION_PRIVATE].id) {
+        continue;
+      }
+
+      // Gets base matrix depending on hit test source type
+      let baseMatrix;
+      if (source instanceof XRTransientInputHitTestSource) {
+        if (!this.gamepadInputSources[0].active) {
+          continue;
+        }
+        if (!source._profile.includes('touch')) {
+          continue;
+        }
+        const gamepad = this.gamepads[0];
+        const matrix = mat4.identity(mat4.create());
+        matrix[12] = gamepad.axes[0];
+        matrix[13] = -gamepad.axes[1];
+        baseMatrix = mat4.multiply(matrix, this.matrix, matrix);
+      } else {
+        baseMatrix = source._space._baseMatrix;
+        if (!baseMatrix) {
+          continue;
+        }
+      }
+
+      // Calculates origin and direction used for hit test in AR scene
+      const offsetRay = source._offsetRay;
+      const origin = vec3.set(vec3.create(), offsetRay.origin.x, offsetRay.origin.y, offsetRay.origin.z);
+      const direction = vec3.set(vec3.create(), offsetRay.direction.x, offsetRay.direction.y, offsetRay.direction.z);
+      vec3.transformMat4(origin, origin, baseMatrix);
+      vec3.transformQuat(direction, direction, mat4.getRotation(quat.create(), baseMatrix));
+
+      // Do hit test in AR scene and stores the result matrices
+      const arHitTestResults = this.arScene.getHitTestResults(origin, direction);
+      const results = [];
+      for (const result of arHitTestResults) {
+        const matrix = mat4.create();
+        // @TODO: Save rotation
+        matrix[12] = result.point.x;
+        matrix[13] = result.point.y;
+        matrix[14] = result.point.z;
+        results.push(matrix);
+      }
+      hitTestResults.set(source, results);
+    }
   }
 
   // Notify the update to panel
@@ -688,6 +739,13 @@ export default class EmulatedXRDevice extends XRDevice {
     if (buttonIndex >= gamepad.buttons.length) { return; }
     gamepad.buttons[buttonIndex].pressed = pressed;
     gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
+  }
+
+  _updateInputAxes(controllerIndex, x, y) {
+    if (controllerIndex >= this.gamepads.length) { return; }
+    const gamepad = this.gamepads[controllerIndex];
+    gamepad.axes[0] = x;
+    gamepad.axes[1] = y;
   }
 
   _initializeControllers(config) {

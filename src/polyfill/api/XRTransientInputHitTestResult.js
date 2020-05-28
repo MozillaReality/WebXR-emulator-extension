@@ -3,14 +3,19 @@ import XRPose from 'webxr-polyfill/src/api/XRPose';
 export const PRIVATE = Symbol('@@webxr-polyfill/XRTransientInputHitTestResult');
 
 export default class XRTransientInputHitTestResult {
-  constructor(transform) {
+  constructor(frame, results, inputSource) {
     this[PRIVATE] = {
-      transform
+      frame,
+      inputSource,
+      results
     };
   }
 
-  getPose(baseSpace) {
-    // @TODO: Implement properly
-    return new XRPose(this[PRIVATE].transform);
+  get inputSource() {
+    return this[PRIVATE].inputSource;
+  }
+
+  get results() {
+    return this[PRIVATE].results;
   }
 }
