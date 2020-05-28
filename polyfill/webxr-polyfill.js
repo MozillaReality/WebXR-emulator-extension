@@ -37088,6 +37088,7 @@ to native implementations of the API.`;
                       this.injected = true;
                       this._patchNavigatorXR();
                     } else {
+                      installEX_API(this.global);
                       let overridden = false;
                       const overrideIfNeeded = () => {
                         if (overridden) { return false; }
@@ -37150,6 +37151,9 @@ to native implementations of the API.`;
                   for (const className in API) {
                     global[className] = API[className];
                   }
+                  installEX_API(global);
+                };
+                const installEX_API = global => {
                   for (const className in EX_API) {
                     global[className] = EX_API[className];
                   }
