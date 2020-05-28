@@ -94,6 +94,7 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
       this.injected = true;
       this._patchNavigatorXR();
     } else {
+      installEX_API(this.global);
       // Note: WebXR API polyfill can be overridden by native WebXR API on the latest Chrome 78
       //       after the extension is loaded but before loading page is completed
       //       if the native WebXR API is disabled via chrome://flags and the page includes
@@ -169,6 +170,10 @@ const overrideAPI = global => {
   for (const className in API) {
     global[className] = API[className];
   }
+  installEX_API(global);
+};
+
+const installEX_API = global => {
   for (const className in EX_API) {
     global[className] = EX_API[className];
   }
