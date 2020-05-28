@@ -88,12 +88,12 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
     XRFrame.prototype.getHitTestResultsForTransientInput = function (hitTestSource) {
       const device = this.session[XRSESSION_PRIVATE].device;
       const hitTestResults = device.getHitTestResultsForTransientInput(hitTestSource);
+      if (hitTestResults.length === 0) {
+        return [];
+      }
       const results = [];
       for (const matrix of hitTestResults) {
         results.push(new XRHitTestResult(this, new XRRigidTransform(matrix)));
-      }
-      if (results.length === 0) {
-        return [];
       }
       const inputSource = device.getInputSources()[0];
       return [new XRTransientInputHitTestResult(this, results, inputSource)];
