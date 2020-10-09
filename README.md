@@ -1,6 +1,6 @@
 # WebXR emulator extension
 
-WebXR emulator extension is a browser extension which helps your WebXR content creation. It enables to responsively run [WebXR](https://www.w3.org/TR/webxr/) application on your **desktop** browser without the need of any XR devices. 
+WebXR emulator extension is a browser extension which helps your WebXR content creation. It enables you to responsively run [WebXR](https://www.w3.org/TR/webxr/) applications on your **desktop** browser without the need of any XR devices. 
 
 [Blog post](https://blog.mozvr.com/webxr-emulator-extension/) / [YouTube](https://www.youtube.com/watch?v=Twnzp-LEMkU) / [Slides (in Japanese)](https://docs.google.com/presentation/d/1J-QDpm27eGzHi0vsPEqZSd5aun-GSWUm-FQC19qjSRA/edit#slide=id.g4775d037d5_0_0)
 
@@ -37,11 +37,11 @@ This extension is built on top of [WebExtensions API](https://developer.mozilla.
 
 ## How to control the emulated devices
 
-By clicking a device in the devtool panel, you can select gizmo mode of the device. By draggin a gizmo, you can rotate or translate the device.
+By clicking a device in the devtool panel, you can select gizmo mode of the device. By dragging a gizmo, you can rotate or translate the device.
 
 ## Configuration
 
-You can congifure some settings from the top in the WebXR tab.
+You can configure some settings from the top in the WebXR tab.
 
 ### Device
 
@@ -68,7 +68,7 @@ WebXR emulator extension also supports AR. You can test WebXR AR application on 
 
 ### How to use
 
-1. [Download and manually intall the newest extension from dev branch](#how-to-install-the-newest-version)
+1. [Download and manually install the newest extension from dev branch](#how-to-install-the-newest-version)
 
 2. Select "Samsung Galaxy S8+ (AR)" device from the device list on the top of WebXR devtool panel
 
