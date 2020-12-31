@@ -20,6 +20,6 @@
   "dependencies": {
     "gl-matrix": "^3.1.0",
     "three": "^0.111.0",
-    "webxr-polyfill": "https://github.com/takahirox/webxr-polyfill.git#XRSystem"
+    "webxr-polyfill": "^2.0.3"
   }
 }
