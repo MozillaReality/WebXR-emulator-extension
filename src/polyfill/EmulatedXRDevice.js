@@ -1,7 +1,9 @@
 import XRDevice from 'webxr-polyfill/src/devices/XRDevice';
 import XRInputSource from 'webxr-polyfill/src/api/XRInputSource';
 import XRTransientInputHitTestSource from './api/XRTransientInputHitTestSource';
+import XRHand from './api/XRHand';
 import {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
+import {PRIVATE as XRJOINT_SPACE_PRIVATE} from './api/XRJointSpace';
 import GamepadXRInputSource from 'webxr-polyfill/src/devices/GamepadXRInputSource';
 import {
   vec3,
@@ -57,6 +59,12 @@ export default class EmulatedXRDevice extends XRDevice {
     // controllers
     this.gamepads = [];
     this.gamepadInputSources = [];
+
+    // hand controllers
+    this.handGamepads = [];
+    this.handGamepadInputSources = [];
+    this.hasHandControllers = false;
+    this.useHandControllers = false;
 
     // other configurations
     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
@@ -433,7 +441,9 @@ export default class EmulatedXRDevice extends XRDevice {
 
   getInputSources() {
     const inputSources = [];
-    for (const inputSourceImpl of this.gamepadInputSources) {
+    const imputSourceImpls = this.hasHandControllers && this.useHandControllers
+      ? this.handGamepadInputSources : this.gamepadInputSources;
+    for (const inputSourceImpl of imputSourceImpls) {
       if (inputSourceImpl.active) {
         inputSources.push(inputSourceImpl.inputSource);
       }
@@ -733,6 +743,19 @@ export default class EmulatedXRDevice extends XRDevice {
     }
   }
 
+  _updateHandPose(matrixArray, handIndex, jointIndex) {
+    if (!this.hasHandControllers ||
+      handIndex >= this.handGamepadInputSources.length ||
+      jointIndex >= this.handGamepadInputSources[handIndex].inputSource.hand.length) {
+      return;
+	}
+    const m = mat4.create();
+    for (let i = 0; i < 16; i++) {
+      m[i] = matrixArray[i];
+    }
+    this.handGamepadInputSources[handIndex].inputSource.hand[jointIndex]._baseMatrix = m;
+  }
+
   _updateInputButtonPressed(pressed, controllerIndex, buttonIndex) {
     if (controllerIndex >= this.gamepads.length) { return; }
     const gamepad = this.gamepads[controllerIndex];
@@ -750,9 +773,13 @@ export default class EmulatedXRDevice extends XRDevice {
 
   _initializeControllers(config) {
     const hasController = config.controllers !== undefined;
+    this.hasHandControllers = this.features.includes('hand-tracking');
+    this.useHandControllers = this.hasHandControllers; // @TODO: implement properly
     const controllerNum = hasController ? config.controllers.length : 0;
     this.gamepads.length = 0;
     this.gamepadInputSources.length = 0;
+    this.handGamepads.length = 0;
+    this.handGamepadInputSources.length = 0;
     for (let i = 0; i < controllerNum; i++) {
       const controller = config.controllers[i];
       const id = controller.id || '';
@@ -764,7 +791,16 @@ export default class EmulatedXRDevice extends XRDevice {
       // @TODO: targetRayMode should be screen for right controller(pointer) in AR
       const imputSourceImpl = new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex);
       imputSourceImpl.active = !this.arDevice; // Override property for transient imput
+      imputSourceImpl.inputSource.hand = null;
       this.gamepadInputSources.push(imputSourceImpl);
+
+      if (this.hasHandControllers) {
+        this.handGamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', 0, true));
+        const imputSourceImpl = new GamepadXRInputSource(this, {}, 0, -1);
+        imputSourceImpl.active = true;
+        imputSourceImpl.inputSource.hand = new XRHand(imputSourceImpl);
+        this.handGamepadInputSources.push(imputSourceImpl);
+      }
     }
   }
 
@@ -876,6 +912,25 @@ export default class EmulatedXRDevice extends XRDevice {
     window.addEventListener('webxr-virtual-room-response', event => {
       const virtualRoomAssetBuffer = event.detail.buffer;
       this.arScene.loadVirtualRoomAsset(virtualRoomAssetBuffer);
+    });
+
+    window.addEventListener('webxr-hand-pose', event => {
+      const poses = event.detail.poses;
+      for (const key in poses) {
+        const pose = poses[key];
+        const m = mat4.identity(mat4.create());
+        // 3D position data are packed in pose
+        for (let i = 0; i < 25; i++) {
+          mat4.identity(m);
+          m[12] = pose[i * 3 + 0];
+          m[13] = pose[i * 3 + 1];
+          m[14] = pose[i * 3 + 2];
+          // @TODO: Write comment
+          mat4.multiply(m, m, this.matrix);
+          // @TODO: Proper Hand select
+          this._updateHandPose(m, key === 'right' ? 0 : 1, i);
+        }
+      }
     });
   }
 };

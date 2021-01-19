@@ -45,6 +45,23 @@ port.onMessage.addListener(message => {
     case 'device-leave-immersive':
       states.inImmersive = false;
       break;
+    case 'webcam-connected':
+      const connected = !!message.connected;
+      if (connected) {
+        webCamState = WEBCAM_STATES.CONNECTED;
+      } else {
+        webCamState = WEBCAM_STATES.DISCONNECTED;
+        chrome.runtime.openOptionsPage();
+      }
+      document.getElementById('webcamButton').style.display = connected ? 'none' : 'flex';
+      break;
+    case 'hand-pose':
+      // @TODO: Update hand model
+      postMessage({
+        action: 'webxr-hand-pose',
+        poses: message.poses
+      });
+      break;
   }
 });
 
@@ -201,6 +218,14 @@ defaultTransforms[DEVICE.TABLET] = {
   position: new THREE.Vector3(0.0, 1.6, -0.2),
   rotation: new THREE.Euler(0, 0, 0)
 };
+
+// WebCam status
+const WEBCAM_STATES = {
+  UNKNOWN: 0,
+  CONNECTED: 1,
+  DISCONNECTED: 2
+};
+let webCamState = WEBCAM_STATES.UNKNOWN;
 
 // initialize Three.js objects
 
@@ -755,6 +780,12 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
   updateControllerPropertyComponent(DEVICE.LEFT_CONTROLLER);
   notifyPoses();
   render();
+}, false);
+
+document.getElementById('webcamButton').addEventListener('click', event => {
+  if (webCamState !== WEBCAM_STATES.CONNECTED) {
+    postMessage({action: 'webcam-connection-request'});
+  }
 }, false);
 
 document.getElementById('exitButton').addEventListener('click', event => {

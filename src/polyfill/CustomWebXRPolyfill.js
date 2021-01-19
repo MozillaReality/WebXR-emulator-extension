@@ -3,6 +3,7 @@ import XRSystem from 'webxr-polyfill/src/api/XRSystem';
 import XRSession, {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
 import XRFrame from 'webxr-polyfill/src/api/XRFrame';
 import XRRigidTransform from 'webxr-polyfill/src/api/XRRigidTransform';
+import XRJointPose from './api/XRJointPose';
 import XRHitTestSource from './api/XRHitTestSource';
 import XRHitTestResult from './api/XRHitTestResult';
 import XRTransientInputHitTestSource from './api/XRTransientInputHitTestSource';
@@ -97,6 +98,25 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
       }
       const inputSource = device.getInputSources()[0];
       return [new XRTransientInputHitTestResult(this, results, inputSource)];
+    };
+
+    // Extending XRFrame for XR Hand input
+
+    XRFrame.prototype.getJointPose = function (jointSpace, baseSpace) {
+      if (!jointSpace._baseMatrix || !jointSpace._inverseBaseMatrix ||
+        !baseSpace._baseMatrix || !baseSpace._inverseBaseMatrix) { return null; }
+      const transform = baseSpace._getSpaceRelativeTransform(jointSpace);
+      return transform ? new XRJointPose(transform, false) : null;
+    };
+
+    XRFrame.prototype.fillJointRadii = function (jointSpaces, radii) {
+      // @TODO: Implement
+      throw new Error('XRFrame.fillJointRadii is not imlemented yet.');
+    };
+
+    XRFrame.prototype.fillPoses = function (spaces, baseSpace, transforms) {
+      // @TODO: Implement
+      throw new Error('XRFrame.fillPoses is not imlemented yet.');
     };
 
     //

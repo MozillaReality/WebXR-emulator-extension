@@ -49,6 +49,13 @@ port.onMessage.addListener(message => {
     case 'webxr-exit-immersive':
       dispatchCustomEvent('webxr-exit-immersive', {});
       break;
+
+    case 'webxr-hand-pose':
+      dispatchCustomEvent('webxr-hand-pose', {
+        hands: message.hands,
+        poses: message.poses
+      });
+      break;
   }
 });
 

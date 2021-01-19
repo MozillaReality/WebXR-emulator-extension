@@ -84,6 +84,9 @@
         "inline",
         "immersive-vr"
       ],
+      "features": [
+        "hand-tracking"
+      ],
       "headset": {
         "hasPosition": true,
         "hasRotation": true

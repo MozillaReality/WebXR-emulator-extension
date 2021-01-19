@@ -13,7 +13,11 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "scripts": ["src/extension/background.js"]
+    "scripts": [
+      "src/extension/node_modules/@mediapipe/hands/hands.js",
+      "src/extension/mediapipe/helper.js",
+      "src/extension/background.js"
+    ]
   },
   "permissions": [
     "file://*/*",
@@ -35,6 +39,10 @@
     "run_at": "document_start",
     "all_frames": true
   }],
+  "options_ui": {
+    "page": "src/extension/options.html",
+    "open_in_tab": true
+  },
   "browser_action": {
     "default_icon": {
       "16": "icons/icon16.png",
@@ -45,6 +53,7 @@
     "default_popup": "src/extension/popup.html"
   },
   "manifest_version": 2,
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self';",
   "web_accessible_resources": [
     "src/devices.json",
     "assets/hall_empty.glb"
