@@ -1,4 +1,5 @@
 import WebXRPolyfill from 'webxr-polyfill/src/WebXRPolyfill';
+import {XR_COMPATIBLE} from 'webxr-polyfill/src/constants';
 import XRSystem from 'webxr-polyfill/src/api/XRSystem';
 import XRSession, {PRIVATE as XRSESSION_PRIVATE} from 'webxr-polyfill/src/api/XRSession';
 import XRFrame from 'webxr-polyfill/src/api/XRFrame';
@@ -206,10 +207,30 @@ const overrideAPI = global => {
     global[className] = API[className];
   }
   installEX_API(global);
+
+  // Since (desktop) Chrome 88 WebGL(2)RenderingContext.makeXRCompatible() seems
+  // to start to reject if no immersive XR device is plugged in.
+  // So we need to override them, too. Otherwise JS engines/apps including
+  // "await context.makeXRCompatible();" won't work with the extension.
+  // See https://github.com/MozillaReality/WebXR-emulator-extension/issues/266
+  if (typeof WebGLRenderingContext !== 'undefined') {
+    overrideMakeXRCompatible(WebGLRenderingContext);
+  }
+  if (typeof WebGL2RenderingContext !== 'undefined') {
+    overrideMakeXRCompatible(WebGL2RenderingContext);
+  }
 };
 
 const installEX_API = global => {
   for (const className in EX_API) {
     global[className] = EX_API[className];
   }
+};
+
+const overrideMakeXRCompatible = Context => {
+  Context.prototype.makeXRCompatible = function () {
+    this[XR_COMPATIBLE] = true;
+    // This is all fake, so just resolve immediately.
+    return Promise.resolve();
+  };
 };
