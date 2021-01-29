@@ -24,6 +24,7 @@
 
       label {
         cursor: pointer;
+        margin-right: 5px;
       }
 
       input[type=checkbox] {
@@ -98,6 +99,12 @@
         background-color: #e8e8e8;
       }
 
+      button:disabled {
+        background-color: #eeeeee;
+        border-color: #cccccc;
+        color: #cccccc;
+      }
+
       button.pressed {
         background-color: #0074e8;
         border-color: #fff;
@@ -148,13 +155,15 @@
       <div class="title-bar">
         <select id="deviceSelect"></select>
         <label id="stereoEffectLabel"><input id="stereoCheckbox" type="checkbox" checked>Stereo effect</label>
+        <label id="handInputLabel"><input id="handInputCheckbox" type="checkbox">Hand input</label>
         <span id="devicePropertiesExpandIcon" class="item-left icon">&#9660;</span>
       </div>
       <div id="renderComponent" class="component main-component"></div>
       <div class="title-bar border-top">
         <button id="resetPoseButton">Reset pose</button>
         <button id="exitButton">Exit immersive</button>
-        <button id="webcamButton">WebCam Start</button>
+        <button id="webcamButton" disabled>Start WebCam</button>
+        <button id="pipButton" disabled>Start PIP</button>
       </div>
     </div>
     <div id="devicePropertiesComponent" class="component device-properties-component">

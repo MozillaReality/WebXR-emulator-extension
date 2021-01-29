@@ -1,7 +1,8 @@
 {
   "default": {
     "deviceKey": "Oculus Go",
-    "stereoEffect": true
+    "stereoEffect": true,
+    "handInput": false
   },
   "devices": {
     "None": {

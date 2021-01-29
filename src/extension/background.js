@@ -16,8 +16,10 @@ chrome.runtime.onConnect.addListener(port => {
 
     // Special path for Web Camera connection request
 
-    if (message.action === 'webcam-connection-request' && port.name === 'panel') {
-      requestWebCamConnection(portMap.panel);
+    if (port.name === 'panel' &&
+      (message.action === 'webcam-request' ||
+      message.action === 'pip-request')) {
+      handleWebCamOrPip(message);
       return;
     }
 
@@ -34,22 +36,42 @@ chrome.runtime.onConnect.addListener(port => {
       }
     }
   });
+
+  // Notify the WebCam and PIP status to the panel
+  // when it opens.
+  if (port.name === 'panel') {
+    notifyWebCamAndPipStatus(port);
+  }
 });
 
-const debugHelper = new MediaPipeDebugHelper();
-const mpHelper = new MediaPipeHelper();
-mpHelper.addOnFrameListener((poses, results) => {
-  if (poses.left || poses.right) {
-    for (const key in connections) {
-      const port = connections[key];
-      if (!port.panel) { continue; }
-      port.panel.postMessage({
-        action: 'hand-pose',
-        poses: poses
-      });
+const postMessageToAllPanels = message => {
+  for (const key in connections) {
+    const port = connections[key];
+    if (port.panel) {
+      port.panel.postMessage(message);
     }
   }
+};
+
+// For Hand input support with MediaPipe
+
+const doHorizontallyFlip = true;
+const debugHelper = new MediaPipeDebugHelper(doHorizontallyFlip);
+const mpHelper = new MediaPipeHelper(doHorizontallyFlip);
+mpHelper.addOnFrameListener((poses, results) => {
+  if (poses.left || poses.right) {
+    postMessageToAllPanels({
+      action: 'hand-pose',
+      poses: poses
+    });
+  }
   debugHelper.update(results);
+});
+debugHelper.addOnLeaveListener(() => {
+  postMessageToAllPanels({
+    action: 'pip-status',
+    active: false
+  });
 });
 
 const webCamHelper = new WebCamHelper();
@@ -57,19 +79,97 @@ webCamHelper.addOnFrameListener(video => {
   return mpHelper.send(video);
 });
 
-const requestWebCamConnection = async panel => {
-  if (await webCamHelper.requestConnection()) {
-    panel.postMessage({
-      action: 'webcam-connected',
-      connected: true
-    });
-    await debugHelper.init();
-    return true;
-  } else {
-    panel.postMessage({
-      action: 'webcam-connected',
-      connected: false
-    });
-    return false;
-  };
+const notifyWebCamAndPipStatus = port => {
+  port.postMessage({
+    action: 'webcam-status',
+    active: !webCamHelper.paused
+  });
+  port.postMessage({
+    action: 'pip-status',
+    active: !debugHelper.paused
+  });
+};
+
+const handleWebCamOrPip = message => {
+  if (message.action === 'webcam-request') {
+    if (message.activate) {
+      startWebCam();
+    } else {
+      stopWebCam();
+    }
+    return;
+  }
+  if (message.action === 'pip-request') {
+    if (message.activate) {
+      requestPictureInPicture();
+    } else {
+      stopPictureInPicture();
+    }
+    return;
+  }
+};
+
+const startWebCam = async () => {
+  if (!webCamHelper.initialized) {
+    if (!(await webCamHelper.init())) {
+      chrome.runtime.openOptionsPage();
+      postMessageToAllPanels({
+        action: 'webcam-status',
+        active: false
+      });
+      return false;
+    }
+    mpHelper.init();
+  }
+  const succeeded = await webCamHelper.play();
+  postMessageToAllPanels({
+    action: 'webcam-status',
+    active: succeeded
+  });
+  return succeeded;
+};
+
+const stopWebCam = async () => {
+  const paused = await webCamHelper.pause();
+  postMessageToAllPanels({
+    action: 'webcam-status',
+    active: !paused
+  });
+  if (!debugHelper.paused) {
+    // @TODO: Error handling
+    if (await debugHelper.pause()) {
+      postMessageToAllPanels({
+        action: 'pip-status',
+        active: false
+      });
+    }
+  }
+  return paused;
+};
+
+const requestPictureInPicture = async () => {
+  if (!debugHelper.initialized) {
+    if (!(await debugHelper.init())) {
+      postMessageToAllPanels({
+        action: 'pip-status',
+        active: false
+      });
+      return false;
+    }
+  }
+  const succeeded = await debugHelper.play();
+  postMessageToAllPanels({
+    action: 'pip-status',
+    active: succeeded
+  });
+  return succeeded;
+};
+
+const stopPictureInPicture = async () => {
+  const paused = await debugHelper.pause();
+  postMessageToAllPanels({
+    action: 'pip-status',
+    active: !paused
+  });
+  return paused;
 };

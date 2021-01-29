@@ -189,7 +189,10 @@ const requestXRDevice = async (global, config) => {
       resolve(new EmulatedXRDevice(global,
         Object.assign({},
           event.detail.deviceDefinition,
-          {stereoEffect: event.detail.stereoEffect}
+          {
+             stereoEffect: event.detail.stereoEffect,
+             handInput: event.detail.handInput
+          }
         )));
     };
     window.addEventListener('webxr-device-init', callback, false);

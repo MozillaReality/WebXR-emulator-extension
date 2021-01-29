@@ -46,6 +46,12 @@ port.onMessage.addListener(message => {
       });
       break;
 
+    case 'webxr-hand-input':
+      dispatchCustomEvent('webxr-hand-input', {
+        enabled: message.enabled
+      });
+      break;
+
     case 'webxr-exit-immersive':
       dispatchCustomEvent('webxr-exit-immersive', {});
       break;
@@ -135,7 +141,8 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     // send the configuration parameters to the polyfill as an event
     dispatchCustomEvent('webxr-device-init', {
       deviceDefinition: manager.deviceDefinition,
-      stereoEffect: manager.stereoEffect
+      stereoEffect: manager.stereoEffect,
+      handInput: manager.handInput
     });
     port.postMessage({
       action: 'webxr-startup'

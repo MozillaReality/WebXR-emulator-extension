@@ -5,6 +5,7 @@ class ConfigurationManager {
     this._deviceDefinitions = deviceDefinitions;
     this._deviceKey = this.defaultDeviceKey;
     this._stereoEffect = this.defaultStereoEffect;
+    this._handInput = this.defaultHandInput;
     this._storageKey = 'webxr-extension';
   }
 
@@ -33,6 +34,10 @@ class ConfigurationManager {
     return this._stereoEffect;
   }
 
+  get handInput() {
+    return this._handInput;
+  }
+
   get defaultDeviceKey() {
     // @TODO: throw error if .default.deviceKey is undefined?
     return this._deviceDefinitions.default.deviceKey;
@@ -41,6 +46,11 @@ class ConfigurationManager {
   get defaultStereoEffect() {
     // @TODO: throw error if .default.stereoEffect is undefined?
     return this._deviceDefinitions.default.stereoEffect;
+  }
+
+  get defaultHandInput() {
+    // @TODO: throw error if .default.handInput is undefined?
+    return this._deviceDefinitions.default.handInput;
   }
 
   get devices() {
@@ -52,7 +62,8 @@ class ConfigurationManager {
   serialize() {
     return JSON.stringify({
       deviceKey: this.deviceKey,
-      stereoEffect: this.stereoEffect
+      stereoEffect: this.stereoEffect,
+      handInput: this.handInput
     });
   }
 
@@ -63,9 +74,12 @@ class ConfigurationManager {
       ? json.deviceKey : this.defaultDeviceKey;
     const stereoEffect = json.stereoEffect !== undefined
       ? json.stereoEffect : this.defaultStereoEffect;
+    const handInput = json.handInput !== undefined
+      ? json.handInput : this.defaultHandInput;
 
     this.updateDeviceKey(deviceKey);
     this.updateStereoEffect(stereoEffect);
+    this.updateHandInput(handInput);
   }
 
   updateDeviceKey(key) {
@@ -83,6 +97,14 @@ class ConfigurationManager {
   updateStereoEffect(enabled) {
     if (this._stereoEffect !== enabled) {
       this._stereoEffect = enabled;
+      return true;
+    }
+    return false;
+  }
+
+  updateHandInput(enabled) {
+    if (this._handInput !== enabled) {
+      this._handInput = enabled;
       return true;
     }
     return false;

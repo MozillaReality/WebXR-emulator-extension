@@ -45,15 +45,25 @@ port.onMessage.addListener(message => {
     case 'device-leave-immersive':
       states.inImmersive = false;
       break;
-    case 'webcam-connected':
-      const connected = !!message.connected;
-      if (connected) {
-        webCamState = WEBCAM_STATES.CONNECTED;
-      } else {
-        webCamState = WEBCAM_STATES.DISCONNECTED;
-        chrome.runtime.openOptionsPage();
+    case 'webcam-status':
+      {
+	    const active = !!message.active;
+        const webcamButton = document.getElementById('webcamButton');
+        const pipButton = document.getElementById('pipButton');
+        webcamButton.disabled = false;
+        webcamButton.innerText = active ? 'Stop WebCam' : 'Start WebCam';
+        pipButton.style.display = active ? '' : 'none';
+        webcamState = active ? WEBCAM_STATE.ACTIVE : WEBCAM_STATE.DISACTIVE;
       }
-      document.getElementById('webcamButton').style.display = connected ? 'none' : 'flex';
+      break;
+    case 'pip-status':
+      {
+        const active = !!message.active;
+        const pipButton = document.getElementById('pipButton');
+        pipButton.disabled = false;
+        pipButton.innerText = active ? 'Stop PIP' : 'Start PIP';
+        pipState = active ? PIP_STATE.ACTIVE : PIP_STATE.DISACTIVE;
+      }
       break;
     case 'hand-pose':
       // @TODO: Update hand model
@@ -108,6 +118,13 @@ const notifyDeviceChange = (deviceDefinition) => {
 const notifyStereoEffectChange = (enabled) => {
   postMessage({
     action: 'webxr-stereo-effect',
+    enabled: enabled
+  });
+};
+
+const notifyHandInputChange = (enabled) => {
+  postMessage({
+    action: 'webxr-hand-input',
     enabled: enabled
   });
 };
@@ -219,13 +236,19 @@ defaultTransforms[DEVICE.TABLET] = {
   rotation: new THREE.Euler(0, 0, 0)
 };
 
-// WebCam status
-const WEBCAM_STATES = {
-  UNKNOWN: 0,
-  CONNECTED: 1,
-  DISCONNECTED: 2
+const WEBCAM_STATE = {
+  DISACTIVE: 0,
+  ACTIVE: 1
 };
-let webCamState = WEBCAM_STATES.UNKNOWN;
+
+let webcamState = WEBCAM_STATE.DISACTIVE;
+
+const PIP_STATE = {
+  DISACTIVE: 0,
+  ACTIVE: 1
+};
+
+let pipState = PIP_STATE.DISACTIVE;
 
 // initialize Three.js objects
 
@@ -472,6 +495,7 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = false;
   document.getElementById('stereoEffectLabel').style.display = 'none';
+  document.getElementById('handInputLabel').style.display = 'none';
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
@@ -489,6 +513,7 @@ const updateAssetNodes = (deviceDefinition) => {
   // secondly load new assets and enable necessary panel controls
 
   const hasImmersiveVR = deviceDefinition.modes && !! deviceDefinition.modes.includes('immersive-vr');
+  const hasHandInput = deviceDefinition.features && !! deviceDefinition.features.includes('hand-tracking');
   const hasHeadset = !! deviceDefinition.headset;
   const hasRightController = deviceDefinition.controllers && deviceDefinition.controllers.length > 0;
   const hasLeftController = deviceDefinition.controllers && deviceDefinition.controllers.length > 1;
@@ -504,6 +529,10 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasImmersiveVR) {
     document.getElementById('stereoEffectLabel').style.display = '';
+  }
+
+  if (hasHandInput) {
+    document.getElementById('handInputLabel').style.display = '';
   }
 
   if (hasHeadset) {
@@ -783,9 +812,19 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
 }, false);
 
 document.getElementById('webcamButton').addEventListener('click', event => {
-  if (webCamState !== WEBCAM_STATES.CONNECTED) {
-    postMessage({action: 'webcam-connection-request'});
-  }
+  event.target.disabled = true;
+  postMessage({
+    action: 'webcam-request',
+    activate: webcamState === WEBCAM_STATE.DISACTIVE
+  });
+}, false);
+
+document.getElementById('pipButton').addEventListener('click', event => {
+  event.target.disabled = true;
+  postMessage({
+    action: 'pip-request',
+    activate: pipState === PIP_STATE.DISACTIVE
+  });
 }, false);
 
 document.getElementById('exitButton').addEventListener('click', event => {
@@ -811,6 +850,7 @@ for (const field of document.getElementsByClassName('value')) {
 ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   const deviceSelect = document.getElementById('deviceSelect');
   const stereoCheckbox = document.getElementById('stereoCheckbox');
+  const handInputCheckbox = document.getElementById('handInputCheckbox');
 
   // set up devices select element
 
@@ -842,11 +882,13 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   const onChange = () => {
     const deviceKey = deviceSelect.children[deviceSelect.selectedIndex].value;
     const stereoEffect = stereoCheckbox.checked;
+    const handInput = handInputCheckbox.checked;
 
     const deviceKeyIsUpdated = manager.updateDeviceKey(deviceKey);
     const stereoEffectIsUpdated = manager.updateStereoEffect(stereoEffect);
+    const handInputIsUpdated = manager.updateHandInput(handInput);
 
-    if (deviceKeyIsUpdated || stereoEffectIsUpdated) {
+    if (deviceKeyIsUpdated || stereoEffectIsUpdated || handInputIsUpdated) {
       manager.storeToStorage().then(storedValues => {
         // console.log(storedValues);
       });
@@ -860,16 +902,22 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     if (stereoEffectIsUpdated) {
       notifyStereoEffectChange(stereoEffect);
     }
+
+    if (handInputIsUpdated) {
+      notifyHandInputChange(handInput);
+    }
   };
 
   deviceSelect.addEventListener('change', onChange);
   stereoCheckbox.addEventListener('change', onChange);
+  handInputCheckbox.addEventListener('change', onChange);
 
   // load configuration and then load assets
 
   manager.loadFromStorage().then(result => {
     const deviceKey = manager.deviceKey;
     const stereoEffect = manager.stereoEffect;
+    const handInput = manager.handInput;
 
     for (let index = 0; index < deviceSelect.children.length; index++) {
       const option = deviceSelect.children[index];
@@ -880,6 +928,7 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     }
 
     stereoCheckbox.checked = stereoEffect;
+    handInputCheckbox.checked = handInput;
     updateAssetNodes(manager.deviceDefinition);
   });
 }).catch(error => {
