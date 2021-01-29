@@ -25,7 +25,7 @@ export default class CustomWebXRPolyfill extends WebXRPolyfill {
 
     let activeImmersiveSession = null;
     const originalRequestSession = XRSystem.prototype.requestSession;
-    XRSystem.prototype.requestSession = function(mode, enabledFeatures) {
+    XRSystem.prototype.requestSession = function(mode, enabledFeatures = {}) {
       return originalRequestSession.call(this, mode, enabledFeatures).then(session => {
         if (mode === 'immersive-vr' || mode === 'immersive-ar') {
           activeImmersiveSession = session;
