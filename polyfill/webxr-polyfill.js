@@ -5937,6 +5937,13 @@ host this content on a secure origin for the best user experience.
                   }
                 }
 
+                class XRJointPose extends XRPose$1 {
+                  constructor(transform, emulatedPosition) {
+                    super(transform, emulatedPosition);
+                    this.radius = 0.01;
+                  }
+                }
+
                 var EPSILON$1 = 0.000001;
                 var ARRAY_TYPE$1 = typeof Float32Array !== 'undefined' ? Float32Array : Array;
                 if (!Math.hypot) Math.hypot = function () {
@@ -6986,7 +6993,80 @@ host this content on a secure origin for the best user experience.
                   }
                 }
 
+                const PRIVATE$o = Symbol('@@webxr-polyfill/XRJointSpace');
+                class XRJointSpace extends XRSpace {
+                  constructor(joint, specialType, inputSource) {
+                    super(specialType, inputSource);
+                    this[PRIVATE$o] = {
+                      jointName: joint.name,
+                      hand: joint.hand,
+                      joint: joint
+                    };
+                  }
+                  get jointName() {
+                    return this[PRIVATE$o].jointName;
+                  }
+                }
+
+                const XRHandJoint = {
+                  'wrist': 0,
+                  'thumb-metacarpal': 1,
+                  'thumb-phalanx-proximal': 2,
+                  'thumb-phalanx-distal': 3,
+                  'thumb-tip': 4,
+                  'index-finger-metacarpal': 5,
+                  'index-finger-phalanx-proximal': 6,
+                  'index-finger-phalanx-intermediate': 7,
+                  'index-finger-phalanx-distal': 8,
+                  'index-finger-tip': 9,
+                  'middle-finger-metacarpal': 10,
+                  'middle-finger-phalanx-proximal': 11,
+                  'middle-finger-phalanx-intermediate': 12,
+                  'middle-finger-phalanx-distal': 13,
+                  'middle-finger-tip': 14,
+                  'ring-finger-metacarpal': 15,
+                  'ring-finger-phalanx-proximal': 16,
+                  'ring-finger-phalanx-intermediate': 17,
+                  'ring-finger-phalanx-distal': 18,
+                  'ring-finger-tip': 19,
+                  'pinky-finger-metacarpal': 20,
+                  'pinky-finger-phalanx-proximal': 21,
+                  'pinky-finger-phalanx-intermediate': 22,
+                  'pinky-finger-phalanx-distal': 23,
+                  'pinky-finger-tip': 24
+                };
+
+                class XRHand {
+                  constructor(inputSource) {
+                    this.size = 25;
+                    this.joints = new Map();
+                    const jointNames = Object.keys(XRHandJoint);
+                    for (const jointName of jointNames) {
+                      const jointSpace = new XRJointSpace({
+                        name: jointName,
+                        hand: this
+                      }, undefined, inputSource);
+                      this.joints.set(jointName, jointSpace);
+                    }
+                  }
+                  get(jointName) {
+                    return this.joints.get(jointName);
+                  }
+                  values() {
+                    return this.joints.values();
+                  }
+                  keys() {
+                    return this.joints.keys();
+                  }
+                  joint(jointIndex) {
+                    throw new Error('XRHand.joint is not implemented yet.');
+                  }
+                }
+
                 var EX_API = {
+                  XRJointPose,
+                  XRJointSpace,
+                  XRHand,
                   XRHitTestResult,
                   XRHitTestSource,
                   XRTransientInputHitTestResult,
@@ -36461,6 +36541,10 @@ host this content on a secure origin for the best user experience.
                     this.rightViewMatrix = create$6();
                     this.gamepads = [];
                     this.gamepadInputSources = [];
+                    this.handInputEnabled = config.handInput !== undefined ? config.handInput : false;
+                    this.handGamepads = [];
+                    this.handGamepadInputSources = [];
+                    this.hasHandControllers = false;
                     this.stereoEffectEnabled = config.stereoEffect !== undefined ? config.stereoEffect : true;
                     this.div = document.createElement('div');
                     this.div.style.position = 'absolute';
@@ -36758,7 +36842,9 @@ host this content on a secure origin for the best user experience.
                   }
                   getInputSources() {
                     const inputSources = [];
-                    for (const inputSourceImpl of this.gamepadInputSources) {
+                    const inputSourceImpls = this.hasHandControllers && this.handInputEnabled
+                      ? this.handGamepadInputSources : this.gamepadInputSources;
+                    for (const inputSourceImpl of inputSourceImpls) {
                       if (inputSourceImpl.active) {
                         inputSources.push(inputSourceImpl.inputSource);
                       }
@@ -36953,6 +37039,9 @@ host this content on a secure origin for the best user experience.
                   _updateStereoEffect(enabled) {
                     this.stereoEffectEnabled = enabled;
                   }
+                  _updateHandInput(enabled) {
+                    this.handInputEnabled = enabled;
+                  }
                   _updatePose(positionArray, quaternionArray) {
                     for (let i = 0; i < 3; i++) {
                       this.position[i] = positionArray[i];
@@ -36972,6 +37061,18 @@ host this content on a secure origin for the best user experience.
                       pose.orientation[i] = quaternionArray[i];
                     }
                   }
+                  _updateHandPose(matrixArray, handIndex, jointName) {
+                    if (!this.hasHandControllers ||
+                      handIndex >= this.handGamepadInputSources.length ||
+                      !XRHandJoint[jointName]) {
+                      return;
+                	}
+                    const m = create$6();
+                    for (let i = 0; i < 16; i++) {
+                      m[i] = matrixArray[i];
+                    }
+                    this.handGamepadInputSources[handIndex].inputSource.hand.get(jointName)._baseMatrix = m;
+                  }
                   _updateInputButtonPressed(pressed, controllerIndex, buttonIndex) {
                     if (controllerIndex >= this.gamepads.length) { return; }
                     const gamepad = this.gamepads[controllerIndex];
@@ -36987,9 +37088,12 @@ host this content on a secure origin for the best user experience.
                   }
                   _initializeControllers(config) {
                     const hasController = config.controllers !== undefined;
+                    this.hasHandControllers = this.features.includes('hand-tracking');
                     const controllerNum = hasController ? config.controllers.length : 0;
                     this.gamepads.length = 0;
                     this.gamepadInputSources.length = 0;
+                    this.handGamepads.length = 0;
+                    this.handGamepadInputSources.length = 0;
                     for (let i = 0; i < controllerNum; i++) {
                       const controller = config.controllers[i];
                       const id = controller.id || '';
@@ -36998,9 +37102,18 @@ host this content on a secure origin for the best user experience.
                       const primaryButtonIndex = controller.primaryButtonIndex !== undefined ? controller.primaryButtonIndex : 0;
                       const primarySqueezeButtonIndex = controller.primarySqueezeButtonIndex !== undefined ? controller.primarySqueezeButtonIndex : -1;
                       this.gamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', buttonNum, hasPosition));
-                      const imputSourceImpl = new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex);
-                      imputSourceImpl.active = !this.arDevice;
-                      this.gamepadInputSources.push(imputSourceImpl);
+                      const inputSourceImpl = new GamepadXRInputSource(this, {}, primaryButtonIndex, primarySqueezeButtonIndex);
+                      inputSourceImpl.active = !this.arDevice;
+                      inputSourceImpl.inputSource.hand = null;
+                      this.gamepadInputSources.push(inputSourceImpl);
+                      if (this.hasHandControllers) {
+                        this.handGamepads.push(createGamepad(id, i === 0 ? 'right' : 'left', buttonNum, true));
+                        const inputSourceImpl = new GamepadXRInputSource(this, {}, 0, -1);
+                        inputSourceImpl.active = true;
+                        inputSourceImpl.inputSource.hand = new XRHand(inputSourceImpl);
+                        this.handGamepadInputSources.push(inputSourceImpl);
+                        inputSourceImpl.updateFromGamepad(this.handGamepads[i]);
+                      }
                     }
                   }
                   _setupEventListeners() {
@@ -37088,9 +37201,28 @@ host this content on a secure origin for the best user experience.
                     window.addEventListener('webxr-stereo-effect', event => {
                       this._updateStereoEffect(event.detail.enabled);
                     });
+                    window.addEventListener('webxr-hand-input', event => {
+                      this._updateHandInput(event.detail.enabled);
+                    });
                     window.addEventListener('webxr-virtual-room-response', event => {
                       const virtualRoomAssetBuffer = event.detail.buffer;
                       this.arScene.loadVirtualRoomAsset(virtualRoomAssetBuffer);
+                    });
+                    window.addEventListener('webxr-hand-pose', event => {
+                      const poses = event.detail.poses;
+                      const jointNames = Object.keys(XRHandJoint);
+                      for (const key in poses) {
+                        const pose = poses[key];
+                        const m = identity$1(create$6());
+                        for (let i = 0; i < 25; i++) {
+                          identity$1(m);
+                          m[12] = pose[i * 3 + 0];
+                          m[13] = pose[i * 3 + 1];
+                          m[14] = pose[i * 3 + 2];
+                          multiply$2(m, this.matrix, m);
+                          this._updateHandPose(m, key === 'right' ? 0 : 1, jointNames[i]);
+                        }
+                      }
                     });
                   }
                 }let SESSION_ID$2 = 0;
@@ -37205,6 +37337,18 @@ host this content on a secure origin for the best user experience.
                       const inputSource = device.getInputSources()[0];
                       return [new XRTransientInputHitTestResult(this, results, inputSource)];
                     };
+                    XRFrame.prototype.getJointPose = function (jointSpace, baseSpace) {
+                      if (!jointSpace._baseMatrix || !jointSpace._inverseBaseMatrix ||
+                        !baseSpace._baseMatrix || !baseSpace._inverseBaseMatrix) { return null; }
+                      const transform = baseSpace._getSpaceRelativeTransform(jointSpace);
+                      return transform ? new XRJointPose(transform, false) : null;
+                    };
+                    XRFrame.prototype.fillJointRadii = function (jointSpaces, radii) {
+                      throw new Error('XRFrame.fillJointRadii is not imlemented yet.');
+                    };
+                    XRFrame.prototype.fillPoses = function (spaces, baseSpace, transforms) {
+                      throw new Error('XRFrame.fillPoses is not imlemented yet.');
+                    };
                     if (this.nativeWebXR) {
                       overrideAPI(this.global);
                       this.injected = true;
@@ -37259,7 +37403,10 @@ host this content on a secure origin for the best user experience.
                       resolve(new EmulatedXRDevice(global,
                         Object.assign({},
                           event.detail.deviceDefinition,
-                          {stereoEffect: event.detail.stereoEffect}
+                          {
+                             stereoEffect: event.detail.stereoEffect,
+                             handInput: event.detail.handInput
+                          }
                         )));
                     };
                     window.addEventListener('webxr-device-init', callback, false);

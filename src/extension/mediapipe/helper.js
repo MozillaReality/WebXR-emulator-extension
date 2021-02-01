@@ -347,7 +347,7 @@ class MediaPipeDebugHelper extends VideoPlayer {
       return Promise.resolve(false);
     }
 
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
       const onEnterPictureInPicture = () => {
         removeEventListeners();
         resolve(true);
@@ -364,7 +364,7 @@ class MediaPipeDebugHelper extends VideoPlayer {
       this.video.addEventListener('enterpictureinpicture', onEnterPictureInPicture);
       this.video.addEventListener('error', onError);
 
-      const onLeavePictureInPicture = () =>{
+      const onLeavePictureInPicture = () => {
         super.pause();
         this.video.removeEventListener('leavepictureinpicture', onLeavePictureInPicture);
         for (const callback of this.onLeaveCallbacks) {
@@ -373,7 +373,11 @@ class MediaPipeDebugHelper extends VideoPlayer {
       };
       this.video.addEventListener('leavepictureinpicture', onLeavePictureInPicture);
 
-      this.video.requestPictureInPicture();
+      try {
+        await this.video.requestPictureInPicture();
+      } catch (error) {
+        onError(error);
+      }
     });
   }
 
@@ -382,7 +386,7 @@ class MediaPipeDebugHelper extends VideoPlayer {
       return Promise.resolve(false);
     }
 
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
       const onLeavePictureInPicture = () => {
         removeEventListeners();
         resolve(true);
@@ -398,7 +402,12 @@ class MediaPipeDebugHelper extends VideoPlayer {
       };
       this.video.addEventListener('leavepictureinpicture', onLeavePictureInPicture);
       this.video.addEventListener('error', onError);
-      document.exitPictureInPicture();
+
+      try {
+        document.exitPictureInPicture();
+      } catch (error) {
+        onError(error);
+      }
     });
   }
 

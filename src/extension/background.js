@@ -1,8 +1,6 @@
 const connections = {};
 
 chrome.runtime.onConnect.addListener(port => {
-  // @TODO: release connection when disconnected
-
   port.onMessage.addListener((message, sender, reply) => {
     const tabId = message.tabId !== undefined ? message.tabId : sender.sender.tab.id;
 
@@ -12,7 +10,15 @@ chrome.runtime.onConnect.addListener(port => {
 
     const portMap = connections[tabId];
 
-    portMap[port.name] = port;
+    if (!portMap[port.name]) {
+      portMap[port.name] = port;
+      port.onDisconnect.addListener(() => {
+        delete portMap[port.name];
+        if (Object.keys(portMap).length === 0) {
+          delete connections[tabId];
+        }
+      });
+    }
 
     // Special path for Web Camera connection request
 
@@ -162,6 +168,12 @@ const requestPictureInPicture = async () => {
     action: 'pip-status',
     active: succeeded
   });
+  if (!succeeded) {
+    // requestPictureInPicture() invoked in MediaPipeDebugHelper.play()
+    // sometimes causes an "needs user gesture to be initiated" exception.
+    // Retry often would work in such the case.
+    window.alert('An error has happened. Press "Start PIP" button again.');
+  }
   return succeeded;
 };
 
