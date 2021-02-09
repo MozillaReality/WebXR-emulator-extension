@@ -10,10 +10,22 @@ chrome.runtime.onConnect.addListener(port => {
 
     const portMap = connections[tabId];
 
+    // Can be multiple content scripts per tab
+    // for example if a web page includes iframe.
+    // So manage ports as an array.
     if (!portMap[port.name]) {
-      portMap[port.name] = port;
+      portMap[port.name] = [];
+    }
+
+    if (!portMap[port.name].includes(port)) {
+      portMap[port.name].push(port);
       port.onDisconnect.addListener(() => {
-        delete portMap[port.name];
+        if (portMap[port.name].includes(port)) {
+          portMap[port.name].splice(portMap[port.name].indexOf(port), 1);
+        }
+        if (portMap[port.name].length === 0) {
+          delete portMap[port.name]
+        }
         if (Object.keys(portMap).length === 0) {
           delete connections[tabId];
         }
@@ -32,14 +44,10 @@ chrome.runtime.onConnect.addListener(port => {
     // transfer message between panel and contentScript of the same tab
 
     if (port.name === 'panel') {
-      if (portMap.contentScript) {
-        portMap.contentScript.postMessage(message);
-      }
+      postMessageToPorts(portMap.contentScript, message);
     }
     if (port.name === 'contentScript') {
-      if (portMap.panel) {
-        portMap.panel.postMessage(message);
-      }
+      postMessageToPorts(portMap.panel, message);
     }
   });
 
@@ -50,12 +58,16 @@ chrome.runtime.onConnect.addListener(port => {
   }
 });
 
+const postMessageToPorts = (ports, message) => {
+  ports && ports.forEach(port => {
+    port.postMessage(message);
+  });
+};
+
 const postMessageToAllPanels = message => {
   for (const key in connections) {
     const port = connections[key];
-    if (port.panel) {
-      port.panel.postMessage(message);
-    }
+    postMessageToPorts(port.panel, message);
   }
 };
 

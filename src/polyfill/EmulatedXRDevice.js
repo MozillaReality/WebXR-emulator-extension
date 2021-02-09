@@ -750,9 +750,9 @@ export default class EmulatedXRDevice extends XRDevice {
   _updateHandPose(matrixArray, handIndex, jointName) {
     if (!this.hasHandControllers ||
       handIndex >= this.handGamepadInputSources.length ||
-      !XRHandJoint[jointName]) {
+      XRHandJoint[jointName] === undefined) {
       return;
-	}
+    }
     const m = mat4.create();
     for (let i = 0; i < 16; i++) {
       m[i] = matrixArray[i];

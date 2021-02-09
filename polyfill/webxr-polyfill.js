@@ -37064,9 +37064,9 @@ host this content on a secure origin for the best user experience.
                   _updateHandPose(matrixArray, handIndex, jointName) {
                     if (!this.hasHandControllers ||
                       handIndex >= this.handGamepadInputSources.length ||
-                      !XRHandJoint[jointName]) {
+                      XRHandJoint[jointName] === undefined) {
                       return;
-                	}
+                    }
                     const m = create$6();
                     for (let i = 0; i < 16; i++) {
                       m[i] = matrixArray[i];

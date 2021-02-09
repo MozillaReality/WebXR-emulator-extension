@@ -126,8 +126,8 @@ class MediaPipeHelper {
   // Easily make up a missing metacarpal landmarks for WebXR Hand input.
   makeUpMissingMetacarpal(wrist, mcp) {
     return {
-      x: (wrist.x * 2 + mcp.x) / 3,
-      y: (wrist.y * 2 + mcp.y) / 3
+      x: (wrist.x + mcp.x) / 2,
+      y: (wrist.y + mcp.y) / 2
     };
   }
 
