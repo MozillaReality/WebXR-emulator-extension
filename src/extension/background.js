@@ -12,19 +12,41 @@ chrome.runtime.onConnect.addListener(port => {
 
     const portMap = connections[tabId];
 
-    portMap[port.name] = port;
+    // Can be multiple content scripts per tab
+    // for example if a web page includes iframe.
+    // So manage ports as an array.
+    if (!portMap[port.name]) {
+      portMap[port.name] = [];
+    }
 
-    // transfer message between panel and contentScript of the same tab
+    if (!portMap[port.name].includes(port)) {
+      portMap[port.name].push(port);
+      port.onDisconnect.addListener(() => {
+        if (portMap[port.name].includes(port)) {
+          portMap[port.name].splice(portMap[port.name].indexOf(port), 1);
+        }
+        if (portMap[port.name].length === 0) {
+          delete portMap[port.name]
+        }
+        if (Object.keys(portMap).length === 0) {
+          delete connections[tabId];
+        }
+      });
+    }
+
+    // transfer message between panel and contentScripts of the same tab
 
     if (port.name === 'panel') {
-      if (portMap.contentScript) {
-        portMap.contentScript.postMessage(message);
-      }
+      postMessageToPorts(portMap.contentScript, message);
     }
     if (port.name === 'contentScript') {
-      if (portMap.panel) {
-        portMap.panel.postMessage(message);
-      }
+      postMessageToPorts(portMap.panel, message);
     }
   });
 });
+
+const postMessageToPorts = (ports, message) => {
+  ports && ports.forEach(port => {
+    port.postMessage(message);
+  });
+};
