@@ -96,7 +96,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "isComplex": true
         },
         {
           "id": "Oculus Touch (Left)",
@@ -105,7 +106,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "isComplex": true
         }
       ]
     },
