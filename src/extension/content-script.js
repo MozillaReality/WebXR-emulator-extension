@@ -40,6 +40,14 @@ port.onMessage.addListener(message => {
       });
       break;
 
+    case 'webxr-input-axes':
+      dispatchCustomEvent('webxr-input-axes', {
+        objectName: message.objectName,
+        value: message.value,
+        axesIndex: message.axesIndex
+      });
+      break;
+
     case 'webxr-stereo-effect':
       dispatchCustomEvent('webxr-stereo-effect', {
         enabled: message.enabled
