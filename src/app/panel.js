@@ -820,10 +820,6 @@ document.getElementById('rightSqueezeButton').addEventListener('click', event =>
   toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE);
 }, false);
 
-document.getElementById('leftSqueezeButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE);
-}, false);
-
 document.getElementById('leftTouchpadButton').addEventListener('click', event => {
   toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.TOUCHPAD);
 }, false);
