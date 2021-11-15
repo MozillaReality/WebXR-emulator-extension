@@ -1,6 +1,6 @@
 {
   "default": {
-    "deviceKey": "Oculus Go",
+    "deviceKey": "Oculus Quest",
     "stereoEffect": true
   },
   "devices": {
@@ -26,6 +26,7 @@
     "HTC Vive": {
       "id": "HTC Vive",
       "name": "HTC Vive",
+      "profile": "htc-vive",
       "modes": [
         "inline",
         "immersive-vr"
@@ -42,7 +43,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "handedness": "right"
         },
         {
           "id": "OpenVR Gamepad",
@@ -51,13 +53,18 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "handedness": "left"
         }
-      ]
+      ],
+      "polyfillInputMapping": {
+        "buttons": [1, 2, 0]
+      }
     },
     "Oculus Go": {
       "id": "Oculus Go",
       "name": "Oculus Go",
+      "profile": "oculus-go",
       "modes": [
         "inline",
         "immersive-vr"
@@ -73,13 +80,18 @@
           "primaryButtonIndex": 0,
           "hasPosition": false,
           "hasRotation": true,
-          "hasSqueezeButton": false
+          "hasSqueezeButton": false,
+          "handedness": "right"
         }
-      ]
+      ],
+      "polyfillInputMapping": {
+        "buttons": [1, null, 0]
+      }
     },
-    "Oculus Quest": {
-      "id": "Oculus Quest",
-      "name": "Oculus Quest",
+    "Oculus Rift CV1": {
+      "id": "Oculus Rift CV1",
+      "name": "Oculus Rift CV1",
+      "profile": "oculus-touch",
       "modes": [
         "inline",
         "immersive-vr"
@@ -96,7 +108,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "handedness": "right"
         },
         {
           "id": "Oculus Touch (Left)",
@@ -105,9 +118,131 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "handedness": "left"
         }
-      ]
+      ],
+      "polyfillInputMapping": {
+        "axes": [2, 3, 0, 1],
+        "buttons": [1, 2, null, 0, 3, 4, null]
+      }
+    },
+    "Oculus Rift S": {
+      "id": "Oculus Rift S",
+      "name": "Oculus Rift S",
+      "profile": "oculus-touch-v2",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "id": "Oculus Touch V2 (Right)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "right"
+        },
+        {
+          "id": "Oculus Touch V2 (Left)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "left"
+        }
+      ],
+      "polyfillInputMapping": {
+        "axes": [2, 3, 0, 1],
+        "buttons": [1, 2, null, 0, 3, 4, null]
+      }
+    },
+    "Oculus Quest": {
+      "id": "Oculus Quest",
+      "name": "Oculus Quest",
+      "profile": "oculus-touch-v2",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "id": "Oculus Touch V2 (Right)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "right"
+        },
+        {
+          "id": "Oculus Touch V2 (Left)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "left"
+        }
+      ],
+      "polyfillInputMapping": {
+        "axes": [2, 3, 0, 1],
+        "buttons": [1, 2, null, 0, 3, 4, null]
+      }
+    },
+    "Oculus Quest 2": {
+      "id": "Oculus Quest 2",
+      "name": "Oculus Quest 2",
+      "profile": "oculus-touch-v3",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "id": "Oculus Touch V3 (Right)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "right"
+        },
+        {
+          "id": "Oculus Touch V3 (Left)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true,
+          "handedness": "left"
+        }
+      ],
+      "polyfillInputMapping": {
+        "axes": [2, 3, 0, 1],
+        "buttons": [1, 2, null, 0, 3, 4, null]
+      }
     },
     "Samsung Galaxy S8+ (AR)": {
       "id": "Samsung Galaxy S8+ (AR)",
@@ -150,6 +285,7 @@
     "Samsung Gear VR": {
       "id": "Samsung Gear VR",
       "name": "Samsung Gear VR",
+      "profile": "samsung-gearvr",
       "modes": [
         "inline",
         "immersive-vr"
@@ -164,9 +300,13 @@
           "buttonNum": 3,
           "primaryButtonIndex": 0,
           "hasPosition": false,
-          "hasRotation": true
+          "hasRotation": true,
+          "handedness": "right"
         }
-      ]
+      ],
+      "polyfillInputMapping": {
+        "buttons": [1, null, 0]
+      }
     }
   }
 }

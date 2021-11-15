@@ -741,6 +741,13 @@ export default class EmulatedXRDevice extends XRDevice {
     gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
   }
 
+  _updateInputAxisValue(value, controllerIndex, axisIndex) {
+    if (controllerIndex >= this.gamepads.length) { return; }
+    const gamepad = this.gamepads[controllerIndex];
+    if (axisIndex >= gamepad.axes.length) { return; }
+    gamepad.axes[axisIndex] = value;
+  }
+
   _updateInputAxes(controllerIndex, x, y) {
     if (controllerIndex >= this.gamepads.length) { return; }
     const gamepad = this.gamepads[controllerIndex];
@@ -865,6 +872,25 @@ export default class EmulatedXRDevice extends XRDevice {
           this._updateInputButtonPressed(pressed,
             objectName === 'rightController' ? 0 : 1, // @TODO: remove magic number
             buttonIndex);
+          break;
+      }
+    }, false);
+
+    window.addEventListener('webxr-input-axis', event => {
+      if (this.arDevice) {
+        return;
+      }
+
+      const value = event.detail.value;
+      const objectName = event.detail.objectName;
+      const axisIndex = event.detail.axisIndex;
+
+      switch (objectName) {
+        case 'rightController':
+        case 'leftController':
+          this._updateInputAxisValue(value,
+            objectName === 'rightController' ? 0 : 1, // @TODO: remove magic number
+            axisIndex);
           break;
       }
     }, false);

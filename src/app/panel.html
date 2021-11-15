@@ -98,6 +98,10 @@
         background-color: #e8e8e8;
       }
 
+      button:disabled {
+        background-color: #D3D3D3;
+      }
+
       button.pressed {
         background-color: #0074e8;
         border-color: #fff;
@@ -141,6 +145,15 @@
         color: #929294;
         margin-left: -15px;
       }
+
+      .horizontal-half-container {
+        display: inline-block; 
+        *display: inline; 
+        zoom: 1; 
+        vertical-align: top; 
+        font-size: 12px;
+        width: 50%;
+      }
     </style>
   </head>
   <body>
@@ -164,24 +177,6 @@
           <div><span class="key">rotation:</span> <span class="value" id="headsetRotation"></span></div>
         </div>
       </div>
-      <div id="rightControllerComponent" class="component device-property-component">
-        <div class="title-bar"><span class="icon">&#9660;</span>Right controller</div>
-        <div class="component device-property-content">
-          <div><span class="key">position:</span> <span class="value" id="rightControllerPosition"></span></div>
-          <div><span class="key">rotation:</span> <span class="value" id="rightControllerRotation"></span></div>
-          <div><button class="trigger-button" id="rightSelectButton">select button</button></div>
-          <div><button class="trigger-button" id="rightSqueezeButton">squeeze button</button></div>
-        </div>
-      </div>
-      <div id="leftControllerComponent" class="component device-property-component">
-        <div class="title-bar"><span class="icon">&#9660;</span>Left controller</div>
-        <div class="component device-property-content">
-          <div><span class="key">position:</span> <span class="value" id="leftControllerPosition"></span></div>
-          <div><span class="key">rotation:</span> <span class="value" id="leftControllerRotation"></span></div>
-          <div><button class="trigger-button" id="leftSelectButton">select button</button></div>
-          <div><button class="trigger-button" id="leftSqueezeButton">squeeze button</button></div>
-        </div>
-      </div>
     </div>
     <script src="three/three.js"></script>
     <script src="three/GLTFLoader.js"></script>
@@ -189,6 +184,8 @@
     <script src="three/OrbitControls.js"></script>
     <script src="three/TransformControls.js"></script>
     <script src="../ConfigurationManager.js"></script>
+    <script src="../lib/InputProfiles.js"></script>
+    <script src="../lib/joystick.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>

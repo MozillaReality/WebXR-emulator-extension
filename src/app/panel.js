@@ -1,6 +1,18 @@
 const port = chrome.runtime.connect(null, {name: 'panel'});
 const tabId = chrome.devtools.inspectedWindow.tabId;
 
+Element.prototype.setAttributes = function (attrs) {
+  for (var idx in attrs) {
+      if ((idx === 'styles' || idx === 'style') && typeof attrs[idx] === 'object') {
+          for (var prop in attrs[idx]){this.style[prop] = attrs[idx][prop];}
+      } else if (idx === 'html') {
+          this.innerHTML = attrs[idx];
+      } else {
+          this.setAttribute(idx, attrs[idx]);
+      }
+  }
+};
+
 // receive message from contentScript via background
 
 port.onMessage.addListener(message => {
@@ -34,7 +46,7 @@ port.onMessage.addListener(message => {
         }
         node.position.fromArray(message.position);
         node.quaternion.fromArray(message.quaternion);
-        updateControllerPropertyComponent(key);
+        updateDeviceTransformData(key);
         render();
       }
       break;
@@ -78,6 +90,15 @@ const notifyInputButtonPressed = (key, buttonKey, pressed) => {
     objectName: OBJECT_NAME[key],
     buttonIndex: buttonKey,
     pressed: pressed
+  });
+};
+
+const notifyInputAxisValue = (key, axisIndex, value) => {
+  postMessage({
+    action: 'webxr-input-axis',
+    objectName: OBJECT_NAME[key],
+    axisIndex: axisIndex,
+    value: value
   });
 };
 
@@ -134,6 +155,21 @@ const BUTTON = {
   SELECT: 0,
   SQUEEZE: 1
 };
+
+const XR_STANDARD_GAMEPAD_POLYFILL_MAPPING = {
+  BUTTONS: {
+    'xr-standard-trigger': 0,
+    'xr_standard-squeeze': 1,
+    'xr_standard-touchpad': 2,
+    'xr_standard-thumbstick': 3
+  },
+  AXES: {
+    'xr-standard-touchpad-x': 0,
+    'xr-standard-touchpad-y': 1,
+    'xr-standard-thumbstick-x': 2,
+    'xr-standard-thumbstick-y': 3
+  }
+}
 
 const ASSET_PATH = {};
 ASSET_PATH[DEVICE.HEADSET] = '../../assets/headset.obj';
@@ -370,7 +406,7 @@ const loadControllersAsset = (loadRight, loadLeft) => {
       assetNodes[key] = parent;
 
       const onChange = () => {
-        updateControllerPropertyComponent(key);
+        updateDeviceTransformData(key);
         notifyInputPoseChange(key, parent);
       };
 
@@ -448,18 +484,8 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = false;
   document.getElementById('stereoEffectLabel').style.display = 'none';
   document.getElementById('headsetComponent').style.display = 'none';
-  document.getElementById('rightControllerComponent').style.display = 'none';
-  document.getElementById('leftControllerComponent').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
-  document.getElementById('rightSelectButton').style.display = 'none';
-  document.getElementById('leftSelectButton').style.display = 'none';
-  document.getElementById('rightSqueezeButton').style.display = 'none';
-  document.getElementById('leftSqueezeButton').style.display = 'none';
-  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT, false);
-  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE, false);
-  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SELECT, false);
-  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE, false);
 
   // secondly load new assets and enable necessary panel controls
 
@@ -489,26 +515,6 @@ const updateAssetNodes = (deviceDefinition) => {
 
   if (hasRightController || hasLeftController) {
     loadControllersAsset(hasRightController, hasLeftController);
-  }
-
-  if (hasRightController) {
-    document.getElementById('rightControllerComponent').style.display = 'flex';
-    if (hasImmersiveVR) {
-      document.getElementById('rightSelectButton').style.display = '';
-    }
-    if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
-      document.getElementById('rightSqueezeButton').style.display = '';
-    }
-  }
-
-  if (hasLeftController) {
-    document.getElementById('leftControllerComponent').style.display = 'flex';
-    if (hasImmersiveVR) {
-      document.getElementById('leftSelectButton').style.display = '';
-    }
-    if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
-      document.getElementById('leftSqueezeButton').style.display = '';
-    }
   }
 
   if (hasHeadset || hasRightController || hasLeftController) {
@@ -621,10 +627,15 @@ renderer.domElement.addEventListener('mouseup', event => {
 // event handlers
 
 const updateDevicePropertyContent = (positionId, rotationId, position, rotation) => {
-  document.getElementById(positionId).textContent =
+  if (document.getElementById(positionId)) {
+    document.getElementById(positionId).textContent =
     position.x.toFixed(2) + ' ' + position.y.toFixed(2) + ' ' + position.z.toFixed(2);
-  document.getElementById(rotationId).textContent =
+  }
+  
+  if (document.getElementById(rotationId)) {
+    document.getElementById(rotationId).textContent =
     rotation.x.toFixed(2) + ' ' + rotation.y.toFixed(2) + ' ' + rotation.z.toFixed(2);
+  }
 };
 
 const updateHeadsetPropertyComponent = () => {
@@ -634,31 +645,21 @@ const updateHeadsetPropertyComponent = () => {
     headset.position, headset.rotation);
 };
 
-const updateControllerPropertyComponent = (key) => {
-  const controller = assetNodes[key];
-  if (!controller) { return; }
+const updateDeviceTransformData = (deviceId) => {
+  const device = assetNodes[deviceId];
+  if (!device) { return; }
+  let deviceIdPrefix = "device"+deviceId;
   updateDevicePropertyContent(
-    key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerPosition' : 'leftControllerPosition',
-    key === DEVICE.RIGHT_CONTROLLER ? 'rightControllerRotation' : 'leftControllerRotation',
-    controller.position, controller.rotation
+    deviceIdPrefix + "Position", deviceIdPrefix + "Rotation", 
+    device.position, device.rotation
   );
-};
-
-const updateTriggerButtonColor = (key, buttonKey, pressed) => {
-  let buttonId = key === DEVICE.RIGHT_CONTROLLER ? 'right' : 'left';
-  buttonId += buttonKey === BUTTON.SELECT ? 'Select' : 'Squeeze';
-  buttonId += 'Button';
-  const button = document.getElementById(buttonId);
-  button.classList.toggle('pressed', pressed);
 };
 
 // Show/Hide device property component
 
-for (const component of document.getElementsByClassName('device-property-component')) {
-  // Expects device-property-component class has a title-bar class element and
-  // a device-property-content class element as children
-  const title = component.getElementsByClassName('title-bar')[0];
-  const content = component.getElementsByClassName('device-property-content')[0];
+const addShowHideToDevicePropertyComponent = (devicePropertyComponent) => {
+  const title = devicePropertyComponent.getElementsByClassName('title-bar')[0];
+  const content = devicePropertyComponent.getElementsByClassName('device-property-content')[0];
   const icon = title.getElementsByClassName('icon')[0];
   title.addEventListener('click', event => {
     if (content.style.display === 'none') {
@@ -669,6 +670,12 @@ for (const component of document.getElementsByClassName('device-property-compone
       content.style.display = 'none';
     }
   }, false);
+}
+
+for (const component of document.getElementsByClassName('device-property-component')) {
+  // Expects device-property-component class has a title-bar class element and
+  // a device-property-content class element as children
+  addShowHideToDevicePropertyComponent(component);
 }
 
 document.getElementById('devicePropertiesExpandIcon').addEventListener('click', event => {
@@ -708,30 +715,6 @@ const toggleControlMode = (key) => {
   render();
 };
 
-const toggleButtonPressed = (key, buttonKey) => {
-  states.buttonPressed[key][buttonKey] = !states.buttonPressed[key][buttonKey];
-  const pressed = states.buttonPressed[key][buttonKey];
-  notifyInputButtonPressed(key, buttonKey, pressed);
-  updateTriggerButtonColor(key, buttonKey, pressed);
-  updateControllerColor(key);
-};
-
-document.getElementById('rightSelectButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT);
-}, false);
-
-document.getElementById('leftSelectButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SELECT);
-}, false);
-
-document.getElementById('rightSqueezeButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE);
-}, false);
-
-document.getElementById('leftSqueezeButton').addEventListener('click', event => {
-  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE);
-}, false);
-
 document.getElementById('resetPoseButton').addEventListener('click', event => {
   for (const key in assetNodes) {
     const device = assetNodes[key];
@@ -751,8 +734,8 @@ document.getElementById('resetPoseButton').addEventListener('click', event => {
     device.rotation.copy(defaultTransforms[defaultTransformKey].rotation);
   }
   updateHeadsetPropertyComponent();
-  updateControllerPropertyComponent(DEVICE.RIGHT_CONTROLLER);
-  updateControllerPropertyComponent(DEVICE.LEFT_CONTROLLER);
+  updateDeviceTransformData(DEVICE.RIGHT_CONTROLLER);
+  updateDeviceTransformData(DEVICE.LEFT_CONTROLLER);
   notifyPoses();
   render();
 }, false);
@@ -776,6 +759,216 @@ for (const field of document.getElementsByClassName('value')) {
 // 1. load external devices.json file
 // 2. set up dom elements from it
 // 3. load configuration from storage and load assets
+
+const handednessToDeviceInfo = (handedness) => {
+  switch (handedness) {
+    case "left":
+      return { id: DEVICE.LEFT_CONTROLLER, name: "Left Controller" };
+    case "right":
+      return { id: DEVICE.RIGHT_CONTROLLER, name: "Right Controller" };
+    case "left-right-none":
+    case "left-right":
+    case "any":
+      return { id: DEVICE.CONTROLLER, name: "Controller" };;
+    default:
+      throw "handedness not supported";
+  }
+}
+
+const INPUT_STATE = {
+  IDLE: 0,
+  PRESSED: 1,
+  FULLY_PRESSED: 2,
+  DISABLED: 3,
+};
+
+let inputStates = {};
+
+const inputButtonAction = (handedness, inputName, buttonPolyfillIndex) => {
+  let deviceId = handednessToDeviceInfo(handedness).id;
+  let inputId = handedness + '-' + inputName;
+  switch (inputStates[inputId]) {
+    case INPUT_STATE.IDLE:
+      inputStates[inputId] = INPUT_STATE.FULLY_PRESSED;
+      break;
+    case INPUT_STATE.PRESSED:
+      // half-pressed triggers will be fully pressed when clicked
+      inputStates[inputId] = INPUT_STATE.FULLY_PRESSED;
+      break;
+    case INPUT_STATE.FULLY_PRESSED:
+      inputStates[inputId] = INPUT_STATE.IDLE;
+      break;
+    case INPUT_STATE.DISABLED:
+      // show prompt that the button is not exposed by WebXR Polyfill
+      break;
+  }
+  const pressed = inputStates[inputId] === INPUT_STATE.FULLY_PRESSED;
+  notifyInputButtonPressed(deviceId, buttonPolyfillIndex, pressed);
+  document.getElementById(inputId).classList.toggle('pressed', pressed);
+  updateControllerColor(deviceId);
+};
+
+const inputAxisAction = (handedness, axisPolyfillIndex, value) => {
+  let deviceId = handednessToDeviceInfo(handedness).id;
+  notifyInputAxisValue(deviceId, axisPolyfillIndex, value);
+}
+
+let intervalJobIds = [];
+
+const resetJoystick = (joystickElementId, autoReturn) => {
+  let joystickContainer = document.getElementById(joystickElementId)
+  joystickContainer.innerHTML = '';
+  let joystick = new Joystick(100, autoReturn);
+  joystick.addToParent(joystickContainer);
+  return joystick;
+}
+
+const createControllerComponent = (deviceProfile, handedness, polyfillInputMapping) => {
+  const fakeXrInputSource = {
+    profiles: [deviceProfile],
+    handedness: handedness,
+  }
+  fetchProfile(fakeXrInputSource, DEFAULT_PROFILES_PATH).then(({profile, _assetPath}) => {
+    let layout = profile.layouts[handedness];
+    const deviceId = handednessToDeviceInfo(handedness).id;
+    const deviceName = handednessToDeviceInfo(handedness).name;
+    const controllerComponent = document.createElement('div');
+    document
+      .getElementById('devicePropertiesComponent')
+      .append(controllerComponent);
+    controllerComponent.id = handedness + 'ControllerComponent';
+    controllerComponent.className = 'component device-property-component';
+    controllerComponent.classList.add('generated-controller-component');
+    const titleBar = document.createElement('div');
+    controllerComponent.append(titleBar);
+    titleBar.className = 'title-bar';
+    titleBar.innerHTML = '<span class="icon">&#9660;</span>' + deviceName;
+    const inputs = document.createElement('div');
+    controllerComponent.append(inputs);
+    inputs.className = 'component device-property-content';
+
+    // generate transform data elements
+    let deviceIdPrefix = "device" + deviceId;
+    const positionDiv = document.createElement('div');
+    positionDiv.innerHTML = '<span class="key">position:</span> <span class="value" id="' + deviceIdPrefix + 'Position"></span>';
+    const rotationDiv = document.createElement('div');
+    rotationDiv.innerHTML = '<span class="key">rotation:</span> <span class="value" id="' + deviceIdPrefix + 'Rotation"></span>';
+    inputs.append(positionDiv);
+    inputs.append(rotationDiv);
+
+    // generate xr-standard-thumbstick ui elements
+    if (layout['components']['xr-standard-thumbstick']) {
+      let joystickContainerDiv = document.createElement('div');
+      inputs.append(joystickContainerDiv);
+      let joystickDiv = document.createElement('div');
+      joystickDiv.id = deviceIdPrefix + "-joystick";
+      joystickDiv.classList.add('horizontal-half-container');
+      joystickContainerDiv.append(joystickDiv);
+      let joystickMenuDiv = document.createElement('div');
+      joystickMenuDiv.classList.add('horizontal-half-container');
+      joystickMenuDiv.style.marginTop = "20px";
+      joystickContainerDiv.append(joystickMenuDiv);
+      let joystickValuesDiv = document.createElement('div');
+      joystickMenuDiv.append(joystickValuesDiv);
+      let joystickResetButton = document.createElement('button');
+      joystickResetButton.innerHTML = "reset";
+      joystickMenuDiv.append(joystickResetButton);
+      joystickMenuDiv.append(document.createElement('br'));
+      let joystickReturnCheckbox = document.createElement('input');
+      joystickReturnCheckbox.setAttributes({
+        'type': 'checkbox',
+        'id': deviceIdPrefix + '-joystick-return',
+        'name': deviceIdPrefix + '-joystick-return',
+        'value': 'AutoReturn',
+        'checked': true
+      });
+      joystickMenuDiv.append(joystickReturnCheckbox);
+      let joystickReturnLabel = document.createElement('label');
+      joystickReturnLabel.setAttribute('for', deviceIdPrefix + "-joystick-return");
+      joystickReturnLabel.innerHTML = 'Auto return';
+      joystickMenuDiv.append(joystickReturnLabel);
+
+      let joystick = resetJoystick(joystickDiv.id, joystickReturnCheckbox.checked);
+      joystickReturnCheckbox.addEventListener('change', event => {
+        // console.log( joystickReturnCheckbox.checked);
+        joystick = resetJoystick(joystickDiv.id, joystickReturnCheckbox.checked);
+      }, false);
+      joystickResetButton.addEventListener('click', event => {
+        joystick = resetJoystick(joystickDiv.id, joystickReturnCheckbox.checked);
+      }, false);
+
+      intervalJobIds.push(setInterval(function(){
+        let x = joystick.getX();
+        // y axis input is inverted
+        let y = joystick.getY();
+        joystickValuesDiv.innerHTML = "X axis: " + x + "<br>Y axis: " + y;
+
+        let xIndex = polyfillInputMapping['axes'][XR_STANDARD_GAMEPAD_POLYFILL_MAPPING.AXES['xr-standard-thumbstick-x']];
+        let yIndex = polyfillInputMapping['axes'][XR_STANDARD_GAMEPAD_POLYFILL_MAPPING.AXES['xr-standard-thumbstick-y']];
+        
+        inputAxisAction(handedness, xIndex, x);
+        inputAxisAction(handedness, yIndex, y);
+      }, 50));
+    }
+
+    // generate button ui elements
+    for (let inputName in layout['components']) {
+      let inputId = handedness + '-' + inputName;
+      inputStates[inputId] = INPUT_STATE.IDLE;
+      const inputWrapper = document.createElement('div');
+      inputs.append(inputWrapper);
+      const input = document.createElement('button');
+      inputWrapper.append(input);
+      input.className = 'trigger-button';
+      input.id = inputId;
+      input.innerHTML = inputName;
+      const inputData = layout['components'][inputName];
+      let gamepadIndex = XR_STANDARD_GAMEPAD_POLYFILL_MAPPING.BUTTONS[inputName];
+      if (!gamepadIndex) {
+        gamepadIndex = inputData['gamepadIndices']['button'];
+      }
+      const inputPolyfillIndex = polyfillInputMapping['buttons'][gamepadIndex];
+      if (inputPolyfillIndex !== null && inputPolyfillIndex !== undefined) {
+        input.addEventListener('click', event => {
+          inputButtonAction(handedness, inputName, inputPolyfillIndex);
+        }, false);
+      } else if (inputData['reserved']) {
+        input.disabled = true;
+        input.setAttribute('title', "input reserved per WebXR specs");
+      } else {
+        input.disabled = true;
+        input.setAttribute('title', "input exists according to WebXR Input Profile, but is not exposed by WebXR Polyfill");
+      }
+    }
+
+    // add show/hide to controller components
+    addShowHideToDevicePropertyComponent(controllerComponent);
+
+    // init transform values for controllers
+    updateDeviceTransformData(deviceId);
+  });
+};
+
+const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles';
+
+const createControllersUI = (manager) => {
+  // clean up all previously generated controller components
+  document.querySelectorAll('.generated-controller-component').forEach(e => e.remove());
+
+  // clean up interval jobs from previously generated controllers
+  intervalJobIds.forEach(id => clearInterval(id));
+  intervalJobIds = [];
+  
+  if (manager.deviceDefinition.profile) {
+    for (let controller of manager.deviceDefinition.controllers) {
+      let deviceProfile = manager.deviceDefinition.profile;
+      let polyfillInputMapping = manager.deviceDefinition.polyfillInputMapping;
+      if (deviceProfile) {
+        createControllerComponent(deviceProfile, controller.handedness, polyfillInputMapping);
+      }
+    }
+  }
+}
 
 ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   const deviceSelect = document.getElementById('deviceSelect');
@@ -802,6 +995,8 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     deviceSelect.add(option);
   }
 
+  createControllersUI(manager);
+
   // setup stereo effect checkbox element
 
   stereoCheckbox.checked = manager.defaultStereoEffect;
@@ -824,6 +1019,7 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     if (deviceKeyIsUpdated) {
       notifyDeviceChange(manager.deviceDefinition);
       updateAssetNodes(manager.deviceDefinition);
+      createControllersUI(manager);
     }
 
     if (stereoEffectIsUpdated) {
