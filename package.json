@@ -20,6 +20,6 @@
   "dependencies": {
     "gl-matrix": "^3.1.0",
     "three": "^0.111.0",
-    "webxr-polyfill": "^2.0.3"
+    "webxr-polyfill": "git+https://github.com/immersive-web/webxr-polyfill.git"
   }
 }
