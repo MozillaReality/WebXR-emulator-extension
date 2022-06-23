@@ -205,6 +205,38 @@
         }
       ]
     },
+    "Valve Index": {
+      "id": "Valve Index",
+      "name": "Valve Index",
+      "modes": [
+        "inline",
+        "immersive-vr"
+      ],
+      "headset": {
+        "hasPosition": true,
+        "hasRotation": true
+      },
+      "controllers": [
+        {
+          "id": "Valve Index (Right)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true
+        },
+        {
+          "id": "Valve Index (Left)",
+          "buttonNum": 7,
+          "primaryButtonIndex": 0,
+          "primarySqueezeButtonIndex": 1,
+          "hasPosition": true,
+          "hasRotation": true,
+          "hasSqueezeButton": true
+        }
+      ]
+    },
     "Samsung Galaxy S8+ (AR)": {
       "id": "Samsung Galaxy S8+ (AR)",
       "name": "Samsung Galaxy S8+ (AR)",
