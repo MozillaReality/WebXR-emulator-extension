@@ -932,7 +932,7 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   })
   leftThumbstick.onMove(({ right, top }) => {
     axesMoved(DEVICE.LEFT_CONTROLLER, AXES.TOUCHPAD_X, right);
-    axesMoved(DEVICE.LEFT_CONTROLLER, AXES.TOUCHPAD_Y, top);
+    axesMoved(DEVICE.LEFT_CONTROLLER, AXES.TOUCHPAD_Y, -top);
     document.getElementById('leftThumbstick').textContent =
       right.toFixed(2) + ' ' + top.toFixed(2);
   })
@@ -941,7 +941,7 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
   })
   rightThumbstick.onMove(({ right, top }) => {
     axesMoved(DEVICE.RIGHT_CONTROLLER, AXES.TOUCHPAD_X, right);
-    axesMoved(DEVICE.RIGHT_CONTROLLER, AXES.TOUCHPAD_Y, top);
+    axesMoved(DEVICE.RIGHT_CONTROLLER, AXES.TOUCHPAD_Y, -top);
     document.getElementById('rightThumbstick').textContent =
       right.toFixed(2) + ' ' + top.toFixed(2);
   })
