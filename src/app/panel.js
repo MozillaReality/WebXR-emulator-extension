@@ -81,6 +81,15 @@ const notifyInputButtonPressed = (key, buttonKey, pressed) => {
   });
 };
 
+const notifyInputAxesMoved = (key, axesKey, value) => {
+  postMessage({
+    action: 'webxr-input-axes',
+    objectName: OBJECT_NAME[key],
+    axesIndex: axesKey,
+    value: value
+  });
+};
+
 const notifyDeviceChange = (deviceDefinition) => {
   postMessage({
     action: 'webxr-device',
@@ -132,7 +141,16 @@ const DEVICE = {
 
 const BUTTON = {
   SELECT: 0,
-  SQUEEZE: 1
+  SQUEEZE: 1,
+  TOUCHPAD: 2,
+  THUMBSTICK: 3,
+  ACTION_A: 4,
+  ACTION_B: 5,
+};
+
+const AXES = {
+  TOUCHPAD_X: 0,
+  TOUCHPAD_Y: 1,
 };
 
 const ASSET_PATH = {};
@@ -147,14 +165,29 @@ OBJECT_NAME[DEVICE.LEFT_CONTROLLER] = 'leftController';
 const states = {
   inImmersive: false,
   buttonPressed: {},
+  axes: {},
   immersiveMode: IMMERSIVE_MODE.NONE
 };
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER] = {};
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SELECT] = false;
 states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SQUEEZE] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.TOUCHPAD] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.THUMBSTICK] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.ACTION_A] = false;
+states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.ACTION_B] = false;
 states.buttonPressed[DEVICE.LEFT_CONTROLLER] = {};
 states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SELECT] = false;
 states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SQUEEZE] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.TOUCHPAD] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.THUMBSTICK] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.ACTION_A] = false;
+states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.ACTION_B] = false;
+states.axes[DEVICE.RIGHT_CONTROLLER] = {};
+states.axes[DEVICE.RIGHT_CONTROLLER][AXES.TOUCHPAD_X] = 0;
+states.axes[DEVICE.RIGHT_CONTROLLER][AXES.TOUCHPAD_Y] = 0;
+states.axes[DEVICE.LEFT_CONTROLLER] = {};
+states.axes[DEVICE.LEFT_CONTROLLER][AXES.TOUCHPAD_X] = 0;
+states.axes[DEVICE.LEFT_CONTROLLER][AXES.TOUCHPAD_Y] = 0;
 
 const deviceCapabilities = {};
 deviceCapabilities[DEVICE.HEADSET] = {
@@ -164,7 +197,8 @@ deviceCapabilities[DEVICE.HEADSET] = {
 deviceCapabilities[DEVICE.CONTROLLER] = {
   hasPosition: false,
   hasRotation: false,
-  hasSqueezeButton: false
+  hasSqueezeButton: false,
+  isComplex: false
 };
 
 const transformControls = {};
@@ -186,11 +220,13 @@ defaultTransforms[DEVICE.HEADSET] = {
 };
 defaultTransforms[DEVICE.RIGHT_CONTROLLER] = {
   position: new THREE.Vector3(0.5, 1.5, -1.0),
-  rotation: new THREE.Euler(0, 0, 0)
+  rotation: new THREE.Euler(0, 0, 0),
+  thumbstickAxes: [0, 0]
 };
 defaultTransforms[DEVICE.LEFT_CONTROLLER] = {
   position: new THREE.Vector3(-0.5, 1.5, -1.0),
-  rotation: new THREE.Euler(0, 0, 0)
+  rotation: new THREE.Euler(0, 0, 0),
+  thumbstickAxes: [0, 0]
 };
 // The parameters should be shared with ARScene.js
 defaultTransforms[DEVICE.POINTER] = {
@@ -413,11 +449,19 @@ const updateAssetNodes = (deviceDefinition) => {
   if (assetNodes[DEVICE.RIGHT_CONTROLLER]) {
     states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SELECT] = false;
     states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.SQUEEZE] = false;
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.TOUCHPAD] = false;
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.THUMBSTICK] = false;
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.ACTION_A] = false;
+    states.buttonPressed[DEVICE.RIGHT_CONTROLLER][BUTTON.ACTION_B] = false;
     updateControllerColor(DEVICE.RIGHT_CONTROLLER);
   }
   if (assetNodes[DEVICE.LEFT_CONTROLLER]) {
     states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SELECT] = false;
     states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.SQUEEZE] = false;
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.TOUCHPAD] = false;
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.THUMBSTICK] = false;
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.ACTION_A] = false;
+    states.buttonPressed[DEVICE.LEFT_CONTROLLER][BUTTON.ACTION_B] = false;
     updateControllerColor(DEVICE.LEFT_CONTROLLER);
   }
 
@@ -446,20 +490,39 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.CONTROLLER].hasPosition = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = false;
   deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = false;
+  deviceCapabilities[DEVICE.CONTROLLER].isComplex = false;
   document.getElementById('stereoEffectLabel').style.display = 'none';
   document.getElementById('headsetComponent').style.display = 'none';
   document.getElementById('rightControllerComponent').style.display = 'none';
   document.getElementById('leftControllerComponent').style.display = 'none';
+  document.getElementById('rightThumbstick').style.display = 'none';
+  document.getElementById('leftThumbstick').style.display = 'none';
   document.getElementById('resetPoseButton').style.display = 'none';
   document.getElementById('exitButton').style.display = 'none';
   document.getElementById('rightSelectButton').style.display = 'none';
   document.getElementById('leftSelectButton').style.display = 'none';
   document.getElementById('rightSqueezeButton').style.display = 'none';
   document.getElementById('leftSqueezeButton').style.display = 'none';
+  document.getElementById('rightTouchpadButton').style.display = 'none';
+  document.getElementById('leftTouchpadButton').style.display = 'none';
+  document.getElementById('rightThumbstickButton').style.display = 'none';
+  document.getElementById('leftThumbstickButton').style.display = 'none';
+  document.getElementById('rightActionAButton').style.display = 'none';
+  document.getElementById('leftActionAButton').style.display = 'none';
+  document.getElementById('rightActionBButton').style.display = 'none';
+  document.getElementById('leftActionBButton').style.display = 'none';
   updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SELECT, false);
   updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE, false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.TOUCHPAD, false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.THUMBSTICK, false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.ACTION_A, false);
+  updateTriggerButtonColor(DEVICE.RIGHT_CONTROLLER, BUTTON.ACTION_B, false);
   updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SELECT, false);
   updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.TOUCHPAD, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.THUMBSTICK, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.ACTION_A, false);
+  updateTriggerButtonColor(DEVICE.LEFT_CONTROLLER, BUTTON.ACTION_B, false);
 
   // secondly load new assets and enable necessary panel controls
 
@@ -473,6 +536,7 @@ const updateAssetNodes = (deviceDefinition) => {
   deviceCapabilities[DEVICE.CONTROLLER].hasPosition = hasRightController && deviceDefinition.controllers[0].hasPosition;
   deviceCapabilities[DEVICE.CONTROLLER].hasRotation = hasRightController && deviceDefinition.controllers[0].hasRotation;
   deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton = hasRightController && deviceDefinition.controllers[0].hasSqueezeButton;
+  deviceCapabilities[DEVICE.CONTROLLER].isComplex = hasRightController && deviceDefinition.controllers[0].isComplex;
 
   const hasPosition = deviceCapabilities[DEVICE.HEADSET].hasPosition ||
     deviceCapabilities[DEVICE.CONTROLLER].hasPosition;
@@ -499,6 +563,14 @@ const updateAssetNodes = (deviceDefinition) => {
     if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
       document.getElementById('rightSqueezeButton').style.display = '';
     }
+    if (deviceCapabilities[DEVICE.CONTROLLER].isComplex) {
+      document.getElementById('rightThumbstick').style.display = '';
+      document.getElementById('rightThumbstickButton').style.display = '';
+      document.getElementById('rightActionAButton').style.display = '';
+      document.getElementById('rightActionBButton').style.display = '';
+    } else {
+      document.getElementById('rightTouchpadButton').style.display = '';
+    }
   }
 
   if (hasLeftController) {
@@ -508,6 +580,14 @@ const updateAssetNodes = (deviceDefinition) => {
     }
     if (deviceCapabilities[DEVICE.CONTROLLER].hasSqueezeButton) {
       document.getElementById('leftSqueezeButton').style.display = '';
+    }
+    if (deviceCapabilities[DEVICE.CONTROLLER].isComplex) {
+      document.getElementById('leftThumbstick').style.display = '';
+      document.getElementById('leftThumbstickButton').style.display = '';
+      document.getElementById('leftActionAButton').style.display = '';
+      document.getElementById('leftActionBButton').style.display = '';
+    } else {
+      document.getElementById('leftTouchpadButton').style.display = '';
     }
   }
 
@@ -646,7 +726,14 @@ const updateControllerPropertyComponent = (key) => {
 
 const updateTriggerButtonColor = (key, buttonKey, pressed) => {
   let buttonId = key === DEVICE.RIGHT_CONTROLLER ? 'right' : 'left';
-  buttonId += buttonKey === BUTTON.SELECT ? 'Select' : 'Squeeze';
+  switch(buttonKey) {
+    case BUTTON.SELECT: buttonId += 'Select'; break;
+    case BUTTON.SQUEEZE: buttonId += 'Squeeze'; break;
+    case BUTTON.TOUCHPAD: buttonId += 'Touchpad'; break;
+    case BUTTON.THUMBSTICK: buttonId += 'Thumbstick'; break;
+    case BUTTON.ACTION_A: buttonId += 'ActionA'; break;
+    case BUTTON.ACTION_B: buttonId += 'ActionB'; break;
+  }
   buttonId += 'Button';
   const button = document.getElementById(buttonId);
   button.classList.toggle('pressed', pressed);
@@ -708,6 +795,11 @@ const toggleControlMode = (key) => {
   render();
 };
 
+const axesMoved = (key, axes, value) => {
+  states.axes[key][axes] = value;
+  notifyInputAxesMoved(key, axes, value);
+};
+
 const toggleButtonPressed = (key, buttonKey) => {
   states.buttonPressed[key][buttonKey] = !states.buttonPressed[key][buttonKey];
   const pressed = states.buttonPressed[key][buttonKey];
@@ -728,8 +820,40 @@ document.getElementById('rightSqueezeButton').addEventListener('click', event =>
   toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.SQUEEZE);
 }, false);
 
+document.getElementById('leftTouchpadButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.TOUCHPAD);
+}, false);
+
+document.getElementById('rightTouchpadButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.TOUCHPAD);
+}, false);
+
+document.getElementById('leftThumbstickButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.THUMBSTICK);
+}, false);
+
+document.getElementById('rightThumbstickButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.THUMBSTICK);
+}, false);
+
 document.getElementById('leftSqueezeButton').addEventListener('click', event => {
   toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.SQUEEZE);
+}, false);
+
+document.getElementById('rightActionAButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.ACTION_A);
+}, false);
+
+document.getElementById('leftActionAButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.ACTION_A);
+}, false);
+
+document.getElementById('rightActionBButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.RIGHT_CONTROLLER, BUTTON.ACTION_B);
+}, false);
+
+document.getElementById('leftActionBButton').addEventListener('click', event => {
+  toggleButtonPressed(DEVICE.LEFT_CONTROLLER, BUTTON.ACTION_B);
 }, false);
 
 document.getElementById('resetPoseButton').addEventListener('click', event => {
@@ -802,6 +926,28 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
     deviceSelect.add(option);
   }
 
+  const joystick = new JoyStick(document.getElementById('renderComponent'));
+  const leftThumbstick = joystick.add.axis({
+    styles: { left: 35, bottom: 35, size: 75 },
+  })
+  leftThumbstick.onMove(({ right, top }) => {
+    axesMoved(DEVICE.LEFT_CONTROLLER, AXES.TOUCHPAD_X, right);
+    axesMoved(DEVICE.LEFT_CONTROLLER, AXES.TOUCHPAD_Y, -top);
+    document.getElementById('leftThumbstick').textContent =
+      right.toFixed(2) + ' ' + top.toFixed(2);
+  })
+  const rightThumbstick = joystick.add.axis({
+    styles: { right: 35, bottom: 35, size: 75 },
+  })
+  rightThumbstick.onMove(({ right, top }) => {
+    axesMoved(DEVICE.RIGHT_CONTROLLER, AXES.TOUCHPAD_X, right);
+    axesMoved(DEVICE.RIGHT_CONTROLLER, AXES.TOUCHPAD_Y, -top);
+    document.getElementById('rightThumbstick').textContent =
+      right.toFixed(2) + ' ' + top.toFixed(2);
+  })
+
+  // document.getElementById('rightThumbstick').add
+
   // setup stereo effect checkbox element
 
   stereoCheckbox.checked = manager.defaultStereoEffect;
@@ -854,3 +1000,262 @@ ConfigurationManager.createFromJsonFile('src/devices.json').then(manager => {
 }).catch(error => {
   console.error(error);
 });
+ class EventDispatcher {
+  constructor () {
+    this._listeners = {};
+  }
+  reset() {
+    Object.keys(this._listeners).forEach(key => {
+      delete this._listeners[key];
+    });
+  }
+  addEventListener (eventName, listener) {
+    const listeners = this._listeners;
+    if (listeners[eventName] === undefined) {
+      listeners[eventName] = [];
+    }
+    if (listeners[eventName].indexOf(listener) === -1) {
+      listeners[eventName].push(listener);
+    }
+  }
+  hasEventListener (eventName, listener) {
+    return this._listeners[eventName] !== undefined && this._listeners[eventName].indexOf(listener) !== -1;
+  }
+  removeEventListener (eventNamer, listener) {
+    const listenerArray = this._listeners[eventName];
+    if (listenerArray !== undefined) {
+      const index = listenerArray.indexOf(listener);
+      if (index !== -1) {
+        listenerArray.splice(index, 1);
+      }
+    }
+  }
+  dispatchEvent( event) {
+    const listenerArray = this._listeners[event.type];
+    if (listenerArray !== undefined) {
+      const array = listenerArray.slice(0);
+
+      for (let i = 0; i < array.length; i++) {
+        array[i].call(this, event);
+      }
+    }
+  }
+}
+
+//  https://github.com/enable3d/enable3d/blob/eeaacad60f57b854ade6fd72a09746c5aeb5ff24/packages/common/src/misc/joystick.ts
+ class JoyStick extends EventDispatcher {
+  constructor(parentElement = document.body) {
+    super()
+    this.parentElement = parentElement;
+    this.id = 0;
+  }
+
+  get add() {
+    return {
+      axis: (config = {}) => this.addAxis(config),
+      button: (config = {}) => this.addButton(config)
+    }
+  }
+
+  addAxis(config = {}) {
+    this.id++
+    const { styles = { left: 35, bottom: 35, size: 100 } } = config
+    const circle = this.circle({ styles })
+    const thumb = this.thumb({ styles })
+
+    circle.appendChild(thumb)
+    this.parentElement.appendChild(circle)
+
+    const { maxRadius = 40, rotationDamping = 0.06, moveDamping = 0.01 } = config
+
+    // element
+    const element = {
+      id: this.id,
+      domElement: thumb,
+      maxRadius: maxRadius,
+      maxRadiusSquared: maxRadius * maxRadius,
+      origin: { left: thumb.offsetLeft, top: thumb.offsetTop },
+      offset: { x: 0, y: 0 },
+      rotationDamping: rotationDamping,
+      moveDamping: moveDamping
+    }
+
+    if (element && element.domElement) {
+      const { domElement } = element
+      if ('ontouchstart' in window) {
+        domElement.addEventListener('touchstart', evt => {
+          evt.preventDefault()
+          this.tap(evt, element)
+          evt.stopPropagation()
+        })
+      } else {
+        domElement.addEventListener('mousedown', evt => {
+          evt.preventDefault()
+          this.tap(evt, element)
+          evt.stopPropagation()
+        })
+      }
+    }
+
+    return {
+      onMove: (event) => {
+        this.addEventListener(`axis_onmove_${element.id}`, (delta) => {
+          event(delta)
+        })
+      }
+    }
+  }
+
+  addButton(config = {}) {
+    this.id++
+    const { styles = { right: 35, bottom: 35, size: 80 }, letter: l = 'A' } = config
+    const circle = this.circle({ styles })
+    const letter = this.letter({ letter: l })
+
+    circle.appendChild(letter)
+    this.parentElement.appendChild(circle)
+
+    // element
+    const element = {
+      id: this.id,
+      domElement: circle,
+      offset: { x: 0, y: 0 }
+    }
+
+    if (element && element.domElement) {
+      this.click(element)
+    }
+
+    return {
+      onClick: (event) => {
+        this.addEventListener(`button_onclick_${element.id}`, (data) => {
+          event(data)
+        })
+      },
+      onRelease: (event) => {
+        this.addEventListener(`button_onrelease_${element.id}`, (data) => {
+          event(data)
+        })
+      }
+    }
+  }
+  circle(config = {}) {
+    const { styles } = config
+    const { top, right, bottom, left, size } = styles
+    const circle = document.createElement('div')
+    let css = `position:absolute; width:${size}px; height:${size}px; background:rgba(126, 126, 126, 0.5); border:#444 solid medium; border-radius:50%; cursor: pointer; `
+    if (top) css += `top:${top}px; `
+    if (right) css += `right:${right}px; `
+    if (bottom) css += `bottom:${bottom}px; `
+    if (left) css += `left:${left}px; `
+    circle.style.cssText = css
+    return circle
+  }
+  thumb(config = {}) {
+    const { styles } = config
+    const { size } = styles
+    const thumb = document.createElement('div')
+    thumb.style.cssText = `position: absolute; left: ${size / 4}px; top: ${size / 4}px; width: ${size / 2}px; height: ${
+      size / 2
+    }px; border-radius: 50%; background: #fff; `
+    return thumb
+  }
+  letter(config = {}) {
+    const { letter: l } = config
+    const letter = document.createElement('span')
+    letter.innerText = l
+    letter.style.cssText =
+      'position: absolute; text-align: center; top: 4px; width: 80px; height: 80px; font-size: 64px; color: #fff; '
+    return letter
+  }
+  click(element) {
+    const { id, domElement } = element
+    if ('ontouchstart' in window) {
+      domElement.addEventListener('touchstart', evt => {
+        evt.preventDefault()
+        this.dispatchEvent({ type: `button_onclick_${id}` })
+      })
+      domElement.addEventListener('touchend', evt => {
+        evt.preventDefault()
+        this.dispatchEvent({ type: `button_onrelease_${id}` })
+      })
+    } else {
+      domElement.addEventListener('mousedown', evt => {
+        evt.preventDefault()
+        this.dispatchEvent({ type: `button_onclick_${id}` })
+        evt.stopPropagation()
+      })
+      domElement.addEventListener('mouseup', evt => {
+        evt.preventDefault()
+        this.dispatchEvent({ type: `button_onrelease_${id}` })
+        evt.stopPropagation()
+      })
+    }
+  }
+  tap(evt, element) {
+    evt = evt || window.event
+    // get the mouse cursor position at startup:
+    element.offset = this.getMousePosition(evt)
+    if ('ontouchstart' in window) {
+      document.ontouchmove = evt => {
+        if (evt.target === element.domElement) this.move(evt, element)
+      }
+      document.ontouchend = evt => {
+        if (evt.target === element.domElement) this.up(element)
+      }
+    } else {
+      document.onmousemove = evt => {
+        if (evt.target === element.domElement) this.move(evt, element)
+      }
+      document.onmouseup = _evt => {
+        this.up(element)
+      }
+    }
+  }
+  move(evt, element) {
+    const { domElement, maxRadius, maxRadiusSquared, origin, offset, id } = element
+    evt = evt || window.event
+    const mouse = this.getMousePosition(evt)
+    // calculate the new cursor position:
+    let left = mouse.x - offset.x
+    let top = mouse.y - offset.y
+    //this.offset = mouse;
+    const sqMag = left * left + top * top
+    if (sqMag > maxRadiusSquared) {
+      //Only use sqrt if essential
+      const magnitude = Math.sqrt(sqMag)
+      left /= magnitude
+      top /= magnitude
+      left *= maxRadius
+      top *= maxRadius
+    }
+    // set the element's new position:
+    domElement.style.top = `${top + domElement.clientHeight / 2}px`
+    domElement.style.left = `${left + domElement.clientWidth / 2}px`
+    const forward = -(top - origin.top + domElement.clientHeight / 2) / maxRadius
+    const turn = (left - origin.left + domElement.clientWidth / 2) / maxRadius
+    this.dispatchEvent({ type: `axis_onmove_${id}`, top: forward, right: turn })
+  }
+  up(element) {
+    const { domElement, origin, id } = element
+    if ('ontouchstart' in window) {
+      document.ontouchmove = null
+      // @ts-ignore
+      document.touchend = null
+    } else {
+      document.onmousemove = null
+      document.onmouseup = null
+    }
+    domElement.style.top = `${origin.top}px`
+    domElement.style.left = `${origin.left}px`
+    this.dispatchEvent({ type: `axis_onmove_${id}`, top: 0, right: 0 })
+  }
+
+  getMousePosition(evt) {
+    // @ts-ignore
+    const clientX = evt.targetTouches ? evt.targetTouches[0].pageX : evt.clientX
+    // @ts-ignore
+    const clientY = evt.targetTouches ? evt.targetTouches[0].pageY : evt.clientY
+    return { x: clientX, y: clientY }
+  }
+}

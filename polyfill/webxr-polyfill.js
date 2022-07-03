@@ -37043,6 +37043,12 @@ host this content on a secure origin for the best user experience.
                     gamepad.buttons[buttonIndex].pressed = pressed;
                     gamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
                   }
+                  _updateInputAxesChanged(value, controllerIndex, axesIndex) {
+                    if (controllerIndex >= this.gamepads.length) { return; }
+                    const gamepad = this.gamepads[controllerIndex];
+                    if (axesIndex >= gamepad.axes.length) { return; }
+                    gamepad.axes[axesIndex] = value;
+                  }
                   _updateInputAxes(controllerIndex, x, y) {
                     if (controllerIndex >= this.gamepads.length) { return; }
                     const gamepad = this.gamepads[controllerIndex];
@@ -37146,6 +37152,22 @@ host this content on a secure origin for the best user experience.
                           this._updateInputButtonPressed(pressed,
                             objectName === 'rightController' ? 0 : 1,
                             buttonIndex);
+                          break;
+                      }
+                    }, false);
+                    window.addEventListener('webxr-input-axes', event => {
+                      if (this.arDevice) {
+                        return;
+                      }
+                      const value = event.detail.value;
+                      const objectName = event.detail.objectName;
+                      const axesIndex = event.detail.axesIndex;
+                      switch (objectName) {
+                        case 'rightController':
+                        case 'leftController':
+                          this._updateInputAxesChanged(value,
+                            objectName === 'rightController' ? 0 : 1,
+                            axesIndex);
                           break;
                       }
                     }, false);

@@ -160,7 +160,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "isComplex": true
         },
         {
           "id": "Oculus Touch V2 (Left)",
@@ -201,7 +202,8 @@
           "primarySqueezeButtonIndex": 1,
           "hasPosition": true,
           "hasRotation": true,
-          "hasSqueezeButton": true
+          "hasSqueezeButton": true,
+          "isComplex": true
         }
       ]
     },
