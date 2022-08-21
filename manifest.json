@@ -27,6 +27,7 @@
       "http://*/*",
       "https://*/*"
     ],
+    "match_about_blank": true,
     "js": [
       "polyfill/webxr-polyfill.js",
       "src/ConfigurationManager.js",
